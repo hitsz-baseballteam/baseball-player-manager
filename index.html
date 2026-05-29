@@ -326,12 +326,32 @@ button:disabled {
 .filters {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: 1fr 108px 108px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.filters .filter-wide {
+  grid-column: 1 / -1;
 }
 
 .selected-meta {
   margin-top: 10px;
   justify-content: space-between;
+}
+
+.bulk-actions {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bulk-actions .span-2 {
+  grid-column: 1 / -1;
+}
+
+.bulk-actions .btn {
+  width: 100%;
 }
 
 .player-list {
@@ -1126,7 +1146,8 @@ dialog::backdrop {
   .field-status,
   .lineup-list,
   .filters,
-  .preview-grid {
+  .preview-grid,
+  .bulk-actions {
     grid-template-columns: 1fr;
   }
 
@@ -1245,7 +1266,7 @@ dialog::backdrop {
           <span class="count-chip" id="playerCount">0 人</span>
         </div>
         <div class="filters">
-          <input class="input" id="searchInput" type="search" placeholder="搜索姓名 / 背号">
+          <input class="input filter-wide" id="searchInput" type="search" placeholder="搜索姓名 / 背号">
           <select class="select" id="positionFilter" aria-label="按守位筛选"></select>
           <select class="select" id="statusFilter" aria-label="按状态筛选">
             <option value="all">全部状态</option>
@@ -1253,10 +1274,34 @@ dialog::backdrop {
             <option value="rest">轮休</option>
             <option value="injured">伤停</option>
           </select>
+          <select class="select" id="batsFilter" aria-label="按打击手向筛选">
+            <option value="all">全部打击</option>
+            <option value="R">右打</option>
+            <option value="L">左打</option>
+            <option value="S">左右开弓</option>
+          </select>
+          <select class="select" id="throwsFilter" aria-label="按投球手向筛选">
+            <option value="all">全部投球</option>
+            <option value="R">右投</option>
+            <option value="L">左投</option>
+            <option value="S">左右皆可</option>
+          </select>
+          <select class="select filter-wide" id="assignmentFilter" aria-label="按当前方案占用筛选">
+            <option value="all">全部占用</option>
+            <option value="unassigned">未进当前方案</option>
+            <option value="defenseAssigned">守位已占</option>
+            <option value="lineupAssigned">棒次已占</option>
+            <option value="fullyAssigned">守位和棒次都已占</option>
+          </select>
         </div>
         <div class="selected-meta">
           <span class="small-chip" id="selectedCount">已选 0</span>
           <button class="ghost-btn" id="clearSelectionBtn" type="button">取消选择</button>
+        </div>
+        <div class="bulk-actions">
+          <button class="btn secondary span-2" id="selectFilteredBtn" type="button">选择当前筛选</button>
+          <button class="btn secondary" id="bulkEditBtn" type="button">批量修改</button>
+          <button class="btn warn" id="bulkDeleteBtn" type="button">批量删除</button>
         </div>
       </div>
       <div class="panel-body">
@@ -1408,6 +1453,63 @@ dialog::backdrop {
   </form>
 </dialog>
 
+<dialog id="bulkPlayerDialog">
+  <form id="bulkPlayerForm" method="dialog">
+    <div class="dialog-header">
+      <h3>批量修改球员</h3>
+    </div>
+    <div class="dialog-body">
+      <p class="subtle-copy" id="bulkPlayerSummary">将修改已选球员。未选择的字段保持原值。</p>
+      <div class="form-row">
+        <label for="bulkStatus">状态</label>
+        <select class="select" id="bulkStatus">
+          <option value="keep">保持不变</option>
+          <option value="available">改为可上场</option>
+          <option value="rest">改为轮休</option>
+          <option value="injured">改为伤停</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="bulkBats">打击</label>
+          <select class="select" id="bulkBats">
+            <option value="keep">保持不变</option>
+            <option value="R">右打</option>
+            <option value="L">左打</option>
+            <option value="S">左右开弓</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="bulkThrows">投球</label>
+          <select class="select" id="bulkThrows">
+            <option value="keep">保持不变</option>
+            <option value="R">右投</option>
+            <option value="L">左投</option>
+            <option value="S">左右皆可</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="bulkPositionMode">守位处理</label>
+        <select class="select" id="bulkPositionMode">
+          <option value="keep">保持原守位</option>
+          <option value="append">追加守位</option>
+          <option value="replace">替换为所选守位</option>
+          <option value="remove">移除所选守位</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>守位清单</label>
+        <div class="checkbox-grid" id="bulkPositionChecks"></div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn secondary" id="cancelBulkPlayerDialogBtn" type="button">取消</button>
+      <button class="btn" type="submit">应用修改</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="scenarioDialog">
   <form id="scenarioForm" method="dialog">
     <input type="hidden" id="scenarioMode">
@@ -1545,6 +1647,9 @@ const els = {
   searchInput: document.querySelector("#searchInput"),
   positionFilter: document.querySelector("#positionFilter"),
   statusFilter: document.querySelector("#statusFilter"),
+  batsFilter: document.querySelector("#batsFilter"),
+  throwsFilter: document.querySelector("#throwsFilter"),
+  assignmentFilter: document.querySelector("#assignmentFilter"),
   playerList: document.querySelector("#playerList"),
   field: document.querySelector("#field"),
   defenseStat: document.querySelector("#defenseStat"),
@@ -1564,6 +1669,9 @@ const els = {
   resetBtn: document.querySelector("#resetBtn"),
   helpBtn: document.querySelector("#helpBtn"),
   clearSelectionBtn: document.querySelector("#clearSelectionBtn"),
+  selectFilteredBtn: document.querySelector("#selectFilteredBtn"),
+  bulkEditBtn: document.querySelector("#bulkEditBtn"),
+  bulkDeleteBtn: document.querySelector("#bulkDeleteBtn"),
   newScenarioBtn: document.querySelector("#newScenarioBtn"),
   renameScenarioBtn: document.querySelector("#renameScenarioBtn"),
   duplicateScenarioBtn: document.querySelector("#duplicateScenarioBtn"),
@@ -1579,6 +1687,15 @@ const els = {
   playerStatus: document.querySelector("#playerStatus"),
   positionChecks: document.querySelector("#positionChecks"),
   cancelPlayerDialogBtn: document.querySelector("#cancelPlayerDialogBtn"),
+  bulkPlayerDialog: document.querySelector("#bulkPlayerDialog"),
+  bulkPlayerForm: document.querySelector("#bulkPlayerForm"),
+  bulkPlayerSummary: document.querySelector("#bulkPlayerSummary"),
+  bulkStatus: document.querySelector("#bulkStatus"),
+  bulkBats: document.querySelector("#bulkBats"),
+  bulkThrows: document.querySelector("#bulkThrows"),
+  bulkPositionMode: document.querySelector("#bulkPositionMode"),
+  bulkPositionChecks: document.querySelector("#bulkPositionChecks"),
+  cancelBulkPlayerDialogBtn: document.querySelector("#cancelBulkPlayerDialogBtn"),
   scenarioDialog: document.querySelector("#scenarioDialog"),
   scenarioForm: document.querySelector("#scenarioForm"),
   scenarioMode: document.querySelector("#scenarioMode"),
@@ -1616,6 +1733,8 @@ function init() {
   workspace = loadWorkspace();
   buildPositionFilter();
   buildPositionChecks();
+  buildBulkPositionChecks();
+  syncBulkPositionMode();
   bindEvents();
   render();
   if (!workspace.preferences.helpDismissed) {
@@ -1860,14 +1979,20 @@ function redo() {
 }
 
 function bindEvents() {
-  els.searchInput.addEventListener("input", renderPlayers);
-  els.positionFilter.addEventListener("change", renderPlayers);
-  els.statusFilter.addEventListener("change", renderPlayers);
+  els.searchInput.addEventListener("input", handlePlayerFilterChange);
+  els.positionFilter.addEventListener("change", handlePlayerFilterChange);
+  els.statusFilter.addEventListener("change", handlePlayerFilterChange);
+  els.batsFilter.addEventListener("change", handlePlayerFilterChange);
+  els.throwsFilter.addEventListener("change", handlePlayerFilterChange);
+  els.assignmentFilter.addEventListener("change", handlePlayerFilterChange);
   els.clearSelectionBtn.addEventListener("click", () => {
     selectedIds.clear();
     renderPlayers();
     updateSelectedCount();
   });
+  els.selectFilteredBtn.addEventListener("click", selectFilteredPlayers);
+  els.bulkEditBtn.addEventListener("click", openBulkPlayerDialog);
+  els.bulkDeleteBtn.addEventListener("click", bulkDeletePlayers);
   els.scenarioSelect.addEventListener("change", (event) => {
     setActiveScenario(event.currentTarget.value);
   });
@@ -1896,12 +2021,15 @@ function bindEvents() {
   els.duplicateScenarioBtn.addEventListener("click", duplicateScenario);
   els.deleteScenarioBtn.addEventListener("click", deleteScenario);
   els.cancelPlayerDialogBtn.addEventListener("click", () => els.playerDialog.close());
+  els.cancelBulkPlayerDialogBtn.addEventListener("click", () => els.bulkPlayerDialog.close());
   els.cancelScenarioDialogBtn.addEventListener("click", () => els.scenarioDialog.close());
   els.cancelImportDialogBtn.addEventListener("click", () => {
     pendingImport = null;
     els.importDialog.close();
   });
   els.playerForm.addEventListener("submit", handlePlayerSubmit);
+  els.bulkPlayerForm.addEventListener("submit", handleBulkPlayerSubmit);
+  els.bulkPositionMode.addEventListener("change", syncBulkPositionMode);
   els.scenarioForm.addEventListener("submit", handleScenarioSubmit);
   els.appendImportBtn.addEventListener("click", appendImportedScenario);
   els.replaceImportBtn.addEventListener("click", replaceWorkspaceFromImport);
@@ -1909,6 +2037,11 @@ function bindEvents() {
   els.guidePrevBtn.addEventListener("click", previousGuideStep);
   els.guideNextBtn.addEventListener("click", nextGuideStep);
   window.addEventListener("keydown", handleGlobalKeydown);
+}
+
+function handlePlayerFilterChange() {
+  renderPlayers();
+  updateSelectedCount();
 }
 
 function buildPositionFilter() {
@@ -1922,6 +2055,15 @@ function buildPositionChecks() {
   els.positionChecks.innerHTML = POSITIONS.map((position) => `
     <label class="check-tile">
       <input type="checkbox" name="positions" value="${position.code}">
+      <span>${position.code}</span>
+    </label>
+  `).join("");
+}
+
+function buildBulkPositionChecks() {
+  els.bulkPositionChecks.innerHTML = POSITIONS.map((position) => `
+    <label class="check-tile">
+      <input type="checkbox" name="bulkPositions" value="${position.code}">
       <span>${position.code}</span>
     </label>
   `).join("");
@@ -2190,20 +2332,39 @@ function updateHistoryButtons() {
 }
 
 function updateSelectedCount() {
-  els.selectedCount.textContent = `已选 ${selectedIds.size}`;
+  const selectedCount = getSelectedPlayerIds().length;
+  const filteredCount = getFilteredPlayers().length;
+  els.selectedCount.textContent = `已选 ${selectedCount} / 当前 ${filteredCount}`;
+  els.clearSelectionBtn.disabled = selectedCount === 0;
+  els.selectFilteredBtn.disabled = filteredCount === 0;
+  els.selectFilteredBtn.textContent = filteredCount ? `选择当前筛选 (${filteredCount})` : "选择当前筛选";
+  els.bulkEditBtn.disabled = selectedCount === 0;
+  els.bulkDeleteBtn.disabled = selectedCount === 0;
 }
 
 function getFilteredPlayers() {
   const query = els.searchInput.value.trim().toLowerCase();
   const position = els.positionFilter.value;
   const status = els.statusFilter.value;
+  const bats = els.batsFilter.value;
+  const throws = els.throwsFilter.value;
+  const assignment = els.assignmentFilter.value;
+  const activeScenario = getActiveScenario();
   return workspace.players.filter((player) => {
+    const assignmentState = getPlayerAssignmentState(player.id, activeScenario);
     const matchesSearch = !query
       || player.name.toLowerCase().includes(query)
       || player.number.toLowerCase().includes(query);
     const matchesPosition = position === "all" || player.positions.includes(position);
     const matchesStatus = status === "all" || player.status === status;
-    return matchesSearch && matchesPosition && matchesStatus;
+    const matchesBats = bats === "all" || player.bats === bats;
+    const matchesThrows = throws === "all" || player.throws === throws;
+    const matchesAssignment = assignment === "all"
+      || (assignment === "unassigned" && !assignmentState.defense && !assignmentState.lineup)
+      || (assignment === "defenseAssigned" && assignmentState.defense)
+      || (assignment === "lineupAssigned" && assignmentState.lineup)
+      || (assignment === "fullyAssigned" && assignmentState.defense && assignmentState.lineup);
+    return matchesSearch && matchesPosition && matchesStatus && matchesBats && matchesThrows && matchesAssignment;
   });
 }
 
@@ -2211,6 +2372,41 @@ function reconcileSelectedIds() {
   selectedIds.forEach((id) => {
     if (!getPlayer(id)) {
       selectedIds.delete(id);
+    }
+  });
+}
+
+function getSelectedPlayerIds() {
+  return workspace.players
+    .filter((player) => selectedIds.has(player.id))
+    .map((player) => player.id);
+}
+
+function getPlayerAssignmentState(playerId, scenario = getActiveScenario()) {
+  return {
+    defense: Object.values(scenario.assignments.defense).includes(playerId),
+    lineup: scenario.assignments.lineup.includes(playerId)
+  };
+}
+
+function selectFilteredPlayers() {
+  const players = getFilteredPlayers();
+  if (!players.length) {
+    showToast("当前筛选没有可选球员");
+    return;
+  }
+  players.forEach((player) => selectedIds.add(player.id));
+  renderPlayers();
+  updateSelectedCount();
+  showToast(`已选择当前筛选的 ${players.length} 名球员`);
+}
+
+function syncBulkPositionMode() {
+  const disabled = els.bulkPositionMode.value === "keep";
+  els.bulkPositionChecks.querySelectorAll("input").forEach((checkbox) => {
+    checkbox.disabled = disabled;
+    if (disabled) {
+      checkbox.checked = false;
     }
   });
 }
@@ -2285,8 +2481,7 @@ function playerIdFromDragToken(token) {
 }
 
 function assignSelectedToPosition(position) {
-  if (!selectedIds.size) return;
-  const playerId = Array.from(selectedIds).find((id) => getPlayer(id));
+  const playerId = getSelectedPlayerIds()[0];
   if (!playerId) return;
   assignDefense(position, playerId);
   selectedIds.delete(playerId);
@@ -2295,8 +2490,7 @@ function assignSelectedToPosition(position) {
 }
 
 function assignSelectedToLineup(index) {
-  if (!selectedIds.size) return;
-  const playerId = Array.from(selectedIds).find((id) => getPlayer(id));
+  const playerId = getSelectedPlayerIds()[0];
   if (!playerId) return;
   assignLineup(index, playerId);
   selectedIds.delete(playerId);
@@ -2387,6 +2581,22 @@ function openPlayerDialog(id = null) {
   window.setTimeout(() => els.playerName.focus(), 0);
 }
 
+function openBulkPlayerDialog() {
+  const ids = getSelectedPlayerIds();
+  if (!ids.length) {
+    showToast("请先选择球员");
+    return;
+  }
+  els.bulkPlayerSummary.textContent = `将修改 ${ids.length} 名已选球员。未选择的字段保持原值。`;
+  els.bulkStatus.value = "keep";
+  els.bulkBats.value = "keep";
+  els.bulkThrows.value = "keep";
+  els.bulkPositionMode.value = "keep";
+  syncBulkPositionMode();
+  els.bulkPlayerDialog.showModal();
+  window.setTimeout(() => els.bulkStatus.focus(), 0);
+}
+
 function handlePlayerSubmit(event) {
   event.preventDefault();
   const id = els.playerId.value || createId();
@@ -2418,6 +2628,57 @@ function handlePlayerSubmit(event) {
   els.playerDialog.close();
 }
 
+function handleBulkPlayerSubmit(event) {
+  event.preventDefault();
+  const ids = getSelectedPlayerIds();
+  if (!ids.length) {
+    showToast("没有可批量修改的球员");
+    return;
+  }
+
+  const positionMode = els.bulkPositionMode.value;
+  const nextPositions = Array.from(els.bulkPositionChecks.querySelectorAll("input:checked")).map((checkbox) => checkbox.value);
+  const hasFieldChange = els.bulkStatus.value !== "keep"
+    || els.bulkBats.value !== "keep"
+    || els.bulkThrows.value !== "keep"
+    || positionMode !== "keep";
+  if (!hasFieldChange) {
+    showToast("请至少选择一个批量修改项");
+    return;
+  }
+  if (positionMode !== "keep" && !nextPositions.length) {
+    showToast("请选择至少一个守位");
+    return;
+  }
+
+  commitWorkspace((draft) => {
+    const selectedSet = new Set(ids);
+    draft.players = draft.players.map((player) => {
+      if (!selectedSet.has(player.id)) return player;
+      const updatedPlayer = { ...player };
+      if (els.bulkStatus.value !== "keep") {
+        updatedPlayer.status = els.bulkStatus.value;
+      }
+      if (els.bulkBats.value !== "keep") {
+        updatedPlayer.bats = els.bulkBats.value;
+      }
+      if (els.bulkThrows.value !== "keep") {
+        updatedPlayer.throws = els.bulkThrows.value;
+      }
+      if (positionMode === "append") {
+        updatedPlayer.positions = sanitizePositions([...updatedPlayer.positions, ...nextPositions]);
+      } else if (positionMode === "replace") {
+        updatedPlayer.positions = sanitizePositions(nextPositions);
+      } else if (positionMode === "remove") {
+        updatedPlayer.positions = updatedPlayer.positions.filter((position) => !nextPositions.includes(position));
+      }
+      return updatedPlayer;
+    });
+  }, { message: `已批量修改 ${ids.length} 名球员` });
+
+  els.bulkPlayerDialog.close();
+}
+
 function deletePlayer(id) {
   const player = getPlayer(id);
   if (!player) return;
@@ -2425,19 +2686,40 @@ function deletePlayer(id) {
   if (!confirmed) return;
 
   commitWorkspace((draft) => {
-    draft.players = draft.players.filter((item) => item.id !== id);
-    draft.scenarios.forEach((scenario) => {
-      POSITION_CODES.forEach((position) => {
-        if (scenario.assignments.defense[position] === id) {
-          scenario.assignments.defense[position] = null;
-        }
-      });
-      scenario.assignments.lineup = scenario.assignments.lineup.map((playerId) => playerId === id ? null : playerId);
-      scenario.updatedAt = new Date().toISOString();
-    });
+    removePlayersFromDraft(draft, [id]);
   }, { message: "球员已删除" });
 
   selectedIds.delete(id);
+}
+
+function bulkDeletePlayers() {
+  const ids = getSelectedPlayerIds();
+  if (!ids.length) {
+    showToast("请先选择球员");
+    return;
+  }
+  const confirmed = window.confirm(`删除已选的 ${ids.length} 名球员？相关守位和棒次会一并清空。`);
+  if (!confirmed) return;
+
+  commitWorkspace((draft) => {
+    removePlayersFromDraft(draft, ids);
+  }, { message: `已删除 ${ids.length} 名球员` });
+
+  selectedIds.clear();
+}
+
+function removePlayersFromDraft(draft, ids) {
+  const idSet = new Set(ids);
+  draft.players = draft.players.filter((item) => !idSet.has(item.id));
+  draft.scenarios.forEach((scenario) => {
+    POSITION_CODES.forEach((position) => {
+      if (idSet.has(scenario.assignments.defense[position])) {
+        scenario.assignments.defense[position] = null;
+      }
+    });
+    scenario.assignments.lineup = scenario.assignments.lineup.map((playerId) => idSet.has(playerId) ? null : playerId);
+    scenario.updatedAt = new Date().toISOString();
+  });
 }
 
 function openScenarioDialog(mode) {
