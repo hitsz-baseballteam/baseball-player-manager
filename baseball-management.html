@@ -1,0 +1,2920 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>棒球球员 Management</title>
+<style>
+:root {
+  --ink: #15201a;
+  --muted: #667066;
+  --paper: #f7f4eb;
+  --panel: rgba(255, 253, 247, .94);
+  --line: #d9d1bd;
+  --line-strong: #c5b79a;
+  --green: #1f6d43;
+  --green-deep: #10462e;
+  --green-soft: #c8dfbd;
+  --clay: #bd5b32;
+  --clay-deep: #8d3e23;
+  --chalk: #fff8e6;
+  --navy: #173857;
+  --gold: #e2b24d;
+  --red: #b8402c;
+  --red-soft: #fff3ef;
+  --blue: #2b6f92;
+  --amber: #9a6a15;
+  --amber-soft: #fff5d8;
+  --shadow: 0 14px 36px rgba(30, 40, 28, .14);
+  --shadow-heavy: 0 24px 70px rgba(18, 30, 24, .28);
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--ink);
+  font-family: "Avenir Next", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:
+    linear-gradient(90deg, rgba(21, 32, 26, .04) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(180deg, #eff3e7 0%, #f8f1df 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(0, 1.1fr);
+  gap: 14px;
+  max-width: 1540px;
+  margin: 0 auto 14px;
+  align-items: start;
+}
+
+.brand {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.brand p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.status-strip,
+.panel-title,
+.scenario-row,
+.scenario-actions,
+.toolbar-grid,
+.toolbar-row,
+.filters,
+.player-actions,
+.inline-actions,
+.selected-meta,
+.position-pills,
+.header-tools,
+.warning-summary,
+.guide-actions,
+.help-actions,
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-strip {
+  gap: 10px;
+}
+
+.page-panel {
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.panel-header {
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+.panel-title {
+  justify-content: space-between;
+}
+
+.panel-title h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.count-chip,
+.status-chip,
+.small-chip,
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #faf7ed;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.small-chip.active {
+  border-color: rgba(31, 109, 67, .32);
+  background: #eff7ea;
+  color: var(--green-deep);
+}
+
+.warning-summary .small-chip {
+  min-height: 22px;
+}
+
+.warning-summary .critical-chip {
+  border-color: rgba(184, 64, 44, .28);
+  background: #fff2ee;
+  color: #8b3126;
+}
+
+.warning-summary .advisory-chip {
+  border-color: rgba(154, 106, 21, .28);
+  background: #fff7e5;
+  color: #875d0f;
+}
+
+.toolbar-panel {
+  grid-column: 2;
+}
+
+.scenario-hub {
+  grid-column: 1 / -1;
+}
+
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 9px 18px rgba(21, 32, 26, .16);
+}
+
+.btn.secondary {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.btn.warn {
+  background: var(--red);
+}
+
+.btn.success {
+  background: var(--green);
+}
+
+.btn.icon {
+  min-width: 34px;
+  width: 34px;
+  padding: 0;
+}
+
+.ghost-btn,
+.link-btn {
+  background: transparent;
+  color: var(--blue);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.link-btn.danger {
+  color: var(--red);
+}
+
+.scenario-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+  .scenario-actions {
+    justify-content: flex-end;
+  }
+
+.scenario-meta {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.scenario-meta strong {
+  font-size: 15px;
+}
+
+.scenario-meta p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.scenario-meta .muted-line {
+  font-size: 12px;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffef9;
+  color: var(--ink);
+  outline: none;
+}
+
+.textarea {
+  min-height: 86px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(31, 109, 67, .14);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 330px minmax(460px, 1fr) 360px;
+  gap: 14px;
+  max-width: 1540px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.filters {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 108px 108px;
+}
+
+.selected-meta {
+  margin-top: 10px;
+  justify-content: space-between;
+}
+
+.player-list {
+  display: grid;
+  gap: 9px;
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.player-card {
+  display: grid;
+  grid-template-columns: 26px 44px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 78px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf7;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.player-card:hover,
+.player-card.dragging {
+  transform: translateY(-1px);
+  border-color: rgba(31, 109, 67, .55);
+  box-shadow: 0 10px 22px rgba(31, 109, 67, .12);
+}
+
+.player-card.selected {
+  border-color: var(--green);
+  background: #f3faef;
+}
+
+.player-select {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.number-badge {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.player-main {
+  min-width: 0;
+}
+
+.player-name-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.player-name,
+.lineup-name,
+.zone-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.player-meta,
+.lineup-meta,
+.empty-label,
+.subtle-copy {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.position-pills {
+  margin-top: 6px;
+  gap: 5px;
+}
+
+.position-pill {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef5e6;
+  color: var(--green-deep);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.assignment-pill {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f0ece0;
+  color: #5c5a52;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.status-chip.available {
+  color: var(--green-deep);
+  background: #eff7ea;
+}
+
+.status-chip.rest {
+  color: #765818;
+  background: #fff3cb;
+}
+
+.status-chip.injured {
+  color: #8b2d24;
+  background: #ffe4dc;
+}
+
+.field-panel .panel-body {
+  padding: 12px;
+}
+
+.field-wrap {
+  position: relative;
+  aspect-ratio: 1 / .86;
+  min-height: 500px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid #0f3c29;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.16) 0 2px, transparent 3px) 0 0 / 26px 26px,
+    radial-gradient(circle at 50% 22%, #3f9b56 0%, #267f48 39%, #155936 75%, #0d3a27 100%);
+  box-shadow: inset 0 0 0 7px rgba(255, 255, 255, .08), var(--shadow);
+}
+
+.outfield-stripe {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-conic-gradient(from 45deg at 50% 72%, rgba(255,255,255,.08) 0deg 5deg, transparent 5deg 10deg);
+  opacity: .55;
+}
+
+.infield-dirt {
+  position: absolute;
+  left: 50%;
+  top: 51%;
+  width: 43%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 22%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.16), transparent 36%),
+    linear-gradient(135deg, var(--clay), var(--clay-deep));
+  border: 3px solid rgba(255, 248, 230, .58);
+  box-shadow: 0 18px 42px rgba(71, 37, 20, .25);
+}
+
+.mound {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 92px;
+  height: 54px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #a84f30;
+  border: 3px solid rgba(255, 248, 230, .65);
+  box-shadow: inset 0 6px 16px rgba(67, 28, 14, .18);
+}
+
+.baseline {
+  position: absolute;
+  left: 50%;
+  top: 68%;
+  width: 31%;
+  height: 3px;
+  background: rgba(255, 248, 230, .88);
+  transform-origin: left center;
+}
+
+.baseline.first {
+  transform: rotate(-45deg);
+}
+
+.baseline.third {
+  transform: rotate(-135deg);
+}
+
+.base {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--chalk);
+  border: 1px solid rgba(21, 32, 26, .26);
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: 0 3px 9px rgba(21, 32, 26, .18);
+}
+
+.base.home {
+  left: 50%;
+  top: 79%;
+  clip-path: polygon(50% 0, 100% 38%, 80% 100%, 20% 100%, 0 38%);
+  transform: translate(-50%, -50%);
+}
+
+.base.first { left: 65%; top: 64%; }
+.base.second { left: 50%; top: 48%; }
+.base.third { left: 35%; top: 64%; }
+
+.foul-line {
+  position: absolute;
+  left: 50%;
+  top: 79%;
+  width: 48%;
+  height: 2px;
+  background: rgba(255, 248, 230, .74);
+  transform-origin: left center;
+}
+
+.foul-line.left {
+  transform: rotate(-139deg);
+}
+
+.foul-line.right {
+  transform: rotate(-41deg);
+}
+
+.field-zone {
+  position: absolute;
+  width: 118px;
+  min-height: 74px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  padding: 8px;
+  border: 2px solid rgba(255, 248, 230, .76);
+  border-radius: var(--radius);
+  background: rgba(255, 253, 247, .82);
+  box-shadow: 0 12px 26px rgba(14, 43, 30, .2);
+  text-align: center;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.field-zone:hover,
+.field-zone.drop-target {
+  transform: translate(-50%, -50%) scale(1.03);
+  background: #fffdf7;
+  border-color: var(--gold);
+}
+
+.field-zone.filled {
+  border-color: rgba(23, 56, 87, .55);
+}
+
+.zone-code {
+  min-width: 34px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.zone-player {
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+}
+
+.zone-number {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.clear-zone {
+  display: none;
+  background: rgba(184, 64, 44, .1);
+  color: var(--red);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.field-zone.filled .clear-zone {
+  display: inline-flex;
+}
+
+.field-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.stat-tile {
+  min-height: 62px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf7;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.stat-value {
+  margin-top: 4px;
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.lineup-list {
+  display: grid;
+  gap: 8px;
+}
+
+.lineup-slot {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf7;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.lineup-slot.dragging,
+.lineup-slot.drop-target {
+  transform: translateY(-1px);
+  border-color: var(--green);
+  background: #f2faef;
+}
+
+.bat-order {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--clay);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.lineup-player {
+  min-width: 0;
+}
+
+.lineup-tools {
+  display: flex;
+  gap: 5px;
+}
+
+.warnings {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.warning-group {
+  display: grid;
+  gap: 6px;
+}
+
+.warning-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+}
+
+.warning-item {
+  border-radius: var(--radius);
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.warning-item.critical {
+  border: 1px solid rgba(184, 64, 44, .28);
+  border-left: 5px solid var(--red);
+  background: var(--red-soft);
+  color: #7f3026;
+}
+
+.warning-item.advisory {
+  border: 1px solid rgba(154, 106, 21, .26);
+  border-left: 5px solid var(--amber);
+  background: var(--amber-soft);
+  color: #7b560e;
+}
+
+.ok-item {
+  border: 1px solid rgba(31, 109, 67, .24);
+  border-left: 5px solid var(--green);
+  border-radius: var(--radius);
+  background: #f1faed;
+  padding: 9px 10px;
+  color: var(--green-deep);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.empty-state {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+  background: #fffdf7;
+}
+
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 16, .34);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 30;
+}
+
+.drawer-scrim.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.help-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(420px, 100vw);
+  height: 100vh;
+  padding: 18px;
+  background: rgba(255, 252, 244, .98);
+  border-left: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-heavy);
+  transform: translateX(100%);
+  transition: transform .2s ease;
+  z-index: 31;
+  overflow: auto;
+}
+
+.help-drawer.open {
+  transform: translateX(0);
+}
+
+.help-drawer h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.help-drawer p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.help-block {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.help-block:first-of-type {
+  border-top: 0;
+}
+
+.help-block h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.help-actions {
+  margin-top: 14px;
+}
+
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 16, .58);
+  z-index: 40;
+  display: none;
+}
+
+.guide-overlay.open {
+  display: block;
+}
+
+.guide-card {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: min(360px, calc(100vw - 28px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: #fffef9;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-heavy);
+  z-index: 42;
+  display: none;
+}
+
+.guide-card.open {
+  display: block;
+}
+
+.guide-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.guide-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.guide-progress {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.guide-actions {
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.guide-focus {
+  position: relative;
+  z-index: 41;
+  scroll-margin-top: 14px;
+  box-shadow: 0 0 0 3px rgba(226, 178, 77, .72), var(--shadow-heavy);
+}
+
+dialog {
+  width: min(560px, calc(100vw - 28px));
+  border: 0;
+  border-radius: var(--radius);
+  padding: 0;
+  color: var(--ink);
+  background: var(--panel);
+  box-shadow: var(--shadow-heavy);
+}
+
+dialog::backdrop {
+  background: rgba(10, 20, 16, .48);
+}
+
+.dialog-header,
+.dialog-body,
+.dialog-footer {
+  padding: 16px;
+}
+
+.dialog-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.dialog-body {
+  display: grid;
+  gap: 12px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  gap: 10px;
+}
+
+.form-row {
+  display: grid;
+  gap: 6px;
+}
+
+.form-row label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.check-tile {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.check-tile input {
+  accent-color: var(--green);
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.preview-tile {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf7;
+}
+
+.preview-tile span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.preview-tile strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.preview-list {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf7;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%) translateY(16px);
+  min-width: 260px;
+  max-width: calc(100vw - 28px);
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #fff;
+  font-weight: 900;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+  z-index: 50;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 1260px) {
+  .toolbar-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .workspace {
+    grid-template-columns: 310px minmax(420px, 1fr);
+  }
+
+  .lineup-panel {
+    grid-column: 1 / -1;
+  }
+
+  .lineup-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-panel,
+  .scenario-hub {
+    grid-column: auto;
+  }
+
+  .toolbar-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .scenario-row {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    padding: 10px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    width: 100%;
+    max-width: calc(100vw - 20px);
+  }
+
+  .brand h1 {
+    font-size: 27px;
+  }
+
+  .toolbar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scenario-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .scenario-actions .btn {
+    width: 100%;
+  }
+
+  .player-list {
+    max-height: none;
+  }
+
+  .field-wrap {
+    min-height: 430px;
+  }
+
+  .field-zone {
+    width: 94px;
+    min-height: 66px;
+    padding: 6px;
+  }
+
+  .field-status,
+  .lineup-list,
+  .filters,
+  .preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkbox-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .field-wrap {
+    min-height: 360px;
+  }
+
+  .field-zone {
+    width: 82px;
+    min-height: 58px;
+  }
+
+  .zone-code {
+    min-width: 28px;
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+
+  .player-card {
+    grid-template-columns: 24px 38px minmax(0, 1fr);
+  }
+
+  .number-badge {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .toolbar-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-card {
+    right: 14px;
+    left: 14px;
+    width: auto;
+  }
+}
+</style>
+</head>
+<body>
+<main class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <h1>棒球球员 Management</h1>
+      <p id="saveStatus">本地工作区已准备</p>
+      <div class="status-strip">
+        <span class="small-chip" id="workspaceVersionChip">Workspace v2</span>
+        <span class="small-chip" id="scenarioCountChip">1 套方案</span>
+        <span class="small-chip" id="historyChip">撤销 0 / 重做 0</span>
+      </div>
+    </div>
+
+    <section class="page-panel toolbar-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>工作区操作</h2>
+          <span class="count-chip" id="workspacePlayerChip">12 名球员</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="toolbar-grid">
+          <button class="btn" id="addPlayerBtn" type="button">新增球员</button>
+          <button class="btn success" id="autoAssignBtn" type="button">自动排阵</button>
+          <button class="btn secondary" id="undoBtn" type="button">撤销</button>
+          <button class="btn secondary" id="redoBtn" type="button">重做</button>
+          <button class="btn secondary" id="exportWorkspaceBtn" type="button">导出工作区</button>
+          <button class="btn secondary" id="exportScenarioBtn" type="button">导出当前方案</button>
+          <button class="btn secondary" id="importBtn" type="button">导入 JSON</button>
+          <button class="btn secondary" id="clearAssignmentsBtn" type="button">清空阵容</button>
+          <button class="btn warn" id="resetBtn" type="button">重置示例</button>
+          <button class="btn secondary" id="helpBtn" type="button">帮助</button>
+        </div>
+        <input id="importInput" type="file" accept=".json,application/json" hidden>
+      </div>
+    </section>
+
+    <section class="panel scenario-hub" id="scenarioPanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>阵容方案</h2>
+          <span class="count-chip" id="scenarioCountInline">1 套</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="scenario-row">
+          <select class="select" id="scenarioSelect" aria-label="切换阵容方案"></select>
+          <div class="scenario-actions">
+            <button class="btn secondary" id="newScenarioBtn" type="button">新建方案</button>
+            <button class="btn secondary" id="renameScenarioBtn" type="button">编辑方案</button>
+            <button class="btn secondary" id="duplicateScenarioBtn" type="button">复制方案</button>
+            <button class="btn secondary" id="deleteScenarioBtn" type="button">删除方案</button>
+          </div>
+        </div>
+        <div class="scenario-meta">
+          <strong id="scenarioNameDisplay">默认方案</strong>
+          <p id="scenarioNoteDisplay">保存不同比赛构想，对左投、守备优先和常规先发可以分别留一套。</p>
+          <p class="muted-line" id="scenarioTimeDisplay">更新时间</p>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <section class="workspace" aria-label="棒球阵容管理工作台">
+    <aside class="panel roster-panel" id="rosterPanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>可用球员</h2>
+          <span class="count-chip" id="playerCount">0 人</span>
+        </div>
+        <div class="filters">
+          <input class="input" id="searchInput" type="search" placeholder="搜索姓名 / 背号">
+          <select class="select" id="positionFilter" aria-label="按守位筛选"></select>
+          <select class="select" id="statusFilter" aria-label="按状态筛选">
+            <option value="all">全部状态</option>
+            <option value="available">可上场</option>
+            <option value="rest">轮休</option>
+            <option value="injured">伤停</option>
+          </select>
+        </div>
+        <div class="selected-meta">
+          <span class="small-chip" id="selectedCount">已选 0</span>
+          <button class="ghost-btn" id="clearSelectionBtn" type="button">取消选择</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="player-list" id="playerList" aria-live="polite"></div>
+      </div>
+    </aside>
+
+    <section class="panel field-panel" id="fieldPanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>守备球场</h2>
+          <div class="header-tools">
+            <span class="small-chip" id="activeScenarioBadge">当前方案</span>
+            <span class="count-chip" id="defenseCount">0 / 9</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="field-wrap" id="field" aria-label="可视化棒球场"></div>
+        <div class="field-status">
+          <div class="stat-tile">
+            <div class="stat-label">守位完成</div>
+            <div class="stat-value" id="defenseStat">0</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">棒次完成</div>
+            <div class="stat-value" id="lineupStat">0</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">可上场</div>
+            <div class="stat-value" id="availableStat">0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel lineup-panel" id="lineupPanel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>棒次分配</h2>
+          <div class="header-tools">
+            <span class="count-chip" id="lineupCount">0 / 9</span>
+          </div>
+        </div>
+        <div class="warning-summary" id="warningSummary"></div>
+      </div>
+      <div class="panel-body">
+        <div class="lineup-list" id="lineupList" aria-live="polite"></div>
+        <div class="warnings" id="warnings"></div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<div class="drawer-scrim" id="drawerScrim"></div>
+<aside class="help-drawer" id="helpDrawer" aria-hidden="true">
+  <div class="panel-title">
+    <h2>使用指引 / 帮助</h2>
+    <button class="btn icon secondary" id="closeHelpBtn" type="button" aria-label="关闭帮助">×</button>
+  </div>
+  <p>这个工具现在支持多套阵容方案、工作区备份、单方案分享、自动排阵初稿、撤销重做和分级提醒。</p>
+  <div class="help-block">
+    <h3>基本流程</h3>
+    <p>先从球员池里搜索或勾选球员，再把他们分配到守备位置和棒次。拖拽和“勾选后点击”两条路径都保留。</p>
+  </div>
+  <div class="help-block">
+    <h3>方案管理</h3>
+    <p>同一批球员可以保存多套命名方案。适合把常规先发、守备优先、对左投和临时调整分别留档。</p>
+  </div>
+  <div class="help-block">
+    <h3>导入导出</h3>
+    <p>“导出工作区”会备份全部球员和全部方案；“导出当前方案”只分享当前阵容和它实际引用到的球员。</p>
+  </div>
+  <div class="help-block">
+    <h3>自动排阵与提醒</h3>
+    <p>自动排阵会优先使用可上场球员和主守位生成初稿。强提醒表示阵容不完整或存在明显风险，建议提醒表示阵容仍可用但值得复查。</p>
+  </div>
+  <div class="help-actions">
+    <button class="btn secondary" id="replayGuideBtn" type="button">重新查看新手引导</button>
+  </div>
+</aside>
+
+<div class="guide-overlay" id="guideOverlay" aria-hidden="true"></div>
+<div class="guide-card" id="guideCard" aria-hidden="true">
+  <div class="guide-progress" id="guideProgress">步骤 1 / 5</div>
+  <h3 id="guideTitle">方案区</h3>
+  <p id="guideBody">这里管理多套阵容方案。切换方案不会改动球员池。</p>
+  <div class="guide-actions">
+    <button class="btn secondary" id="guideSkipBtn" type="button">关闭引导</button>
+    <div class="inline-actions">
+      <button class="btn secondary" id="guidePrevBtn" type="button">上一步</button>
+      <button class="btn" id="guideNextBtn" type="button">下一步</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="playerDialog">
+  <form id="playerForm" method="dialog">
+    <input type="hidden" id="playerId">
+    <div class="dialog-header">
+      <h3 id="dialogTitle">新增球员</h3>
+    </div>
+    <div class="dialog-body">
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="playerName">姓名</label>
+          <input class="input" id="playerName" required maxlength="28">
+        </div>
+        <div class="form-row">
+          <label for="playerNumber">背号</label>
+          <input class="input" id="playerNumber" required maxlength="3" inputmode="numeric">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="playerBats">打击</label>
+          <select class="select" id="playerBats">
+            <option value="R">右打</option>
+            <option value="L">左打</option>
+            <option value="S">左右开弓</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="playerThrows">投球</label>
+          <select class="select" id="playerThrows">
+            <option value="R">右投</option>
+            <option value="L">左投</option>
+            <option value="S">左右皆可</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="playerStatus">状态</label>
+        <select class="select" id="playerStatus">
+          <option value="available">可上场</option>
+          <option value="rest">轮休</option>
+          <option value="injured">伤停</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>可守位置</label>
+        <div class="checkbox-grid" id="positionChecks"></div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn secondary" id="cancelPlayerDialogBtn" type="button">取消</button>
+      <button class="btn" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="scenarioDialog">
+  <form id="scenarioForm" method="dialog">
+    <input type="hidden" id="scenarioMode">
+    <div class="dialog-header">
+      <h3 id="scenarioDialogTitle">新建方案</h3>
+    </div>
+    <div class="dialog-body">
+      <div class="form-row">
+        <label for="scenarioNameInput">方案名称</label>
+        <input class="input" id="scenarioNameInput" maxlength="24" required>
+      </div>
+      <div class="form-row">
+        <label for="scenarioNoteInput">方案说明</label>
+        <textarea class="textarea" id="scenarioNoteInput" maxlength="120" placeholder="例如：对左投，前两棒提速。"></textarea>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn secondary" id="cancelScenarioDialogBtn" type="button">取消</button>
+      <button class="btn" type="submit">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="importDialog">
+  <form id="importForm" method="dialog">
+    <div class="dialog-header">
+      <h3>导入预览</h3>
+    </div>
+    <div class="dialog-body">
+      <p class="subtle-copy" id="importSummary">正在准备导入内容。</p>
+      <div class="preview-grid">
+        <div class="preview-tile">
+          <span>类型</span>
+          <strong id="importTypeValue">-</strong>
+        </div>
+        <div class="preview-tile">
+          <span>方案数</span>
+          <strong id="importScenarioCountValue">-</strong>
+        </div>
+        <div class="preview-tile">
+          <span>球员数</span>
+          <strong id="importPlayerCountValue">-</strong>
+        </div>
+      </div>
+      <div class="preview-list" id="importNameList"></div>
+    </div>
+    <div class="dialog-footer" id="importDialogFooter">
+      <button class="btn secondary" id="cancelImportDialogBtn" type="button">取消</button>
+      <button class="btn secondary" id="appendImportBtn" type="button">追加为新方案</button>
+      <button class="btn warn" id="replaceImportBtn" type="button">替换当前工作区</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const STORAGE_KEY_V2 = "baseball-management:v2";
+const STORAGE_KEY_V1 = "baseball-management:v1";
+const HISTORY_LIMIT = 30;
+const POSITIONS = [
+  { code: "P", label: "投手", x: 50, y: 55 },
+  { code: "C", label: "捕手", x: 50, y: 88 },
+  { code: "1B", label: "一垒", x: 68, y: 62 },
+  { code: "2B", label: "二垒", x: 59, y: 44 },
+  { code: "3B", label: "三垒", x: 32, y: 62 },
+  { code: "SS", label: "游击", x: 41, y: 45 },
+  { code: "LF", label: "左外", x: 23, y: 25 },
+  { code: "CF", label: "中外", x: 50, y: 16 },
+  { code: "RF", label: "右外", x: 77, y: 25 }
+];
+const POSITION_CODES = POSITIONS.map((position) => position.code);
+const DEFENSE_PRIORITY = ["P", "C", "SS", "2B", "3B", "CF", "1B", "LF", "RF"];
+const STATUS_LABELS = {
+  available: "可上场",
+  rest: "轮休",
+  injured: "伤停"
+};
+const HAND_LABELS = {
+  R: "右",
+  L: "左",
+  S: "双"
+};
+const GUIDE_STEPS = [
+  { target: "scenarioPanel", title: "方案区", body: "这里管理多套阵容方案。你可以保存常规先发、守备优先或对左投等不同方案。" },
+  { target: "rosterPanel", title: "球员池", body: "搜索、筛选、勾选或拖拽球员。编辑球员不会只影响当前方案，而是影响整个工作区。" },
+  { target: "fieldPanel", title: "守备球场", body: "把球员拖到守位，或者先勾选球员再点守位。自动排阵也会直接覆盖当前方案的守位分配。" },
+  { target: "lineupPanel", title: "棒次与提醒", body: "棒次支持拖拽排序。下方提醒区分强提醒和建议提醒，先处理强提醒再看建议提醒。" },
+  { target: "helpBtn", title: "帮助入口", body: "后续忘记操作逻辑时，右上角帮助抽屉可以重新查看流程、导入导出差异和新手引导。" }
+];
+const DEFAULT_PLAYERS = [
+  { id: "p-01", name: "陈浩宇", number: "18", throws: "R", bats: "R", positions: ["P", "1B"], status: "available" },
+  { id: "p-02", name: "林子昂", number: "2", throws: "R", bats: "L", positions: ["C", "3B"], status: "available" },
+  { id: "p-03", name: "王嘉诚", number: "7", throws: "R", bats: "S", positions: ["SS", "2B"], status: "available" },
+  { id: "p-04", name: "赵铭", number: "11", throws: "L", bats: "L", positions: ["1B", "RF"], status: "available" },
+  { id: "p-05", name: "周亦凡", number: "23", throws: "R", bats: "R", positions: ["CF", "LF"], status: "available" },
+  { id: "p-06", name: "许天泽", number: "5", throws: "R", bats: "R", positions: ["3B", "SS"], status: "available" },
+  { id: "p-07", name: "黄景澄", number: "9", throws: "L", bats: "L", positions: ["LF", "CF"], status: "available" },
+  { id: "p-08", name: "李沐阳", number: "16", throws: "R", bats: "R", positions: ["RF", "P"], status: "available" },
+  { id: "p-09", name: "郑一诺", number: "33", throws: "R", bats: "S", positions: ["2B", "SS"], status: "available" },
+  { id: "p-10", name: "孙柏川", number: "12", throws: "R", bats: "L", positions: ["C", "1B"], status: "rest" },
+  { id: "p-11", name: "唐睿", number: "27", throws: "L", bats: "L", positions: ["P", "CF"], status: "available" },
+  { id: "p-12", name: "马启航", number: "44", throws: "R", bats: "R", positions: ["3B", "LF"], status: "injured" }
+];
+
+let workspace = createDefaultWorkspace(false);
+let historyState = {
+  undo: [],
+  redo: []
+};
+let pendingImport = null;
+let selectedIds = new Set();
+let draggedElement = null;
+let toastTimer = null;
+let guideStep = 0;
+let helpOpen = false;
+
+const els = {
+  saveStatus: document.querySelector("#saveStatus"),
+  workspaceVersionChip: document.querySelector("#workspaceVersionChip"),
+  scenarioCountChip: document.querySelector("#scenarioCountChip"),
+  historyChip: document.querySelector("#historyChip"),
+  workspacePlayerChip: document.querySelector("#workspacePlayerChip"),
+  activeScenarioBadge: document.querySelector("#activeScenarioBadge"),
+  playerCount: document.querySelector("#playerCount"),
+  defenseCount: document.querySelector("#defenseCount"),
+  lineupCount: document.querySelector("#lineupCount"),
+  selectedCount: document.querySelector("#selectedCount"),
+  scenarioCountInline: document.querySelector("#scenarioCountInline"),
+  scenarioSelect: document.querySelector("#scenarioSelect"),
+  scenarioNameDisplay: document.querySelector("#scenarioNameDisplay"),
+  scenarioNoteDisplay: document.querySelector("#scenarioNoteDisplay"),
+  scenarioTimeDisplay: document.querySelector("#scenarioTimeDisplay"),
+  warningSummary: document.querySelector("#warningSummary"),
+  searchInput: document.querySelector("#searchInput"),
+  positionFilter: document.querySelector("#positionFilter"),
+  statusFilter: document.querySelector("#statusFilter"),
+  playerList: document.querySelector("#playerList"),
+  field: document.querySelector("#field"),
+  defenseStat: document.querySelector("#defenseStat"),
+  lineupStat: document.querySelector("#lineupStat"),
+  availableStat: document.querySelector("#availableStat"),
+  lineupList: document.querySelector("#lineupList"),
+  warnings: document.querySelector("#warnings"),
+  addPlayerBtn: document.querySelector("#addPlayerBtn"),
+  autoAssignBtn: document.querySelector("#autoAssignBtn"),
+  undoBtn: document.querySelector("#undoBtn"),
+  redoBtn: document.querySelector("#redoBtn"),
+  exportWorkspaceBtn: document.querySelector("#exportWorkspaceBtn"),
+  exportScenarioBtn: document.querySelector("#exportScenarioBtn"),
+  importBtn: document.querySelector("#importBtn"),
+  importInput: document.querySelector("#importInput"),
+  clearAssignmentsBtn: document.querySelector("#clearAssignmentsBtn"),
+  resetBtn: document.querySelector("#resetBtn"),
+  helpBtn: document.querySelector("#helpBtn"),
+  clearSelectionBtn: document.querySelector("#clearSelectionBtn"),
+  newScenarioBtn: document.querySelector("#newScenarioBtn"),
+  renameScenarioBtn: document.querySelector("#renameScenarioBtn"),
+  duplicateScenarioBtn: document.querySelector("#duplicateScenarioBtn"),
+  deleteScenarioBtn: document.querySelector("#deleteScenarioBtn"),
+  playerDialog: document.querySelector("#playerDialog"),
+  playerForm: document.querySelector("#playerForm"),
+  dialogTitle: document.querySelector("#dialogTitle"),
+  playerId: document.querySelector("#playerId"),
+  playerName: document.querySelector("#playerName"),
+  playerNumber: document.querySelector("#playerNumber"),
+  playerBats: document.querySelector("#playerBats"),
+  playerThrows: document.querySelector("#playerThrows"),
+  playerStatus: document.querySelector("#playerStatus"),
+  positionChecks: document.querySelector("#positionChecks"),
+  cancelPlayerDialogBtn: document.querySelector("#cancelPlayerDialogBtn"),
+  scenarioDialog: document.querySelector("#scenarioDialog"),
+  scenarioForm: document.querySelector("#scenarioForm"),
+  scenarioMode: document.querySelector("#scenarioMode"),
+  scenarioDialogTitle: document.querySelector("#scenarioDialogTitle"),
+  scenarioNameInput: document.querySelector("#scenarioNameInput"),
+  scenarioNoteInput: document.querySelector("#scenarioNoteInput"),
+  cancelScenarioDialogBtn: document.querySelector("#cancelScenarioDialogBtn"),
+  importDialog: document.querySelector("#importDialog"),
+  importSummary: document.querySelector("#importSummary"),
+  importTypeValue: document.querySelector("#importTypeValue"),
+  importScenarioCountValue: document.querySelector("#importScenarioCountValue"),
+  importPlayerCountValue: document.querySelector("#importPlayerCountValue"),
+  importNameList: document.querySelector("#importNameList"),
+  appendImportBtn: document.querySelector("#appendImportBtn"),
+  replaceImportBtn: document.querySelector("#replaceImportBtn"),
+  cancelImportDialogBtn: document.querySelector("#cancelImportDialogBtn"),
+  drawerScrim: document.querySelector("#drawerScrim"),
+  helpDrawer: document.querySelector("#helpDrawer"),
+  closeHelpBtn: document.querySelector("#closeHelpBtn"),
+  replayGuideBtn: document.querySelector("#replayGuideBtn"),
+  guideOverlay: document.querySelector("#guideOverlay"),
+  guideCard: document.querySelector("#guideCard"),
+  guideProgress: document.querySelector("#guideProgress"),
+  guideTitle: document.querySelector("#guideTitle"),
+  guideBody: document.querySelector("#guideBody"),
+  guideSkipBtn: document.querySelector("#guideSkipBtn"),
+  guidePrevBtn: document.querySelector("#guidePrevBtn"),
+  guideNextBtn: document.querySelector("#guideNextBtn"),
+  toast: document.querySelector("#toast")
+};
+
+init();
+
+function init() {
+  workspace = loadWorkspace();
+  buildPositionFilter();
+  buildPositionChecks();
+  bindEvents();
+  render();
+  if (!workspace.preferences.helpDismissed) {
+    guideStep = 0;
+  }
+}
+
+function createEmptyAssignments() {
+  return {
+    defense: Object.fromEntries(POSITIONS.map((position) => [position.code, null])),
+    lineup: Array(9).fill(null)
+  };
+}
+
+function createScenario(name, note = "", assignments = createEmptyAssignments()) {
+  const now = new Date().toISOString();
+  return {
+    id: createId(),
+    name,
+    note,
+    assignments,
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function createDefaultWorkspace(helpDismissed) {
+  const scenario = createScenario("默认方案", "常规先发方案", createEmptyAssignments());
+  return {
+    version: 2,
+    players: structuredClone(DEFAULT_PLAYERS),
+    scenarios: [scenario],
+    activeScenarioId: scenario.id,
+    preferences: {
+      helpDismissed
+    }
+  };
+}
+
+function loadWorkspace() {
+  const savedV2 = localStorage.getItem(STORAGE_KEY_V2);
+  if (savedV2) {
+    try {
+      return sanitizeWorkspace(JSON.parse(savedV2));
+    } catch {
+      return createDefaultWorkspace(false);
+    }
+  }
+
+  const savedV1 = localStorage.getItem(STORAGE_KEY_V1);
+  if (savedV1) {
+    try {
+      const migrated = migrateLegacyState(JSON.parse(savedV1));
+      persistWorkspace(migrated);
+      return migrated;
+    } catch {
+      return createDefaultWorkspace(false);
+    }
+  }
+
+  return createDefaultWorkspace(false);
+}
+
+function migrateLegacyState(legacyState) {
+  const players = sanitizePlayers(Array.isArray(legacyState?.players) ? legacyState.players : []);
+  const assignments = sanitizeAssignments(legacyState?.assignments, new Set(players.map((player) => player.id)));
+  const scenario = createScenario("默认方案", "由 v1 数据迁移", assignments);
+  return sanitizeWorkspace({
+    version: 2,
+    players,
+    scenarios: [scenario],
+    activeScenarioId: scenario.id,
+    preferences: {
+      helpDismissed: false
+    }
+  });
+}
+
+function sanitizeWorkspace(value) {
+  const fallback = createDefaultWorkspace(false);
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const players = sanitizePlayers(Array.isArray(value.players) ? value.players : []);
+  const validIds = new Set(players.map((player) => player.id));
+  const scenariosInput = Array.isArray(value.scenarios) ? value.scenarios : [];
+  const scenarios = scenariosInput
+    .map((scenario) => sanitizeScenario(scenario, validIds))
+    .filter(Boolean);
+
+  if (!scenarios.length) {
+    const defaultScenario = createScenario("默认方案", "默认工作区方案", createEmptyAssignments());
+    scenarios.push(defaultScenario);
+  }
+
+  const activeScenarioId = scenarios.some((scenario) => scenario.id === value.activeScenarioId)
+    ? value.activeScenarioId
+    : scenarios[0].id;
+
+  return {
+    version: 2,
+    players,
+    scenarios,
+    activeScenarioId,
+    preferences: {
+      helpDismissed: Boolean(value.preferences?.helpDismissed)
+    }
+  };
+}
+
+function sanitizePlayers(players) {
+  return players
+    .filter((player) => player && player.id && player.name)
+    .map((player) => ({
+      id: String(player.id),
+      name: String(player.name).trim().slice(0, 28),
+      number: String(player.number || "").trim().slice(0, 3),
+      throws: normalizeHand(player.throws),
+      bats: normalizeHand(player.bats),
+      positions: sanitizePositions(player.positions),
+      status: STATUS_LABELS[player.status] ? player.status : "available"
+    }))
+    .filter((player) => player.name && player.number);
+}
+
+function sanitizeScenario(scenario, validIds) {
+  if (!scenario || !scenario.id || !scenario.name) return null;
+  const createdAt = isIsoDate(scenario.createdAt) ? scenario.createdAt : new Date().toISOString();
+  const updatedAt = isIsoDate(scenario.updatedAt) ? scenario.updatedAt : createdAt;
+  return {
+    id: String(scenario.id),
+    name: String(scenario.name).trim().slice(0, 24) || "未命名方案",
+    note: String(scenario.note || "").trim().slice(0, 120),
+    assignments: sanitizeAssignments(scenario.assignments, validIds),
+    createdAt,
+    updatedAt
+  };
+}
+
+function sanitizeAssignments(assignments, validIds) {
+  const safeIds = validIds || new Set();
+  const defense = Object.fromEntries(POSITIONS.map((position) => {
+    const candidate = assignments?.defense?.[position.code] || null;
+    return [position.code, safeIds.has(candidate) ? candidate : null];
+  }));
+  const lineupSource = Array.isArray(assignments?.lineup) ? assignments.lineup : [];
+  const lineup = Array.from({ length: 9 }, (_, index) => {
+    const candidate = lineupSource[index] || null;
+    return safeIds.has(candidate) ? candidate : null;
+  });
+  return { defense, lineup };
+}
+
+function sanitizePositions(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((position, index) => POSITION_CODES.includes(position) && value.indexOf(position) === index);
+}
+
+function normalizeHand(value) {
+  return HAND_LABELS[value] ? value : "R";
+}
+
+function isIsoDate(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function getActiveScenario() {
+  return workspace.scenarios.find((scenario) => scenario.id === workspace.activeScenarioId) || workspace.scenarios[0];
+}
+
+function getPlayer(id) {
+  return workspace.players.find((player) => player.id === id) || null;
+}
+
+function cloneWorkspace(currentWorkspace = workspace) {
+  return structuredClone(currentWorkspace);
+}
+
+function persistWorkspace(currentWorkspace = workspace) {
+  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(currentWorkspace));
+  setSaveStatus("已保存到本地");
+}
+
+function setSaveStatus(message) {
+  els.saveStatus.textContent = message;
+  window.clearTimeout(setSaveStatus.timer);
+  setSaveStatus.timer = window.setTimeout(() => {
+    els.saveStatus.textContent = "本地工作区已准备";
+  }, 1400);
+}
+
+function commitWorkspace(mutator, options = {}) {
+  const before = cloneWorkspace();
+  const beforeSerialized = JSON.stringify(before);
+  const draft = cloneWorkspace();
+  const result = mutator(draft);
+  const candidate = sanitizeWorkspace(result || draft);
+  const afterSerialized = JSON.stringify(candidate);
+  if (beforeSerialized === afterSerialized) {
+    return false;
+  }
+  if (options.recordHistory !== false) {
+    historyState.undo.push(before);
+    if (historyState.undo.length > HISTORY_LIMIT) {
+      historyState.undo.shift();
+    }
+    historyState.redo = [];
+  }
+  workspace = candidate;
+  persistWorkspace();
+  render();
+  if (options.message) {
+    showToast(options.message);
+  }
+  return true;
+}
+
+function setActiveScenario(scenarioId) {
+  if (!workspace.scenarios.some((scenario) => scenario.id === scenarioId)) return;
+  workspace.activeScenarioId = scenarioId;
+  persistWorkspace();
+  render();
+}
+
+function undo() {
+  if (!historyState.undo.length) return;
+  historyState.redo.push(cloneWorkspace());
+  workspace = sanitizeWorkspace(historyState.undo.pop());
+  persistWorkspace();
+  render();
+  showToast("已撤销上一步");
+}
+
+function redo() {
+  if (!historyState.redo.length) return;
+  historyState.undo.push(cloneWorkspace());
+  workspace = sanitizeWorkspace(historyState.redo.pop());
+  persistWorkspace();
+  render();
+  showToast("已恢复上一步");
+}
+
+function bindEvents() {
+  els.searchInput.addEventListener("input", renderPlayers);
+  els.positionFilter.addEventListener("change", renderPlayers);
+  els.statusFilter.addEventListener("change", renderPlayers);
+  els.clearSelectionBtn.addEventListener("click", () => {
+    selectedIds.clear();
+    renderPlayers();
+    updateSelectedCount();
+  });
+  els.scenarioSelect.addEventListener("change", (event) => {
+    setActiveScenario(event.currentTarget.value);
+  });
+  els.addPlayerBtn.addEventListener("click", () => openPlayerDialog());
+  els.autoAssignBtn.addEventListener("click", autoAssignScenario);
+  els.undoBtn.addEventListener("click", undo);
+  els.redoBtn.addEventListener("click", redo);
+  els.exportWorkspaceBtn.addEventListener("click", exportWorkspace);
+  els.exportScenarioBtn.addEventListener("click", exportScenario);
+  els.importBtn.addEventListener("click", () => {
+    els.importInput.value = "";
+    els.importInput.click();
+  });
+  els.importInput.addEventListener("change", handleImportFile);
+  els.clearAssignmentsBtn.addEventListener("click", clearAssignments);
+  els.resetBtn.addEventListener("click", resetExampleData);
+  els.helpBtn.addEventListener("click", () => setHelpOpen(true));
+  els.closeHelpBtn.addEventListener("click", () => setHelpOpen(false));
+  els.drawerScrim.addEventListener("click", () => setHelpOpen(false));
+  els.replayGuideBtn.addEventListener("click", () => {
+    setHelpOpen(false);
+    openGuide();
+  });
+  els.newScenarioBtn.addEventListener("click", () => openScenarioDialog("create"));
+  els.renameScenarioBtn.addEventListener("click", () => openScenarioDialog("edit"));
+  els.duplicateScenarioBtn.addEventListener("click", duplicateScenario);
+  els.deleteScenarioBtn.addEventListener("click", deleteScenario);
+  els.cancelPlayerDialogBtn.addEventListener("click", () => els.playerDialog.close());
+  els.cancelScenarioDialogBtn.addEventListener("click", () => els.scenarioDialog.close());
+  els.cancelImportDialogBtn.addEventListener("click", () => {
+    pendingImport = null;
+    els.importDialog.close();
+  });
+  els.playerForm.addEventListener("submit", handlePlayerSubmit);
+  els.scenarioForm.addEventListener("submit", handleScenarioSubmit);
+  els.appendImportBtn.addEventListener("click", appendImportedScenario);
+  els.replaceImportBtn.addEventListener("click", replaceWorkspaceFromImport);
+  els.guideSkipBtn.addEventListener("click", dismissGuide);
+  els.guidePrevBtn.addEventListener("click", previousGuideStep);
+  els.guideNextBtn.addEventListener("click", nextGuideStep);
+  window.addEventListener("keydown", handleGlobalKeydown);
+}
+
+function buildPositionFilter() {
+  els.positionFilter.innerHTML = [
+    '<option value="all">全部守位</option>',
+    ...POSITIONS.map((position) => `<option value="${position.code}">${position.code}</option>`)
+  ].join("");
+}
+
+function buildPositionChecks() {
+  els.positionChecks.innerHTML = POSITIONS.map((position) => `
+    <label class="check-tile">
+      <input type="checkbox" name="positions" value="${position.code}">
+      <span>${position.code}</span>
+    </label>
+  `).join("");
+}
+
+function render() {
+  reconcileSelectedIds();
+  renderHeader();
+  renderScenarioControls();
+  renderPlayers();
+  renderField();
+  renderLineup();
+  renderStats();
+  renderWarnings();
+  renderHelpDrawer();
+  renderGuide();
+  updateSelectedCount();
+  updateHistoryButtons();
+}
+
+function renderHeader() {
+  els.workspaceVersionChip.textContent = "Workspace v2";
+  els.scenarioCountChip.textContent = `${workspace.scenarios.length} 套方案`;
+  els.workspacePlayerChip.textContent = `${workspace.players.length} 名球员`;
+  els.historyChip.textContent = `撤销 ${historyState.undo.length} / 重做 ${historyState.redo.length}`;
+  els.activeScenarioBadge.textContent = getActiveScenario().name;
+}
+
+function renderScenarioControls() {
+  const activeScenario = getActiveScenario();
+  els.scenarioSelect.innerHTML = workspace.scenarios
+    .map((scenario) => `<option value="${scenario.id}" ${scenario.id === activeScenario.id ? "selected" : ""}>${escapeHtml(scenario.name)}</option>`)
+    .join("");
+  els.scenarioCountInline.textContent = `${workspace.scenarios.length} 套`;
+  els.scenarioNameDisplay.textContent = activeScenario.name;
+  els.scenarioNoteDisplay.textContent = activeScenario.note || "保存不同比赛构想，对左投、守备优先和常规先发可以分别留一套。";
+  els.scenarioTimeDisplay.textContent = `创建于 ${formatDateTime(activeScenario.createdAt)} · 更新于 ${formatDateTime(activeScenario.updatedAt)}`;
+  els.deleteScenarioBtn.disabled = workspace.scenarios.length <= 1;
+}
+
+function renderPlayers() {
+  const players = getFilteredPlayers();
+  els.playerCount.textContent = `${players.length} 人`;
+  if (!players.length) {
+    els.playerList.innerHTML = '<div class="empty-state">没有匹配的球员</div>';
+    return;
+  }
+
+  const activeScenario = getActiveScenario();
+  const defenseAssignments = activeScenario.assignments.defense;
+
+  els.playerList.innerHTML = players.map((player) => {
+    const selected = selectedIds.has(player.id) ? " selected" : "";
+    const positions = player.positions.map((position) => `<span class="position-pill">${position}</span>`).join("");
+    const assignmentPills = [];
+    const defensePosition = Object.entries(defenseAssignments).find(([, playerId]) => playerId === player.id)?.[0];
+    const lineupIndex = activeScenario.assignments.lineup.findIndex((playerId) => playerId === player.id);
+    if (defensePosition) assignmentPills.push(`<span class="assignment-pill">守 ${defensePosition}</span>`);
+    if (lineupIndex >= 0) assignmentPills.push(`<span class="assignment-pill">第 ${lineupIndex + 1} 棒</span>`);
+    return `
+      <article class="player-card${selected}" draggable="true" data-player-id="${player.id}">
+        <input class="player-select" type="checkbox" aria-label="选择 ${escapeHtml(player.name)}" data-select-id="${player.id}" ${selected ? "checked" : ""}>
+        <div class="number-badge">${escapeHtml(player.number)}</div>
+        <div class="player-main">
+          <div class="player-name-row">
+            <div class="player-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</div>
+            <span class="status-chip ${player.status}">${STATUS_LABELS[player.status]}</span>
+          </div>
+          <div class="player-meta">打 ${HAND_LABELS[player.bats]} / 投 ${HAND_LABELS[player.throws]}</div>
+          <div class="position-pills">${positions}${assignmentPills.join("")}</div>
+          <div class="player-actions">
+            <button class="link-btn" type="button" data-edit-id="${player.id}">编辑</button>
+            <button class="link-btn danger" type="button" data-delete-id="${player.id}">删除</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  els.playerList.querySelectorAll(".player-card").forEach((card) => {
+    card.addEventListener("dragstart", handlePlayerDragStart);
+    card.addEventListener("dragend", handleDragEnd);
+  });
+  els.playerList.querySelectorAll("[data-select-id]").forEach((checkbox) => {
+    checkbox.addEventListener("change", (event) => {
+      const id = event.currentTarget.dataset.selectId;
+      if (event.currentTarget.checked) {
+        selectedIds.add(id);
+      } else {
+        selectedIds.delete(id);
+      }
+      renderPlayers();
+      updateSelectedCount();
+    });
+  });
+  els.playerList.querySelectorAll("[data-edit-id]").forEach((button) => {
+    button.addEventListener("click", () => openPlayerDialog(button.dataset.editId));
+  });
+  els.playerList.querySelectorAll("[data-delete-id]").forEach((button) => {
+    button.addEventListener("click", () => deletePlayer(button.dataset.deleteId));
+  });
+}
+
+function renderField() {
+  const activeScenario = getActiveScenario();
+  els.field.innerHTML = `
+    <div class="outfield-stripe"></div>
+    <div class="foul-line left"></div>
+    <div class="foul-line right"></div>
+    <div class="baseline first"></div>
+    <div class="baseline third"></div>
+    <div class="infield-dirt"></div>
+    <div class="mound"></div>
+    <div class="base home"></div>
+    <div class="base first"></div>
+    <div class="base second"></div>
+    <div class="base third"></div>
+    ${POSITIONS.map((position) => renderFieldZone(position, activeScenario)).join("")}
+  `;
+
+  els.field.querySelectorAll(".field-zone").forEach((zone) => {
+    zone.addEventListener("click", (event) => {
+      if (event.target.closest(".clear-zone")) {
+        clearDefensePosition(zone.dataset.position);
+        return;
+      }
+      assignSelectedToPosition(zone.dataset.position);
+    });
+    zone.addEventListener("dragover", allowDrop);
+    zone.addEventListener("dragenter", markDropTarget);
+    zone.addEventListener("dragleave", unmarkDropTarget);
+    zone.addEventListener("drop", handleDefenseDrop);
+  });
+}
+
+function renderFieldZone(position, activeScenario) {
+  const player = getPlayer(activeScenario.assignments.defense[position.code]);
+  const filledClass = player ? " filled" : "";
+  const content = player
+    ? `<div class="zone-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</div><div class="zone-number">#${escapeHtml(player.number)}</div>`
+    : `<div class="empty-label">${position.label}</div>`;
+  return `
+    <button class="field-zone${filledClass}" type="button" data-position="${position.code}" style="left:${position.x}%; top:${position.y}%;">
+      <span class="zone-code">${position.code}</span>
+      <span class="zone-player">${content}</span>
+      <span class="clear-zone">清空</span>
+    </button>
+  `;
+}
+
+function renderLineup() {
+  const activeScenario = getActiveScenario();
+  els.lineupList.innerHTML = activeScenario.assignments.lineup.map((playerId, index) => {
+    const player = getPlayer(playerId);
+    const draggable = player ? ' draggable="true"' : "";
+    const content = player
+      ? `<div class="lineup-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</div><div class="lineup-meta">#${escapeHtml(player.number)} / ${player.positions.join(", ") || "未设守位"}</div>`
+      : '<div class="empty-label">空棒次</div>';
+    const tools = player
+      ? `<button class="btn icon secondary" type="button" title="清空" data-clear-lineup="${index}">×</button>`
+      : "";
+    return `
+      <article class="lineup-slot" data-lineup-index="${index}"${draggable}>
+        <div class="bat-order">${index + 1}</div>
+        <div class="lineup-player">${content}</div>
+        <div class="lineup-tools">${tools}</div>
+      </article>
+    `;
+  }).join("");
+
+  els.lineupList.querySelectorAll(".lineup-slot").forEach((slot) => {
+    slot.addEventListener("click", (event) => {
+      if (event.target.closest("[data-clear-lineup]")) return;
+      assignSelectedToLineup(Number(slot.dataset.lineupIndex));
+    });
+    slot.addEventListener("dragover", allowDrop);
+    slot.addEventListener("dragenter", markDropTarget);
+    slot.addEventListener("dragleave", unmarkDropTarget);
+    slot.addEventListener("drop", handleLineupDrop);
+    if (slot.draggable) {
+      slot.addEventListener("dragstart", handleLineupDragStart);
+      slot.addEventListener("dragend", handleDragEnd);
+    }
+  });
+  els.lineupList.querySelectorAll("[data-clear-lineup]").forEach((button) => {
+    button.addEventListener("click", () => clearLineupSlot(Number(button.dataset.clearLineup)));
+  });
+}
+
+function renderStats() {
+  const activeScenario = getActiveScenario();
+  const defenseFilled = Object.values(activeScenario.assignments.defense).filter(Boolean).length;
+  const lineupFilled = activeScenario.assignments.lineup.filter(Boolean).length;
+  const available = workspace.players.filter((player) => player.status === "available").length;
+  els.defenseCount.textContent = `${defenseFilled} / 9`;
+  els.lineupCount.textContent = `${lineupFilled} / 9`;
+  els.defenseStat.textContent = defenseFilled;
+  els.lineupStat.textContent = lineupFilled;
+  els.availableStat.textContent = available;
+}
+
+function renderWarnings() {
+  const analysis = analyzeScenarioWarnings(workspace, getActiveScenario());
+  els.warningSummary.innerHTML = [
+    `<span class="small-chip critical-chip">强提醒 ${analysis.critical.length}</span>`,
+    `<span class="small-chip advisory-chip">建议 ${analysis.advisory.length}</span>`
+  ].join("");
+
+  if (!analysis.critical.length && !analysis.advisory.length) {
+    els.warnings.innerHTML = '<div class="ok-item">阵容规则检查通过</div>';
+    return;
+  }
+
+  const groups = [];
+  if (analysis.critical.length) {
+    groups.push(`
+      <section class="warning-group">
+        <div class="warning-heading"><span>强提醒</span><span>${analysis.critical.length} 条</span></div>
+        ${analysis.critical.map((warning) => `<div class="warning-item critical">${escapeHtml(warning)}</div>`).join("")}
+      </section>
+    `);
+  }
+  if (analysis.advisory.length) {
+    groups.push(`
+      <section class="warning-group">
+        <div class="warning-heading"><span>建议提醒</span><span>${analysis.advisory.length} 条</span></div>
+        ${analysis.advisory.map((warning) => `<div class="warning-item advisory">${escapeHtml(warning)}</div>`).join("")}
+      </section>
+    `);
+  }
+  els.warnings.innerHTML = groups.join("");
+}
+
+function renderHelpDrawer() {
+  els.helpDrawer.classList.toggle("open", helpOpen);
+  els.helpDrawer.setAttribute("aria-hidden", String(!helpOpen));
+  els.drawerScrim.classList.toggle("open", helpOpen);
+}
+
+function renderGuide() {
+  const open = !workspace.preferences.helpDismissed;
+  els.guideOverlay.classList.toggle("open", open);
+  els.guideOverlay.setAttribute("aria-hidden", String(!open));
+  els.guideCard.classList.toggle("open", open);
+  els.guideCard.setAttribute("aria-hidden", String(!open));
+  document.querySelectorAll(".guide-focus").forEach((node) => node.classList.remove("guide-focus"));
+  if (!open) return;
+
+  const step = GUIDE_STEPS[guideStep];
+  const target = document.querySelector(`#${step.target}`);
+  target?.scrollIntoView({
+    block: step.target === "helpBtn" ? "start" : "center",
+    inline: "nearest"
+  });
+  target?.classList.add("guide-focus");
+  els.guideProgress.textContent = `步骤 ${guideStep + 1} / ${GUIDE_STEPS.length}`;
+  els.guideTitle.textContent = step.title;
+  els.guideBody.textContent = step.body;
+  els.guidePrevBtn.disabled = guideStep === 0;
+  els.guideNextBtn.textContent = guideStep === GUIDE_STEPS.length - 1 ? "完成" : "下一步";
+}
+
+function updateHistoryButtons() {
+  els.undoBtn.disabled = historyState.undo.length === 0;
+  els.redoBtn.disabled = historyState.redo.length === 0;
+}
+
+function updateSelectedCount() {
+  els.selectedCount.textContent = `已选 ${selectedIds.size}`;
+}
+
+function getFilteredPlayers() {
+  const query = els.searchInput.value.trim().toLowerCase();
+  const position = els.positionFilter.value;
+  const status = els.statusFilter.value;
+  return workspace.players.filter((player) => {
+    const matchesSearch = !query
+      || player.name.toLowerCase().includes(query)
+      || player.number.toLowerCase().includes(query);
+    const matchesPosition = position === "all" || player.positions.includes(position);
+    const matchesStatus = status === "all" || player.status === status;
+    return matchesSearch && matchesPosition && matchesStatus;
+  });
+}
+
+function reconcileSelectedIds() {
+  selectedIds.forEach((id) => {
+    if (!getPlayer(id)) {
+      selectedIds.delete(id);
+    }
+  });
+}
+
+function handlePlayerDragStart(event) {
+  const id = event.currentTarget.dataset.playerId;
+  event.dataTransfer.effectAllowed = "copyMove";
+  event.dataTransfer.setData("text/plain", `player:${id}`);
+  draggedElement = event.currentTarget;
+  event.currentTarget.classList.add("dragging");
+}
+
+function handleLineupDragStart(event) {
+  const index = event.currentTarget.dataset.lineupIndex;
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", `lineup:${index}`);
+  draggedElement = event.currentTarget;
+  event.currentTarget.classList.add("dragging");
+}
+
+function handleDragEnd() {
+  if (draggedElement) {
+    draggedElement.classList.remove("dragging");
+  }
+  draggedElement = null;
+  document.querySelectorAll(".drop-target").forEach((element) => element.classList.remove("drop-target"));
+}
+
+function allowDrop(event) {
+  event.preventDefault();
+}
+
+function markDropTarget(event) {
+  event.preventDefault();
+  event.currentTarget.classList.add("drop-target");
+}
+
+function unmarkDropTarget(event) {
+  event.currentTarget.classList.remove("drop-target");
+}
+
+function handleDefenseDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("drop-target");
+  const token = event.dataTransfer.getData("text/plain");
+  const playerId = playerIdFromDragToken(token);
+  if (!playerId) return;
+  assignDefense(event.currentTarget.dataset.position, playerId);
+}
+
+function handleLineupDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("drop-target");
+  const targetIndex = Number(event.currentTarget.dataset.lineupIndex);
+  const token = event.dataTransfer.getData("text/plain");
+  if (token.startsWith("player:")) {
+    assignLineup(targetIndex, token.slice("player:".length));
+  } else if (token.startsWith("lineup:")) {
+    moveLineup(Number(token.slice("lineup:".length)), targetIndex);
+  }
+}
+
+function playerIdFromDragToken(token) {
+  const activeScenario = getActiveScenario();
+  if (token.startsWith("player:")) {
+    return token.slice("player:".length);
+  }
+  if (token.startsWith("lineup:")) {
+    return activeScenario.assignments.lineup[Number(token.slice("lineup:".length))] || null;
+  }
+  return null;
+}
+
+function assignSelectedToPosition(position) {
+  if (!selectedIds.size) return;
+  const playerId = Array.from(selectedIds).find((id) => getPlayer(id));
+  if (!playerId) return;
+  assignDefense(position, playerId);
+  selectedIds.delete(playerId);
+  updateSelectedCount();
+  renderPlayers();
+}
+
+function assignSelectedToLineup(index) {
+  if (!selectedIds.size) return;
+  const playerId = Array.from(selectedIds).find((id) => getPlayer(id));
+  if (!playerId) return;
+  assignLineup(index, playerId);
+  selectedIds.delete(playerId);
+  updateSelectedCount();
+  renderPlayers();
+}
+
+function assignDefense(position, playerId) {
+  const player = getPlayer(playerId);
+  if (!player) return;
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    scenario.assignments.defense[position] = playerId;
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: `已安排 ${player.name} 守 ${position}` });
+}
+
+function clearDefensePosition(position) {
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    scenario.assignments.defense[position] = null;
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: `已清空 ${position}` });
+}
+
+function assignLineup(index, playerId) {
+  const player = getPlayer(playerId);
+  if (!player) return;
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    scenario.assignments.lineup[index] = playerId;
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: `已放入第 ${index + 1} 棒` });
+}
+
+function moveLineup(fromIndex, toIndex) {
+  if (fromIndex === toIndex) return;
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    const lineup = [...scenario.assignments.lineup];
+    const [moved] = lineup.splice(fromIndex, 1);
+    lineup.splice(toIndex, 0, moved);
+    scenario.assignments.lineup = lineup.slice(0, 9);
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: "已调整棒次顺序" });
+}
+
+function clearLineupSlot(index) {
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    scenario.assignments.lineup[index] = null;
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: `已清空第 ${index + 1} 棒` });
+}
+
+function clearAssignments() {
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    scenario.assignments = createEmptyAssignments();
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: "当前方案阵容已清空" });
+}
+
+function resetExampleData() {
+  const confirmed = window.confirm("重置示例会恢复默认球员和默认方案，但保留帮助已读状态。继续吗？");
+  if (!confirmed) return;
+  commitWorkspace(() => {
+    const fresh = createDefaultWorkspace(workspace.preferences.helpDismissed);
+    return fresh;
+  }, { message: "已重置为示例数据" });
+  historyState.redo = [];
+}
+
+function openPlayerDialog(id = null) {
+  const player = id ? getPlayer(id) : null;
+  els.dialogTitle.textContent = player ? "编辑球员" : "新增球员";
+  els.playerId.value = player?.id || "";
+  els.playerName.value = player?.name || "";
+  els.playerNumber.value = player?.number || "";
+  els.playerBats.value = player?.bats || "R";
+  els.playerThrows.value = player?.throws || "R";
+  els.playerStatus.value = player?.status || "available";
+  const positions = new Set(player?.positions || []);
+  els.positionChecks.querySelectorAll("input").forEach((checkbox) => {
+    checkbox.checked = positions.has(checkbox.value);
+  });
+  els.playerDialog.showModal();
+  window.setTimeout(() => els.playerName.focus(), 0);
+}
+
+function handlePlayerSubmit(event) {
+  event.preventDefault();
+  const id = els.playerId.value || createId();
+  const positions = Array.from(els.positionChecks.querySelectorAll("input:checked")).map((checkbox) => checkbox.value);
+  const player = {
+    id,
+    name: els.playerName.value.trim(),
+    number: els.playerNumber.value.trim(),
+    bats: els.playerBats.value,
+    throws: els.playerThrows.value,
+    positions,
+    status: els.playerStatus.value
+  };
+
+  if (!player.name || !player.number) {
+    showToast("姓名和背号不能为空");
+    return;
+  }
+
+  commitWorkspace((draft) => {
+    const existingIndex = draft.players.findIndex((item) => item.id === id);
+    if (existingIndex >= 0) {
+      draft.players[existingIndex] = player;
+    } else {
+      draft.players.push(player);
+    }
+  }, { message: "球员已保存" });
+
+  els.playerDialog.close();
+}
+
+function deletePlayer(id) {
+  const player = getPlayer(id);
+  if (!player) return;
+  const confirmed = window.confirm(`删除 ${player.name}？`);
+  if (!confirmed) return;
+
+  commitWorkspace((draft) => {
+    draft.players = draft.players.filter((item) => item.id !== id);
+    draft.scenarios.forEach((scenario) => {
+      POSITION_CODES.forEach((position) => {
+        if (scenario.assignments.defense[position] === id) {
+          scenario.assignments.defense[position] = null;
+        }
+      });
+      scenario.assignments.lineup = scenario.assignments.lineup.map((playerId) => playerId === id ? null : playerId);
+      scenario.updatedAt = new Date().toISOString();
+    });
+  }, { message: "球员已删除" });
+
+  selectedIds.delete(id);
+}
+
+function openScenarioDialog(mode) {
+  const activeScenario = getActiveScenario();
+  els.scenarioMode.value = mode;
+  els.scenarioDialogTitle.textContent = mode === "create" ? "新建方案" : "编辑方案";
+  els.scenarioNameInput.value = mode === "create" ? "" : activeScenario.name;
+  els.scenarioNoteInput.value = mode === "create" ? "" : activeScenario.note;
+  els.scenarioDialog.showModal();
+  window.setTimeout(() => els.scenarioNameInput.focus(), 0);
+}
+
+function handleScenarioSubmit(event) {
+  event.preventDefault();
+  const mode = els.scenarioMode.value;
+  const name = els.scenarioNameInput.value.trim();
+  const note = els.scenarioNoteInput.value.trim();
+  if (!name) {
+    showToast("方案名称不能为空");
+    return;
+  }
+
+  if (mode === "create") {
+    commitWorkspace((draft) => {
+      const uniqueName = createUniqueScenarioName(name, draft.scenarios, "");
+      const scenario = createScenario(uniqueName, note, createEmptyAssignments());
+      draft.scenarios.push(scenario);
+      draft.activeScenarioId = scenario.id;
+    }, { message: "已新建方案" });
+  } else {
+    const activeScenario = getActiveScenario();
+    commitWorkspace((draft) => {
+      const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+      const otherScenarios = draft.scenarios.filter((item) => item.id !== scenario.id);
+      scenario.name = createUniqueScenarioName(name, otherScenarios, "");
+      scenario.note = note.slice(0, 120);
+      scenario.updatedAt = new Date().toISOString();
+    }, { message: `已更新方案 ${activeScenario.name}` });
+  }
+
+  els.scenarioDialog.close();
+}
+
+function duplicateScenario() {
+  const activeScenario = getActiveScenario();
+  commitWorkspace((draft) => {
+    const source = draft.scenarios.find((scenario) => scenario.id === draft.activeScenarioId);
+    const clone = createScenario(
+      createUniqueScenarioName(`${source.name} 副本`, draft.scenarios, ""),
+      source.note,
+      structuredClone(source.assignments)
+    );
+    draft.scenarios.push(clone);
+    draft.activeScenarioId = clone.id;
+  }, { message: "已复制当前方案" });
+}
+
+function deleteScenario() {
+  if (workspace.scenarios.length <= 1) {
+    showToast("至少保留一套方案");
+    return;
+  }
+  const activeScenario = getActiveScenario();
+  const confirmed = window.confirm(`删除方案「${activeScenario.name}」？`);
+  if (!confirmed) return;
+  commitWorkspace((draft) => {
+    draft.scenarios = draft.scenarios.filter((scenario) => scenario.id !== draft.activeScenarioId);
+    draft.activeScenarioId = draft.scenarios[0].id;
+  }, { message: "方案已删除" });
+}
+
+function exportWorkspace() {
+  const payload = {
+    type: "workspace",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    players: workspace.players,
+    scenarios: workspace.scenarios,
+    activeScenarioId: workspace.activeScenarioId
+  };
+  downloadJson(`baseball-workspace-${timestampFilePart()}.json`, payload);
+  showToast("工作区 JSON 已导出");
+}
+
+function exportScenario() {
+  const activeScenario = getActiveScenario();
+  const referencedIds = new Set([
+    ...Object.values(activeScenario.assignments.defense).filter(Boolean),
+    ...activeScenario.assignments.lineup.filter(Boolean)
+  ]);
+  const players = workspace.players.filter((player) => referencedIds.has(player.id));
+  const payload = {
+    type: "scenario",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    players,
+    scenario: activeScenario
+  };
+  downloadJson(`baseball-scenario-${timestampFilePart()}.json`, payload);
+  showToast("当前方案 JSON 已导出");
+}
+
+async function handleImportFile(event) {
+  const file = event.currentTarget.files?.[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    pendingImport = prepareImport(parsed, file.name);
+    renderImportPreview();
+    els.importDialog.showModal();
+  } catch (error) {
+    pendingImport = null;
+    showToast("导入失败：JSON 无法识别");
+  }
+}
+
+function prepareImport(payload, fileName) {
+  if (payload?.type === "workspace" && payload?.version === 2) {
+    const candidate = sanitizeWorkspace({
+      version: 2,
+      players: payload.players,
+      scenarios: payload.scenarios,
+      activeScenarioId: payload.activeScenarioId,
+      preferences: workspace.preferences
+    });
+    return {
+      type: "workspace",
+      fileName,
+      workspace: candidate,
+      names: candidate.scenarios.map((scenario) => scenario.name),
+      summary: `将用 ${fileName} 替换当前工作区。帮助已读状态会保留在本地。`
+    };
+  }
+
+  if (payload?.type === "scenario" && payload?.version === 2) {
+    const importedPlayers = sanitizePlayers(Array.isArray(payload.players) ? payload.players : []);
+    const importedScenario = sanitizeScenario(payload.scenario, new Set(importedPlayers.map((player) => player.id)));
+    if (!importedScenario) {
+      throw new Error("invalid scenario payload");
+    }
+    return {
+      type: "scenario",
+      fileName,
+      scenario: importedScenario,
+      players: importedPlayers,
+      names: [importedScenario.name],
+      summary: `将把 ${fileName} 追加为新方案，并合并它引用到的球员。`
+    };
+  }
+
+  throw new Error("unsupported payload");
+}
+
+function renderImportPreview() {
+  if (!pendingImport) return;
+  els.importSummary.textContent = pendingImport.summary;
+  els.importTypeValue.textContent = pendingImport.type === "workspace" ? "工作区" : "单方案";
+  els.importScenarioCountValue.textContent = pendingImport.type === "workspace" ? String(pendingImport.workspace.scenarios.length) : "1";
+  els.importPlayerCountValue.textContent = pendingImport.type === "workspace" ? String(pendingImport.workspace.players.length) : String(pendingImport.players.length);
+  els.importNameList.innerHTML = pendingImport.names.map((name) => `<div>${escapeHtml(name)}</div>`).join("");
+  els.appendImportBtn.hidden = pendingImport.type !== "scenario";
+  els.replaceImportBtn.hidden = pendingImport.type !== "workspace";
+}
+
+function appendImportedScenario() {
+  if (!pendingImport || pendingImport.type !== "scenario") return;
+  commitWorkspace((draft) => {
+    pendingImport.players.forEach((incomingPlayer) => {
+      const index = draft.players.findIndex((player) => player.id === incomingPlayer.id);
+      if (index >= 0) {
+        draft.players[index] = incomingPlayer;
+      } else {
+        draft.players.push(incomingPlayer);
+      }
+    });
+    const scenario = structuredClone(pendingImport.scenario);
+    scenario.id = createId();
+    scenario.name = createUniqueScenarioName(`${scenario.name}（导入）`, draft.scenarios, "");
+    scenario.createdAt = new Date().toISOString();
+    scenario.updatedAt = scenario.createdAt;
+    draft.scenarios.push(scenario);
+    draft.activeScenarioId = scenario.id;
+  }, { message: "导入方案已追加" });
+
+  pendingImport = null;
+  els.importDialog.close();
+}
+
+function replaceWorkspaceFromImport() {
+  if (!pendingImport || pendingImport.type !== "workspace") return;
+  commitWorkspace(() => {
+    pendingImport.workspace.preferences = structuredClone(workspace.preferences);
+    return pendingImport.workspace;
+  }, { message: "工作区已从导入内容恢复" });
+
+  pendingImport = null;
+  els.importDialog.close();
+}
+
+function autoAssignScenario() {
+  const activeScenario = getActiveScenario();
+  const nextAssignments = buildAutoScenario(workspace.players, activeScenario);
+  commitWorkspace((draft) => {
+    const scenario = draft.scenarios.find((item) => item.id === draft.activeScenarioId);
+    scenario.assignments = nextAssignments.assignments;
+    scenario.updatedAt = new Date().toISOString();
+  }, { message: "已生成自动排阵初稿" });
+}
+
+function buildAutoScenario(players, currentScenario) {
+  const availablePlayers = players.filter((player) => player.status === "available");
+  const remaining = [...availablePlayers];
+  const defense = createEmptyAssignments().defense;
+
+  DEFENSE_PRIORITY.forEach((positionCode) => {
+    const candidates = remaining
+      .filter((player) => player.positions.includes(positionCode))
+      .sort((a, b) => {
+        const aPrimary = a.positions[0] === positionCode ? 1 : 0;
+        const bPrimary = b.positions[0] === positionCode ? 1 : 0;
+        if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+        if (a.positions.length !== b.positions.length) return a.positions.length - b.positions.length;
+        return a.number.localeCompare(b.number);
+      });
+    const chosen = candidates[0];
+    if (!chosen) return;
+    defense[positionCode] = chosen.id;
+    const chosenIndex = remaining.findIndex((player) => player.id === chosen.id);
+    if (chosenIndex >= 0) remaining.splice(chosenIndex, 1);
+  });
+
+  const lineup = Array(9).fill(null);
+  const assignedPlayerIds = Object.values(defense).filter(Boolean);
+  const defenseByPlayer = Object.fromEntries(
+    Object.entries(defense)
+      .filter(([, playerId]) => playerId)
+      .map(([position, playerId]) => [playerId, position])
+  );
+
+  assignedPlayerIds.forEach((playerId) => {
+    const player = getPlayer(playerId);
+    if (!player) return;
+    const preferredSlots = getPreferredBattingSlots(player, defenseByPlayer[playerId]);
+    const targetSlot = preferredSlots.find((slot) => lineup[slot] === null);
+    const fallbackSlot = lineup.findIndex((slot) => slot === null);
+    const finalSlot = targetSlot ?? fallbackSlot;
+    if (finalSlot >= 0) {
+      lineup[finalSlot] = playerId;
+    }
+  });
+
+  return {
+    ...currentScenario,
+    assignments: {
+      defense,
+      lineup
+    }
+  };
+}
+
+function getPreferredBattingSlots(player, assignedPosition) {
+  const isBattery = assignedPosition === "P" || assignedPosition === "C";
+  if (isBattery) {
+    return [7, 8, 5, 6, 4, 3, 2, 1, 0];
+  }
+  if (player.bats === "S") {
+    return [0, 1, 5, 2, 3, 4, 6, 7, 8];
+  }
+  if (player.bats === "L") {
+    return [1, 4, 6, 0, 2, 3, 5, 7, 8];
+  }
+  return [2, 3, 7, 8, 0, 1, 4, 5, 6];
+}
+
+function analyzeScenarioWarnings(currentWorkspace, scenario) {
+  const critical = [];
+  const advisory = [];
+  const defenseEntries = Object.entries(scenario.assignments.defense);
+  const defenseIds = defenseEntries.map(([, playerId]) => playerId).filter(Boolean);
+  const lineupIds = scenario.assignments.lineup.filter(Boolean);
+  const uniqueAssignedIds = Array.from(new Set([...defenseIds, ...lineupIds]));
+  const missingPositions = defenseEntries.filter(([, playerId]) => !playerId).map(([position]) => position);
+  const repeatedDefense = findRepeatedIds(defenseIds).map((id) => formatPlayerName(id));
+  const unavailablePlayers = uniqueAssignedIds
+    .map(getPlayer)
+    .filter((player) => player && player.status !== "available");
+
+  if (missingPositions.length) {
+    critical.push(`守位未满：${missingPositions.join("、")}`);
+  }
+  if (lineupIds.length < 9) {
+    critical.push(`棒次未满：还缺 ${9 - lineupIds.length} 人`);
+  }
+  if (repeatedDefense.length) {
+    critical.push(`同一球员重复占用守位：${repeatedDefense.join("、")}`);
+  }
+  if (unavailablePlayers.length) {
+    critical.push(`非可上场球员已进入阵容：${unavailablePlayers.map((player) => `${player.name}（${STATUS_LABELS[player.status]}）`).join("、")}`);
+  }
+
+  defenseEntries.forEach(([position, playerId]) => {
+    const player = getPlayer(playerId);
+    if (player && !player.positions.includes(position)) {
+      advisory.push(`${player.name} 当前被放在 ${position}，但他的可守位置不包含该守位`);
+    }
+  });
+
+  scenario.assignments.lineup.slice(0, 2).forEach((playerId, index) => {
+    if (!playerId) return;
+    const defensePosition = defenseEntries.find(([, id]) => id === playerId)?.[0];
+    if (defensePosition === "P" || defensePosition === "C") {
+      advisory.push(`第 ${index + 1} 棒是 ${defensePosition}，建议确认是否需要把投手或捕手前置`);
+    }
+  });
+
+  const injuredPlayers = uniqueAssignedIds
+    .map(getPlayer)
+    .filter((player) => player && player.status === "injured");
+  if (injuredPlayers.length) {
+    advisory.push(`伤停球员仍被安排：${injuredPlayers.map((player) => player.name).join("、")}`);
+  }
+  const restPlayers = uniqueAssignedIds
+    .map(getPlayer)
+    .filter((player) => player && player.status === "rest");
+  if (restPlayers.length) {
+    advisory.push(`轮休球员仍被安排：${restPlayers.map((player) => player.name).join("、")}`);
+  }
+
+  return { critical, advisory };
+}
+
+function setHelpOpen(open) {
+  helpOpen = open;
+  renderHelpDrawer();
+}
+
+function openGuide() {
+  guideStep = 0;
+  const changed = commitWorkspace((draft) => {
+    draft.preferences.helpDismissed = false;
+  }, { recordHistory: false });
+  if (!changed) {
+    renderGuide();
+  }
+}
+
+function dismissGuide() {
+  commitWorkspace((draft) => {
+    draft.preferences.helpDismissed = true;
+  }, { recordHistory: false });
+}
+
+function nextGuideStep() {
+  if (guideStep >= GUIDE_STEPS.length - 1) {
+    dismissGuide();
+    return;
+  }
+  guideStep += 1;
+  renderGuide();
+}
+
+function previousGuideStep() {
+  if (guideStep === 0) return;
+  guideStep -= 1;
+  renderGuide();
+}
+
+function handleGlobalKeydown(event) {
+  if (event.key === "Escape" && helpOpen) {
+    setHelpOpen(false);
+  }
+
+  if (isEditableTarget(event.target)) return;
+
+  const metaPressed = event.metaKey || event.ctrlKey;
+  if (!metaPressed || event.key.toLowerCase() !== "z") return;
+
+  event.preventDefault();
+  if (event.shiftKey) {
+    redo();
+  } else {
+    undo();
+  }
+}
+
+function isEditableTarget(target) {
+  return Boolean(target && target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
+function createUniqueScenarioName(baseName, scenarios, suffix) {
+  const trimmed = (baseName || "未命名方案").trim().slice(0, 24);
+  const existingNames = new Set(scenarios.map((scenario) => scenario.name));
+  let candidate = suffix ? `${trimmed}${suffix}` : trimmed;
+  if (!existingNames.has(candidate)) return candidate;
+  let index = 2;
+  while (existingNames.has(`${candidate} ${index}`)) {
+    index += 1;
+  }
+  return `${candidate} ${index}`;
+}
+
+function findRepeatedIds(ids) {
+  const counts = ids.reduce((map, id) => {
+    map.set(id, (map.get(id) || 0) + 1);
+    return map;
+  }, new Map());
+  return Array.from(counts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([id]) => id);
+}
+
+function formatPlayerName(id) {
+  const player = getPlayer(id);
+  return player ? player.name : "未知球员";
+}
+
+function formatDateTime(isoString) {
+  try {
+    return new Intl.DateTimeFormat("zh-CN", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(new Date(isoString));
+  } catch {
+    return isoString;
+  }
+}
+
+function timestampFilePart() {
+  const date = new Date();
+  const parts = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+    "-",
+    String(date.getHours()).padStart(2, "0"),
+    String(date.getMinutes()).padStart(2, "0"),
+    String(date.getSeconds()).padStart(2, "0")
+  ];
+  return parts.join("");
+}
+
+function downloadJson(fileName, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function createId() {
+  if (crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `p-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function showToast(message) {
+  els.toast.textContent = message;
+  els.toast.classList.add("show");
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    els.toast.classList.remove("show");
+  }, 1800);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+</script>
+</body>
+</html>
