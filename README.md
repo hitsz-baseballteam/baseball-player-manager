@@ -1,23 +1,58 @@
-# player-manager
+# Baseball Player Manager
 
-Single-file baseball lineup manager for arranging defensive positions and batting order.
+Next.js + Supabase version of the baseball player manager. The frontend keeps the existing single-page workflow and UI structure, while persistence now goes through protected server-side APIs backed by Supabase.
 
-## Files
+## Stack
 
-- `index.html`: main standalone page
+- Next.js 16 App Router
+- Server-side Supabase access with `service_role`
+- Shared passcode protection via signed `httpOnly` cookie
+- Workspace snapshot storage in `public.app_workspace`
 
-## Usage
+## Environment Variables
 
-Open `index.html` directly in a browser.
+Copy [.env.example](/Users/kennywang/Documents/baseball%20player%20manager/.env.example) to `.env.local` and set:
 
-## Features
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APP_ADMIN_PASSCODE`
 
-- Player roster management
-- Defensive field assignment
-- Batting order arrangement
-- Multiple saved scenarios
-- Workspace import/export
-- Undo and redo
-- Rule-based auto lineup
-- Critical and advisory warnings
-- Built-in help and first-use guide
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Build and Test
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+## Supabase Schema
+
+Local migration file:
+
+- [supabase/migrations/20260529172000_create_app_workspace.sql](/Users/kennywang/Documents/baseball%20player%20manager/supabase/migrations/20260529172000_create_app_workspace.sql)
+
+This migration has already been applied to Supabase project `frwuqncmghzrmqnxcfnw`, and the default shared workspace row was verified.
+
+## Deployment
+
+Deploy to Vercel after setting the same three environment variables in the Vercel project:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APP_ADMIN_PASSCODE`
+
+The app does not expose Supabase credentials to the browser. All reads and writes go through:
+
+- `POST /api/unlock`
+- `POST /api/logout`
+- `GET /api/workspace`
+- `PUT /api/workspace`

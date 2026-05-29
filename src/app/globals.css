@@ -1,0 +1,105 @@
+:root {
+  --background: #f2efe6;
+  --foreground: #172019;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), "Avenir Next", "PingFang SC", sans-serif;
+}
+
+.unlock-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(31, 109, 67, 0.15), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(23, 56, 87, 0.18), transparent 36%),
+    linear-gradient(180deg, #eff3e7 0%, #f8f1df 100%);
+}
+
+.unlock-card {
+  width: min(460px, 100%);
+  padding: 32px;
+  border: 1px solid rgba(16, 70, 46, 0.15);
+  border-radius: 24px;
+  background: rgba(255, 252, 246, 0.92);
+  box-shadow: 0 24px 60px rgba(20, 32, 26, 0.16);
+}
+
+.unlock-eyebrow {
+  margin-bottom: 12px;
+  color: #1f6d43;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.unlock-card h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.unlock-card p {
+  margin: 14px 0 0;
+  color: #55625a;
+  line-height: 1.6;
+}
+
+.unlock-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.unlock-form label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.unlock-form input {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #cfccb9;
+  border-radius: 14px;
+  background: #fffef9;
+  outline: none;
+}
+
+.unlock-form input:focus {
+  border-color: #1f6d43;
+  box-shadow: 0 0 0 4px rgba(31, 109, 67, 0.12);
+}
+
+.unlock-form button {
+  min-height: 46px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10462e, #1f6d43);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.unlock-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.unlock-error {
+  margin-top: 14px;
+  color: #9b2f25;
+  font-size: 14px;
+  font-weight: 700;
+}
