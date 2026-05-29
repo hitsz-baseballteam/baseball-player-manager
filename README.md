@@ -4,11 +4,11 @@ Single-file baseball lineup manager for arranging defensive positions and battin
 
 ## Files
 
-- `baseball-management.html`: main standalone page
+- `index.html`: main standalone page
 
 ## Usage
 
-Open `baseball-management.html` directly in a browser.
+Open `index.html` directly in a browser.
 
 ## Features
 
