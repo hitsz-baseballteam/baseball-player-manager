@@ -1,8 +1,13 @@
+import { createElement } from "react";
+import { createRoot, type Root as ReactRoot } from "react-dom/client";
+
+import { PlayerProfileEditor } from "@/components/player-profile-editor";
 import {
   analyzeScenarioWarnings,
   buildAutoScenario,
   cloneWorkspace,
   createDefaultWorkspace,
+  createDefaultPlayerProfile,
   createEmptyAssignments,
   createId,
   createScenario,
@@ -15,6 +20,7 @@ import {
   GUIDE_STEPS,
   HAND_LABELS,
   HISTORY_LIMIT,
+  inferPlayerProfileType,
   POSITIONS,
   prepareImport,
   removePlayersFromWorkspace,
@@ -22,17 +28,18 @@ import {
   sanitizeWorkspace,
   STATUS_LABELS,
   timestampFilePart,
+  type Player,
   type PendingImport,
   type PositionCode,
   type Scenario,
   type Workspace,
 } from "@/lib/workspace";
-
-type WorkspaceSnapshot = {
-  workspace: Workspace;
-  version: number;
-  updatedAt: string;
-};
+import {
+  isVersionConflict,
+  loadWorkspaceSnapshot,
+  saveWorkspaceSnapshot,
+  type WorkspaceSnapshot,
+} from "@/lib/workspace-client";
 
 type Elements = {
   saveStatus: HTMLElement;
@@ -155,12 +162,16 @@ export function mountPlayerManager(
   let toastTimer: number | null = null;
   let guideStep = workspace.preferences.helpDismissed ? 0 : 0;
   let helpOpen = false;
+  let activeProfileId: string | null = null;
   let destroyed = false;
   let saveStatusTimer: number | null = null;
   let saveQueue = Promise.resolve();
   const saveStatusIdleMessage = "云端工作区已准备";
+  const profileDrawerContainer = document.createElement("div");
+  const profileDrawerRoot: ReactRoot = createRoot(profileDrawerContainer);
 
   const els = queryElements(root);
+  document.body.appendChild(profileDrawerContainer);
   buildPositionFilter();
   buildPositionChecks();
   buildBulkPositionChecks();
@@ -181,6 +192,8 @@ export function mountPlayerManager(
     if (saveStatusTimer) {
       window.clearTimeout(saveStatusTimer);
     }
+    profileDrawerRoot.unmount();
+    profileDrawerContainer.remove();
   };
 
   function queryElements(scope: ParentNode): Elements {
@@ -519,8 +532,43 @@ export function mountPlayerManager(
     renderWarnings();
     renderHelpDrawer();
     renderGuide();
+    renderProfileDrawer();
     updateSelectedCount();
     updateHistoryButtons();
+  }
+
+  function renderProfileDrawer() {
+    const player = activeProfileId ? getCurrentPlayer(activeProfileId) : null;
+    if (activeProfileId && !player) {
+      activeProfileId = null;
+    }
+
+    profileDrawerRoot.render(
+      createElement(PlayerProfileEditor, {
+        player: activeProfileId ? getCurrentPlayer(activeProfileId) : null,
+        variant: "drawer",
+        statusMessage: "抽屉保存后会立即回写当前工作区",
+        onClose: () => {
+          activeProfileId = null;
+          renderProfileDrawer();
+        },
+        onOpenPage: () => {
+          const current = activeProfileId;
+          if (!current) {
+            return;
+          }
+          window.open(`/players/${current}`, "_blank", "noopener,noreferrer");
+        },
+        onSave: async (nextPlayer: Player) => {
+          commitWorkspace((draft) => {
+            const index = draft.players.findIndex((item) => item.id === nextPlayer.id);
+            if (index >= 0) {
+              draft.players[index] = nextPlayer;
+            }
+          }, { message: "球员档案已保存" });
+        },
+      }),
+    );
   }
 
   function renderHeader() {
@@ -590,6 +638,7 @@ export function mountPlayerManager(
               <div class="player-meta">打 ${HAND_LABELS[player.bats]} / 投 ${HAND_LABELS[player.throws]}</div>
               <div class="position-pills">${positions}${assignmentPills.join("")}</div>
               <div class="player-actions">
+                <button class="link-btn" type="button" data-profile-id="${player.id}">档案</button>
                 <button class="link-btn" type="button" data-edit-id="${player.id}">编辑</button>
                 <button class="link-btn danger" type="button" data-delete-id="${player.id}">删除</button>
               </div>
@@ -619,6 +668,16 @@ export function mountPlayerManager(
     root.querySelectorAll("[data-edit-id]").forEach((button) => {
       button.addEventListener("click", () => {
         openPlayerDialog((button as HTMLButtonElement).dataset.editId || null);
+      });
+    });
+    root.querySelectorAll("[data-profile-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const playerId = (button as HTMLButtonElement).dataset.profileId || null;
+        if (!playerId) {
+          return;
+        }
+        activeProfileId = playerId;
+        renderProfileDrawer();
       });
     });
     root.querySelectorAll("[data-delete-id]").forEach((button) => {
@@ -1113,17 +1172,21 @@ export function mountPlayerManager(
   function handlePlayerSubmit(event: Event) {
     event.preventDefault();
     const id = els.playerId.value || createId();
+    const existingPlayer = getCurrentPlayer(id);
     const positions = Array.from(
       els.positionChecks.querySelectorAll("input:checked"),
     ).map((checkbox) => (checkbox as HTMLInputElement).value as PositionCode);
-    const player = {
+    const player: Player = {
       id,
       name: els.playerName.value.trim(),
       number: els.playerNumber.value.trim(),
-      bats: els.playerBats.value,
-      throws: els.playerThrows.value,
+      bats: els.playerBats.value as Player["bats"],
+      throws: els.playerThrows.value as Player["throws"],
       positions,
-      status: els.playerStatus.value,
+      status: els.playerStatus.value as Player["status"],
+      profile:
+        existingPlayer?.profile ??
+        createDefaultPlayerProfile(inferPlayerProfileType(positions)),
     };
 
     if (!player.name || !player.number) {
@@ -1518,40 +1581,4 @@ export function mountPlayerManager(
       els.toast.classList.remove("show");
     }, 1800);
   }
-}
-
-async function loadWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
-  const response = await fetch("/api/workspace", {
-    credentials: "same-origin",
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to load workspace: ${response.status}`);
-  }
-  return response.json();
-}
-
-async function saveWorkspaceSnapshot(
-  workspace: Workspace,
-  version: number,
-): Promise<WorkspaceSnapshot> {
-  const response = await fetch("/api/workspace", {
-    method: "PUT",
-    headers: {
-      "content-type": "application/json",
-    },
-    credentials: "same-origin",
-    body: JSON.stringify({ workspace, version }),
-  });
-
-  if (response.status === 409) {
-    throw new Error("version_conflict");
-  }
-  if (!response.ok) {
-    throw new Error(`Failed to save workspace: ${response.status}`);
-  }
-  return response.json();
-}
-
-function isVersionConflict(error: unknown) {
-  return error instanceof Error && error.message === "version_conflict";
 }

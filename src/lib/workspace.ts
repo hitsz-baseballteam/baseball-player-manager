@@ -1,5 +1,6 @@
 export type PlayerStatus = "available" | "rest" | "injured";
 export type Hand = "R" | "L" | "S";
+export type PlayerProfileType = "pitcher" | "fielder";
 
 export type PositionCode =
   | "P"
@@ -20,6 +21,42 @@ export type Player = {
   bats: Hand;
   positions: PositionCode[];
   status: PlayerStatus;
+  profile: PlayerProfile;
+};
+
+export type PitcherRadar = {
+  velocity: number | null;
+  command: number | null;
+  movement: number | null;
+  stamina: number | null;
+  fielding: number | null;
+  mental: number | null;
+};
+
+export type FielderRadar = {
+  contact: number | null;
+  power: number | null;
+  speed: number | null;
+  arm: number | null;
+  defense: number | null;
+  instinct: number | null;
+};
+
+export type PlayerProfile = {
+  profileType: PlayerProfileType;
+  age: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  fastballTopKmh: number | null;
+  fastballAvgKmh: number | null;
+  armStrengthKmh: number | null;
+  sixtyMeterSec: number | null;
+  pitchTypes: string[];
+  scoutingSummary: string;
+  radar: {
+    pitcher: PitcherRadar;
+    fielder: FielderRadar;
+  };
 };
 
 export type ScenarioAssignments = {
@@ -118,10 +155,33 @@ export const STATUS_LABELS: Record<PlayerStatus, string> = {
   injured: "伤停",
 };
 
+export const PROFILE_TYPE_LABELS: Record<PlayerProfileType, string> = {
+  pitcher: "投手模型",
+  fielder: "野手模型",
+};
+
 export const HAND_LABELS: Record<Hand, string> = {
   R: "右",
   L: "左",
   S: "双",
+};
+
+export const PITCHER_RADAR_LABELS: Record<keyof PitcherRadar, string> = {
+  velocity: "球速",
+  command: "控球",
+  movement: "位移",
+  stamina: "续航",
+  fielding: "补位",
+  mental: "抗压",
+};
+
+export const FIELDER_RADAR_LABELS: Record<keyof FielderRadar, string> = {
+  contact: "击球",
+  power: "长打",
+  speed: "速度",
+  arm: "臂力",
+  defense: "守备",
+  instinct: "球感",
 };
 
 export const GUIDE_STEPS = [
@@ -152,7 +212,7 @@ export const GUIDE_STEPS = [
   },
 ] as const;
 
-export const DEFAULT_PLAYERS: Player[] = [
+export const DEFAULT_PLAYERS: Array<Omit<Player, "profile">> = [
   {
     id: "p-01",
     name: "陈浩宇",
@@ -271,6 +331,103 @@ export function createId() {
   return `p-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+export function inferPlayerProfileType(
+  positions: PositionCode[],
+): PlayerProfileType {
+  return positions.includes("P") ? "pitcher" : "fielder";
+}
+
+export function createEmptyPitcherRadar(): PitcherRadar {
+  return {
+    velocity: null,
+    command: null,
+    movement: null,
+    stamina: null,
+    fielding: null,
+    mental: null,
+  };
+}
+
+export function createEmptyFielderRadar(): FielderRadar {
+  return {
+    contact: null,
+    power: null,
+    speed: null,
+    arm: null,
+    defense: null,
+    instinct: null,
+  };
+}
+
+export function createDefaultPlayerProfile(
+  profileType: PlayerProfileType,
+): PlayerProfile {
+  return {
+    profileType,
+    age: null,
+    heightCm: null,
+    weightKg: null,
+    fastballTopKmh: null,
+    fastballAvgKmh: null,
+    armStrengthKmh: null,
+    sixtyMeterSec: null,
+    pitchTypes: [],
+    scoutingSummary: "",
+    radar: {
+      pitcher: createEmptyPitcherRadar(),
+      fielder: createEmptyFielderRadar(),
+    },
+  };
+}
+
+function createDemoPlayerProfile(
+  player: Omit<Player, "profile">,
+  index: number,
+): PlayerProfile {
+  const profileType = inferPlayerProfileType(player.positions);
+  const profile = createDefaultPlayerProfile(profileType);
+  const handedBias = player.throws === "L" ? 1 : 0;
+
+  profile.age = 18 + (index % 6);
+  profile.heightCm = 171 + index * 2 + handedBias;
+  profile.weightKg = 67 + index * 2;
+  profile.armStrengthKmh = 118 + index + handedBias;
+  profile.sixtyMeterSec = Number((7.8 - index * 0.08).toFixed(2));
+
+  profile.radar.fielder = {
+    contact: 42 + (index % 5) * 6,
+    power: 40 + (index % 4) * 7,
+    speed: 46 + ((index + 2) % 5) * 5,
+    arm: 44 + (index % 6) * 5,
+    defense: 45 + ((index + 1) % 5) * 6,
+    instinct: 43 + ((index + 3) % 5) * 6,
+  };
+
+  if (profileType === "pitcher") {
+    profile.fastballTopKmh = 132 + index * 2 + handedBias;
+    profile.fastballAvgKmh = profile.fastballTopKmh - 4;
+    profile.pitchTypes = player.throws === "L"
+      ? ["四缝线", "滑球", "变速球"]
+      : ["四缝线", "曲球", "变速球"];
+    profile.radar.pitcher = {
+      velocity: 46 + (index % 5) * 7,
+      command: 42 + ((index + 1) % 5) * 6,
+      movement: 45 + ((index + 2) % 5) * 6,
+      stamina: 44 + ((index + 3) % 5) * 6,
+      fielding: 40 + ((index + 4) % 5) * 5,
+      mental: 43 + (index % 5) * 6,
+    };
+    profile.scoutingSummary = `${player.name} 具备先发投手轮换潜力，球速带宽稳定，具备二级球种发展空间。`;
+  } else {
+    profile.fastballTopKmh = null;
+    profile.fastballAvgKmh = null;
+    profile.pitchTypes = [];
+    profile.scoutingSummary = `${player.name} 具备稳定守备覆盖与跑动能力，适合作为比赛日机动型野手培养。`;
+  }
+
+  return profile;
+}
+
 export function createEmptyAssignments(): ScenarioAssignments {
   return {
     defense: Object.fromEntries(
@@ -303,10 +460,14 @@ export function createDefaultWorkspace(helpDismissed: boolean): Workspace {
     "常规先发方案",
     createEmptyAssignments(),
   );
+  const players = structuredClone(DEFAULT_PLAYERS).map((player, index) => ({
+    ...player,
+    profile: createDemoPlayerProfile(player, index),
+  }));
 
   return {
     version: WORKSPACE_SCHEMA_VERSION,
-    players: structuredClone(DEFAULT_PLAYERS),
+    players,
     scenarios: [scenario],
     activeScenarioId: scenario.id,
     preferences: {
@@ -381,18 +542,57 @@ export function sanitizePlayers(players: unknown[]): Player[] {
       return Boolean(player && typeof player === "object");
     })
     .filter((player) => player.id && player.name)
-    .map((player) => ({
-      id: String(player.id),
-      name: String(player.name).trim().slice(0, 28),
-      number: String(player.number ?? "").trim().slice(0, 3),
-      throws: normalizeHand(player.throws),
-      bats: normalizeHand(player.bats),
-      positions: sanitizePositions(player.positions),
-      status: STATUS_LABELS[player.status as PlayerStatus]
-        ? (player.status as PlayerStatus)
-        : "available",
-    }))
+    .map((player) => {
+      const positions = sanitizePositions(player.positions);
+      return {
+        id: String(player.id),
+        name: String(player.name).trim().slice(0, 28),
+        number: String(player.number ?? "").trim().slice(0, 3),
+        throws: normalizeHand(player.throws),
+        bats: normalizeHand(player.bats),
+        positions,
+        status: STATUS_LABELS[player.status as PlayerStatus]
+          ? (player.status as PlayerStatus)
+          : "available",
+        profile: sanitizePlayerProfile(player.profile, positions),
+      };
+    })
     .filter((player) => Boolean(player.name && player.number));
+}
+
+export function sanitizePlayerProfile(
+  value: unknown,
+  positions: PositionCode[],
+): PlayerProfile {
+  const source = value as Partial<PlayerProfile> | undefined;
+  const profileType =
+    source?.profileType === "pitcher" || source?.profileType === "fielder"
+      ? source.profileType
+      : inferPlayerProfileType(positions);
+  const fallback = createDefaultPlayerProfile(profileType);
+
+  return {
+    profileType,
+    age: sanitizeNullableNumber(source?.age, 10, 60, true),
+    heightCm: sanitizeNullableNumber(source?.heightCm, 100, 240, true),
+    weightKg: sanitizeNullableNumber(source?.weightKg, 30, 200, true),
+    fastballTopKmh: sanitizeNullableNumber(source?.fastballTopKmh, 60, 180),
+    fastballAvgKmh: sanitizeNullableNumber(source?.fastballAvgKmh, 60, 180),
+    armStrengthKmh: sanitizeNullableNumber(source?.armStrengthKmh, 60, 180),
+    sixtyMeterSec: sanitizeNullableNumber(source?.sixtyMeterSec, 5, 12),
+    pitchTypes: sanitizeStringList(source?.pitchTypes, 6, 10),
+    scoutingSummary: String(source?.scoutingSummary ?? "").trim().slice(0, 180),
+    radar: {
+      pitcher: sanitizeRadar(
+        source?.radar?.pitcher,
+        fallback.radar.pitcher,
+      ) as PitcherRadar,
+      fielder: sanitizeRadar(
+        source?.radar?.fielder,
+        fallback.radar.fielder,
+      ) as FielderRadar,
+    },
+  };
 }
 
 export function sanitizeScenario(
@@ -463,6 +663,59 @@ export function normalizeHand(value: unknown): Hand {
   return typeof value === "string" && value in HAND_LABELS
     ? (value as Hand)
     : "R";
+}
+
+function sanitizeNullableNumber(
+  value: unknown,
+  min: number,
+  max: number,
+  integer = false,
+) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  const normalized = integer ? Math.round(parsed) : Number(parsed.toFixed(2));
+  if (normalized < min || normalized > max) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function sanitizeStringList(value: unknown, limit: number, maxLength: number) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().slice(0, maxLength))
+    .filter(Boolean)
+    .filter((item, index, list) => list.indexOf(item) === index)
+    .slice(0, limit);
+}
+
+function sanitizeRadar<T extends Record<string, number | null>>(
+  value: unknown,
+  fallback: T,
+) {
+  if (!value || typeof value !== "object") {
+    return structuredClone(fallback);
+  }
+
+  const source = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.keys(fallback).map((key) => [
+      key,
+      sanitizeNullableNumber(source[key], 20, 80, true),
+    ]),
+  ) as T;
 }
 
 export function isIsoDate(value: unknown): value is string {
