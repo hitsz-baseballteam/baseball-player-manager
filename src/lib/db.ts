@@ -5,11 +5,11 @@ let pool: Pool | null = null;
 function getDatabaseUrl() {
   const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error(
-      "DATABASE_URL is not configured. " +
-      "For Supabase, use the connection pooler URL (port 6543): " +
-      "postgresql://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres"
-    );
+    throw new Error("DATABASE_URL is not configured");
+  }
+  // Append sslmode if not present (Supabase requires SSL)
+  if (!url.includes("sslmode=") && !url.includes("?sslmode=")) {
+    return url.includes("?") ? `${url}&sslmode=require` : `${url}?sslmode=require`;
   }
   return url;
 }
@@ -19,8 +19,10 @@ export function getPool() {
     pool = new Pool({
       connectionString: getDatabaseUrl(),
       max: 1,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 10000,
+      ssl: { rejectUnauthorized: false },
+      allowExitOnIdle: true,
     });
   }
   return pool;
