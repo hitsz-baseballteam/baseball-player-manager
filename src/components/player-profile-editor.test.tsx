@@ -27,19 +27,19 @@ function createTestPlayer(overrides: Partial<Player> = {}): Player {
       radar: {
         pitcher: {
           velocity: 65,
-          movement: 55,
-          control: 50,
+          command: 55,
+          movement: 50,
           stamina: 45,
-          deception: 40,
-          composure: 60,
+          fielding: 40,
+          mental: 60,
         },
         fielder: {
-          arm: 60,
-          fielding: 50,
-          range: 45,
-          speed: 55,
-          hitting: 30,
-          power: 25,
+          contact: 60,
+          power: 50,
+          speed: 45,
+          arm: 55,
+          defense: 30,
+          instinct: 25,
         },
       },
     },
@@ -118,9 +118,14 @@ describe("PlayerProfileEditor", () => {
       fireEvent.click(submitButton);
     });
 
-    assert.ok(savedPlayer);
-    assert.equal(savedPlayer!.name, "更新的球员");
-    assert.equal(savedPlayer!.id, "test-player-1");
+    const result = savedPlayer;
+    if (!result) {
+      throw new Error("onSave should have been called");
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const p = result as Player;
+    assert.equal(p.name, "更新的球员");
+    assert.equal(p.id, "test-player-1");
   });
 
   it("shows validation error when name is empty", async () => {
