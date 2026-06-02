@@ -1,20 +1,21 @@
 # Baseball Player Manager
 
-Next.js + Supabase version of the baseball player manager. The frontend keeps the existing single-page workflow and UI structure, while persistence now goes through protected server-side APIs backed by Supabase.
+A Next.js 16 application for managing a shared baseball roster, defensive assignments, and batting-order scenarios.
+The current UI is hybrid: a legacy DOM-based manager is hosted inside a newer React/Next.js shell, and workspace data is persisted through protected server-side APIs backed by PostgreSQL.
 
 ## Stack
 
 - Next.js 16 App Router
-- Server-side Supabase access with `service_role`
-- Shared passcode protection via signed `httpOnly` cookie
-- Workspace snapshot storage in `public.app_workspace`
+- React 19
+- TypeScript
+- PostgreSQL via `pg`
+- Supabase SQL migrations
 
 ## Environment Variables
 
-Copy [.env.example](/Users/kennywang/Documents/baseball%20player%20manager/.env.example) to `.env.local` and set:
+Copy `.env.example` to `.env.local` and set:
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `DATABASE_URL`
 - `APP_ADMIN_PASSCODE`
 
 ## Local Development
@@ -26,7 +27,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Build and Test
+## Verification
 
 ```bash
 npm run lint
@@ -34,25 +35,27 @@ npm test
 npm run build
 ```
 
-## Supabase Schema
+## Database Schema
 
-Local migration file:
+The repository currently includes one migration:
 
-- [supabase/migrations/20260529172000_create_app_workspace.sql](/Users/kennywang/Documents/baseball%20player%20manager/supabase/migrations/20260529172000_create_app_workspace.sql)
+- [`supabase/migrations/20260529172000_create_app_workspace.sql`](./supabase/migrations/20260529172000_create_app_workspace.sql)
 
-This migration has already been applied to Supabase project `frwuqncmghzrmqnxcfnw`, and the default shared workspace row was verified.
+That migration creates the `public.app_workspace` table used by the application and seeds a default shared workspace row when missing.
 
-## Deployment
+## API Surface
 
-Deploy to Vercel after setting the same three environment variables in the Vercel project:
-
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `APP_ADMIN_PASSCODE`
-
-The app does not expose Supabase credentials to the browser. All reads and writes go through:
+The app currently uses these server routes:
 
 - `POST /api/unlock`
 - `POST /api/logout`
 - `GET /api/workspace`
 - `PUT /api/workspace`
+
+`/api/workspace` is protected by a signed `httpOnly` cookie set through the unlock flow.
+
+## Project Docs
+
+- [AGENTS.md](./AGENTS.md) — compact repo map for agents
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — observed current-state architecture
+- [docs/index.md](./docs/index.md) — documentation index

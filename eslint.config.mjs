@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // CJS test setup file (Node --require):
+    "src/lib/test-setup.cjs",
   ]),
 ]);
 

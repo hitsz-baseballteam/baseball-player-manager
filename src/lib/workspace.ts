@@ -665,7 +665,7 @@ export function normalizeHand(value: unknown): Hand {
     : "R";
 }
 
-function sanitizeNullableNumber(
+export function sanitizeNullableNumber(
   value: unknown,
   min: number,
   max: number,
@@ -759,18 +759,21 @@ export function createUniqueScenarioName(
 ) {
   const trimmed = (baseName || "未命名方案").trim().slice(0, 24);
   const existingNames = new Set(scenarios.map((scenario) => scenario.name));
-  const baseCandidate = suffix ? `${trimmed}${suffix}` : trimmed;
+  const baseCandidate = (suffix ? `${trimmed}${suffix}` : trimmed).slice(0, 24);
 
   if (!existingNames.has(baseCandidate)) {
     return baseCandidate;
   }
 
   let index = 2;
-  while (existingNames.has(`${baseCandidate} ${index}`)) {
+  const maxIndex = 99;
+  const suffixMaxLen = String(maxIndex).length + 1;
+  const truncatedBase = baseCandidate.slice(0, 24 - suffixMaxLen);
+  while (existingNames.has(`${truncatedBase} ${index}`) && index <= maxIndex) {
     index += 1;
   }
 
-  return `${baseCandidate} ${index}`;
+  return `${truncatedBase} ${index}`.slice(0, 24);
 }
 
 export function removePlayersFromWorkspace(draft: Workspace, ids: string[]) {
@@ -950,20 +953,6 @@ export function analyzeScenarioWarnings(
       );
     }
   });
-
-  const injuredPlayers = uniqueAssignedIds
-    .map((id) => getPlayer(workspace, id))
-    .filter((player): player is Player => Boolean(player && player.status === "injured"));
-  if (injuredPlayers.length) {
-    advisory.push(`伤停球员仍被安排：${injuredPlayers.map((player) => player.name).join("、")}`);
-  }
-
-  const restPlayers = uniqueAssignedIds
-    .map((id) => getPlayer(workspace, id))
-    .filter((player): player is Player => Boolean(player && player.status === "rest"));
-  if (restPlayers.length) {
-    advisory.push(`轮休球员仍被安排：${restPlayers.map((player) => player.name).join("、")}`);
-  }
 
   return { critical, advisory };
 }

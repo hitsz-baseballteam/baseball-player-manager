@@ -5,8 +5,18 @@ import {
   verifyPasscode,
   UNLOCK_COOKIE_NAME,
 } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: Request) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  if (!checkRateLimit(`unlock:${ip}`, 5, 60_000)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   const body = (await request.json().catch(() => null)) as
     | { passcode?: string }
     | null;

@@ -4,24 +4,30 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts"
+    "test": "node --require ./src/lib/test-setup.cjs --import tsx --test src/lib/*.test.ts src/components/*.test.tsx src/app/api/*.test.ts"
   },
   "dependencies": {
     "next": "16.2.6",
+    "pg": "^8.21.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "@supabase/supabase-js": "^2.57.4"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

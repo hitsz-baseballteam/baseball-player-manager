@@ -47,6 +47,38 @@ export async function saveWorkspaceSnapshot(
   return response.json();
 }
 
+/**
+ * Save with automatic retry on version conflict.
+ * Reloads the latest workspace, re-applies the mutation, and retries
+ * up to `maxRetries` times (default 3).
+ */
+export async function saveWithRetry(
+  currentVersion: number,
+  applyMutation: (latest: Workspace) => Workspace,
+  maxRetries = 3,
+): Promise<WorkspaceSnapshot> {
+  let version = currentVersion;
+  let workspace: Workspace | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      const latest = await loadWorkspaceSnapshot();
+      workspace = applyMutation(latest.workspace);
+      version = latest.version;
+    }
+
+    try {
+      return await saveWorkspaceSnapshot(workspace!, version);
+    } catch (error) {
+      if (!isVersionConflict(error) || attempt >= maxRetries) {
+        throw error;
+      }
+    }
+  }
+
+  throw new VersionConflictError();
+}
+
 export function isVersionConflict(error: unknown) {
   return error instanceof VersionConflictError;
 }

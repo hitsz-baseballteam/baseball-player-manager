@@ -6,27 +6,28 @@
 <title>棒球球员 Management</title>
 <style>
 :root {
-  --ink: #15201a;
-  --muted: #667066;
-  --paper: #f7f4eb;
-  --panel: rgba(255, 253, 247, .94);
-  --line: #d9d1bd;
-  --line-strong: #c5b79a;
-  --green: #1f6d43;
-  --green-deep: #10462e;
-  --green-soft: #c8dfbd;
-  --clay: #bd5b32;
-  --clay-deep: #8d3e23;
-  --chalk: #fff8e6;
-  --navy: #173857;
-  --gold: #e2b24d;
-  --red: #b8402c;
-  --red-soft: #fff3ef;
-  --blue: #2b6f92;
-  --amber: #9a6a15;
-  --amber-soft: #fff5d8;
-  --shadow: 0 14px 36px rgba(30, 40, 28, .14);
-  --shadow-heavy: 0 24px 70px rgba(18, 30, 24, .28);
+  --ink: var(--theme-fg);
+  --muted: var(--theme-muted);
+  --paper: var(--theme-bg);
+  --panel: var(--theme-surface);
+  --panel-alt: var(--theme-surface-alt);
+  --line: var(--theme-border);
+  --line-strong: var(--theme-border);
+  --green: var(--theme-accent);
+  --green-deep: var(--theme-accent-hover);
+  --green-soft: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-bg));
+  --clay: var(--theme-warm);
+  --clay-deep: var(--theme-warm);
+  --chalk: var(--theme-surface);
+  --navy: var(--theme-cool);
+  --gold: var(--theme-gold);
+  --red: var(--theme-danger);
+  --red-soft: color-mix(in srgb, var(--theme-danger) 10%, var(--theme-bg));
+  --blue: var(--theme-cool);
+  --amber: var(--theme-gold);
+  --amber-soft: color-mix(in srgb, var(--theme-gold) 15%, var(--theme-bg));
+  --shadow: 0 14px 36px var(--theme-shadow);
+  --shadow-heavy: 0 24px 70px var(--theme-shadow-strong);
   --radius: 8px;
 }
 
@@ -44,8 +45,9 @@ body {
   color: var(--ink);
   font-family: "Avenir Next", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif;
   background:
-    linear-gradient(90deg, rgba(21, 32, 26, .04) 1px, transparent 1px) 0 0 / 28px 28px,
-    linear-gradient(180deg, #eff3e7 0%, #f8f1df 100%);
+    linear-gradient(90deg, var(--theme-shadow) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(180deg, var(--theme-surface-alt) 0%, var(--theme-bg) 100%);
+  transition: background 0.3s, color 0.3s;
 }
 
 button,
@@ -131,6 +133,7 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 
 .panel {
@@ -139,15 +142,16 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 
 .panel-header {
-  padding: 14px;
+  padding: 16px;
   border-bottom: 1px solid var(--line);
 }
 
 .panel-body {
-  padding: 14px;
+  padding: 16px;
 }
 
 .panel-title {
@@ -171,7 +175,7 @@ button:disabled {
   padding: 0 9px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #faf7ed;
+  background: var(--panel-alt);
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -179,8 +183,8 @@ button:disabled {
 }
 
 .small-chip.active {
-  border-color: rgba(31, 109, 67, .32);
-  background: #eff7ea;
+  border-color: color-mix(in srgb, var(--theme-accent) 32%, transparent);
+  background: var(--green-soft);
   color: var(--green-deep);
 }
 
@@ -189,15 +193,15 @@ button:disabled {
 }
 
 .warning-summary .critical-chip {
-  border-color: rgba(184, 64, 44, .28);
-  background: #fff2ee;
-  color: #8b3126;
+  border-color: color-mix(in srgb, var(--theme-danger) 28%, transparent);
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 .warning-summary .advisory-chip {
-  border-color: rgba(154, 106, 21, .28);
-  background: #fff7e5;
-  color: #875d0f;
+  border-color: color-mix(in srgb, var(--theme-gold) 28%, transparent);
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .toolbar-panel {
@@ -219,9 +223,10 @@ button:disabled {
   padding: 0 12px;
   border-radius: var(--radius);
   background: var(--ink);
-  color: #fff;
+  color: var(--panel);
   font-weight: 800;
-  box-shadow: 0 9px 18px rgba(21, 32, 26, .16);
+  box-shadow: 0 9px 18px var(--theme-shadow);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
 .btn.secondary {
@@ -229,6 +234,11 @@ button:disabled {
   color: var(--ink);
   border: 1px solid var(--line);
   box-shadow: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn.secondary:hover {
+  background: var(--panel-alt);
 }
 
 .btn.warn {
@@ -296,9 +306,10 @@ button:disabled {
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffef9;
+  background: var(--panel);
   color: var(--ink);
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .textarea {
@@ -311,7 +322,7 @@ button:disabled {
 .select:focus,
 .textarea:focus {
   border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(31, 109, 67, .14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 14%, transparent);
 }
 
 .workspace {
@@ -371,20 +382,20 @@ button:disabled {
   padding: 9px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffdf7;
-  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  background: var(--panel);
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
 .player-card:hover,
 .player-card.dragging {
   transform: translateY(-1px);
-  border-color: rgba(31, 109, 67, .55);
-  box-shadow: 0 10px 22px rgba(31, 109, 67, .12);
+  border-color: color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--theme-accent) 12%, transparent);
 }
 
 .player-card.selected {
   border-color: var(--green);
-  background: #f3faef;
+  background: var(--green-soft);
 }
 
 .player-select {
@@ -400,7 +411,7 @@ button:disabled {
   height: 44px;
   border-radius: 50%;
   background: var(--navy);
-  color: #fff;
+  color: var(--panel);
   font-family: Georgia, serif;
   font-size: 18px;
   font-weight: 800;
@@ -443,7 +454,7 @@ button:disabled {
 .position-pill {
   padding: 2px 7px;
   border-radius: 999px;
-  background: #eef5e6;
+  background: var(--green-soft);
   color: var(--green-deep);
   font-size: 11px;
   font-weight: 900;
@@ -452,25 +463,25 @@ button:disabled {
 .assignment-pill {
   padding: 2px 7px;
   border-radius: 999px;
-  background: #f0ece0;
-  color: #5c5a52;
+  background: var(--panel-alt);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 900;
 }
 
 .status-chip.available {
   color: var(--green-deep);
-  background: #eff7ea;
+  background: var(--green-soft);
 }
 
 .status-chip.rest {
-  color: #765818;
-  background: #fff3cb;
+  color: var(--amber);
+  background: var(--amber-soft);
 }
 
 .status-chip.injured {
-  color: #8b2d24;
-  background: #ffe4dc;
+  color: var(--red);
+  background: var(--red-soft);
 }
 
 .field-panel .panel-body {
@@ -483,7 +494,7 @@ button:disabled {
   min-height: 500px;
   overflow: hidden;
   border-radius: var(--radius);
-  border: 1px solid #0f3c29;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 80%, var(--theme-fg));
   background:
     radial-gradient(circle at 50% 50%, rgba(255,255,255,.16) 0 2px, transparent 3px) 0 0 / 26px 26px,
     radial-gradient(circle at 50% 22%, #3f9b56 0%, #267f48 39%, #155936 75%, #0d3a27 100%);
@@ -510,7 +521,7 @@ button:disabled {
     radial-gradient(circle at 50% 50%, rgba(255,255,255,.16), transparent 36%),
     linear-gradient(135deg, var(--clay), var(--clay-deep));
   border: 3px solid rgba(255, 248, 230, .58);
-  box-shadow: 0 18px 42px rgba(71, 37, 20, .25);
+  box-shadow: 0 18px 42px var(--theme-shadow-strong);
 }
 
 .mound {
@@ -523,7 +534,7 @@ button:disabled {
   border-radius: 50%;
   background: #a84f30;
   border: 3px solid rgba(255, 248, 230, .65);
-  box-shadow: inset 0 6px 16px rgba(67, 28, 14, .18);
+  box-shadow: inset 0 6px 16px var(--theme-shadow);
 }
 
 .baseline {
@@ -549,9 +560,9 @@ button:disabled {
   width: 18px;
   height: 18px;
   background: var(--chalk);
-  border: 1px solid rgba(21, 32, 26, .26);
+  border: 1px solid color-mix(in srgb, var(--theme-fg) 26%, transparent);
   transform: translate(-50%, -50%) rotate(45deg);
-  box-shadow: 0 3px 9px rgba(21, 32, 26, .18);
+  box-shadow: 0 3px 9px var(--theme-shadow);
 }
 
 .base.home {
@@ -595,8 +606,8 @@ button:disabled {
   padding: 8px;
   border: 2px solid rgba(255, 248, 230, .76);
   border-radius: var(--radius);
-  background: rgba(255, 253, 247, .82);
-  box-shadow: 0 12px 26px rgba(14, 43, 30, .2);
+  background: color-mix(in srgb, var(--theme-surface) 82%, transparent);
+  box-shadow: 0 12px 26px var(--theme-shadow-strong);
   text-align: center;
   transition: transform .15s ease, background .15s ease, border-color .15s ease;
 }
@@ -604,12 +615,12 @@ button:disabled {
 .field-zone:hover,
 .field-zone.drop-target {
   transform: translate(-50%, -50%) scale(1.03);
-  background: #fffdf7;
+  background: var(--panel);
   border-color: var(--gold);
 }
 
 .field-zone.filled {
-  border-color: rgba(23, 56, 87, .55);
+  border-color: color-mix(in srgb, var(--theme-cool) 55%, transparent);
 }
 
 .zone-code {
@@ -617,7 +628,7 @@ button:disabled {
   padding: 3px 8px;
   border-radius: 999px;
   background: var(--ink);
-  color: #fff;
+  color: var(--panel);
   font-family: Georgia, serif;
   font-weight: 900;
   line-height: 1.1;
@@ -639,7 +650,7 @@ button:disabled {
 
 .clear-zone {
   display: none;
-  background: rgba(184, 64, 44, .1);
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
   color: var(--red);
   border-radius: 999px;
   padding: 3px 8px;
@@ -663,7 +674,8 @@ button:disabled {
   padding: 9px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffdf7;
+  background: var(--panel);
+  transition: background 0.3s, border-color 0.3s;
 }
 
 .stat-label {
@@ -694,7 +706,7 @@ button:disabled {
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffdf7;
+  background: var(--panel);
   transition: transform .15s ease, border-color .15s ease, background .15s ease;
 }
 
@@ -702,7 +714,7 @@ button:disabled {
 .lineup-slot.drop-target {
   transform: translateY(-1px);
   border-color: var(--green);
-  background: #f2faef;
+  background: var(--green-soft);
 }
 
 .bat-order {
@@ -712,7 +724,7 @@ button:disabled {
   height: 34px;
   border-radius: 50%;
   background: var(--clay);
-  color: #fff;
+  color: var(--panel);
   font-family: Georgia, serif;
   font-size: 18px;
   font-weight: 900;
@@ -756,24 +768,24 @@ button:disabled {
 }
 
 .warning-item.critical {
-  border: 1px solid rgba(184, 64, 44, .28);
+  border: 1px solid color-mix(in srgb, var(--theme-danger) 28%, transparent);
   border-left: 5px solid var(--red);
   background: var(--red-soft);
-  color: #7f3026;
+  color: var(--red);
 }
 
 .warning-item.advisory {
-  border: 1px solid rgba(154, 106, 21, .26);
+  border: 1px solid color-mix(in srgb, var(--theme-gold) 26%, transparent);
   border-left: 5px solid var(--amber);
   background: var(--amber-soft);
-  color: #7b560e;
+  color: var(--amber);
 }
 
 .ok-item {
-  border: 1px solid rgba(31, 109, 67, .24);
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 24%, transparent);
   border-left: 5px solid var(--green);
   border-radius: var(--radius);
-  background: #f1faed;
+  background: var(--green-soft);
   padding: 9px 10px;
   color: var(--green-deep);
   font-size: 13px;
@@ -786,13 +798,13 @@ button:disabled {
   padding: 18px;
   color: var(--muted);
   text-align: center;
-  background: #fffdf7;
+  background: var(--panel);
 }
 
 .drawer-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(10, 20, 16, .34);
+  background: color-mix(in srgb, var(--theme-fg) 34%, transparent);
   opacity: 0;
   pointer-events: none;
   transition: opacity .18s ease;
@@ -811,7 +823,7 @@ button:disabled {
   width: min(420px, 100vw);
   height: 100vh;
   padding: 18px;
-  background: rgba(255, 252, 244, .98);
+  background: var(--panel);
   border-left: 1px solid var(--line-strong);
   box-shadow: var(--shadow-heavy);
   transform: translateX(100%);
@@ -858,7 +870,7 @@ button:disabled {
 .guide-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 20, 16, .58);
+  background: color-mix(in srgb, var(--theme-fg) 58%, transparent);
   z-index: 40;
   display: none;
 }
@@ -876,7 +888,7 @@ button:disabled {
   overflow: auto;
   padding: 16px;
   border-radius: var(--radius);
-  background: #fffef9;
+  background: var(--panel);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-heavy);
   z-index: 42;
@@ -914,7 +926,7 @@ button:disabled {
   position: relative;
   z-index: 41;
   scroll-margin-top: 14px;
-  box-shadow: 0 0 0 3px rgba(226, 178, 77, .72), var(--shadow-heavy);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-gold) 72%, transparent), var(--shadow-heavy);
 }
 
 dialog {
@@ -928,7 +940,7 @@ dialog {
 }
 
 dialog::backdrop {
-  background: rgba(10, 20, 16, .48);
+  background: color-mix(in srgb, var(--theme-fg) 48%, transparent);
 }
 
 .dialog-header,
@@ -989,7 +1001,7 @@ dialog::backdrop {
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffdf7;
+  background: var(--panel);
   font-size: 12px;
   font-weight: 900;
 }
@@ -1008,7 +1020,7 @@ dialog::backdrop {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffdf7;
+  background: var(--panel);
 }
 
 .preview-tile span {
@@ -1030,7 +1042,7 @@ dialog::backdrop {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffdf7;
+  background: var(--panel);
   color: var(--muted);
   font-size: 13px;
 }
@@ -1045,7 +1057,7 @@ dialog::backdrop {
   padding: 11px 14px;
   border-radius: var(--radius);
   background: var(--ink);
-  color: #fff;
+  color: var(--panel);
   font-weight: 900;
   box-shadow: var(--shadow);
   opacity: 0;
@@ -1193,6 +1205,29 @@ dialog::backdrop {
     width: auto;
   }
 }
+
+#theme-toggle-btn .theme-icon { font-size: 16px; }
+
+#theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+#theme-toggle-btn:hover {
+  background: var(--panel-alt);
+  border-color: var(--line-strong);
+}
 </style>
 </head>
 <body>
@@ -1227,6 +1262,10 @@ dialog::backdrop {
           <button class="btn secondary" id="clearAssignmentsBtn" type="button">清空阵容</button>
           <button class="btn warn" id="resetBtn" type="button">重置示例</button>
           <button class="btn secondary" id="helpBtn" type="button">帮助</button>
+          <button id="theme-toggle-btn" class="btn btn-ghost" type="button" title="切换主题">
+            <span class="theme-icon">🎨</span>
+            <span class="btn-label">主题</span>
+          </button>
         </div>
         <input id="importInput" type="file" accept=".json,application/json" hidden>
       </div>
@@ -1357,9 +1396,9 @@ dialog::backdrop {
 </main>
 
 <div class="drawer-scrim" id="drawerScrim"></div>
-<aside class="help-drawer" id="helpDrawer" aria-hidden="true">
+<aside class="help-drawer" id="helpDrawer" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="helpDrawerTitle" tabindex="-1">
   <div class="panel-title">
-    <h2>使用指引 / 帮助</h2>
+    <h2 id="helpDrawerTitle">使用指引 / 帮助</h2>
     <button class="btn icon secondary" id="closeHelpBtn" type="button" aria-label="关闭帮助">×</button>
   </div>
   <p>这个工具现在支持多套阵容方案、工作区备份、单方案分享、自动排阵初稿、撤销重做和分级提醒。</p>

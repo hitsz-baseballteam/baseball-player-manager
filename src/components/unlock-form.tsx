@@ -7,28 +7,42 @@ export function UnlockForm() {
   const router = useRouter();
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const isBusy = isSubmitting || isPending;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
-    const response = await fetch("/api/unlock", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ passcode }),
-    });
+    try {
+      const response = await fetch("/api/unlock", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ passcode }),
+      });
 
-    if (!response.ok) {
-      setError("口令不正确");
-      return;
+      if (response.status === 401) {
+        setError("口令不正确");
+        return;
+      }
+
+      if (!response.ok) {
+        setError("暂时无法验证口令，请稍后重试");
+        return;
+      }
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setError("网络异常，请稍后重试");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    startTransition(() => {
-      router.refresh();
-    });
   }
 
   return (
@@ -50,8 +64,8 @@ export function UnlockForm() {
             autoComplete="current-password"
             required
           />
-          <button type="submit" disabled={isPending}>
-            {isPending ? "验证中..." : "进入工作区"}
+          <button type="submit" disabled={isBusy}>
+            {isBusy ? "验证中..." : "进入工作区"}
           </button>
         </form>
         {error ? <div className="unlock-error">{error}</div> : null}

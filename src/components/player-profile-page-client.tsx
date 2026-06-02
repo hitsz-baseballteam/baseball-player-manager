@@ -71,6 +71,7 @@ export function PlayerProfilePageClient(
 
   return (
     <PlayerProfileEditor
+      key={player ? `${player.id}:${version}` : `missing:${props.playerId}:${version}`}
       player={player}
       variant="page"
       saving={saving}

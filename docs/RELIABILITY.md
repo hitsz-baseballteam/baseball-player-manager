@@ -1,0 +1,91 @@
+# 可靠性要求
+
+## 数据完整性
+
+### 乐观并发控制
+
+`src/lib/workspace-store.ts` 实现乐观并发：
+
+```
+UPDATE app_workspace
+SET data = $data, version = $newVersion
+WHERE slug = $slug AND version = $currentVersion
+RETURNING version
+```
+
+- 每次写入必须携带当前 `version`
+- 版本冲突（返回 0 行）→ API 返回 409
+- 主工作区编辑路径会通过 `saveWithRetry()` 重新加载最新数据并最多自动重试 3 次
+- 球员档案页冲突时会刷新到最新 workspace，但不会自动重放本次编辑
+
+### 写操作保证
+
+- **原子性**：核心写入是单条 `UPDATE ... RETURNING` 语句；代码中没有显式 `BEGIN/COMMIT` 事务块
+- **隔离性**：依赖 PostgreSQL 默认事务行为与版本条件更新
+- **无分布式事务**：单表单行操作，不需要两阶段提交
+
+## 连接池策略
+
+`src/lib/db.ts`：
+
+| 参数 | 值 | 原因 |
+|---|---|---|
+| `max` | 5 | 限制 Supabase 连接数，避免超出免费层配额 |
+| `idleTimeoutMillis` | 30000 | 30 秒空闲即释放，避免占用连接 |
+| `connectionTimeoutMillis` | 默认（无超时） | 依赖 pg 默认行为 |
+
+## 错误处理模式
+
+### API 层
+
+所有 API route 返回结构化 JSON 错误：
+
+```json
+{ "error": "描述性错误信息" }
+```
+
+HTTP 状态码（当前代码显式返回的部分）：
+- 200：成功
+- 204：解锁成功 / 登出成功
+- 400：请求格式错误
+- 401：未认证或口令错误
+- 409：版本冲突
+- 429：解锁速率限制
+- 500：未捕获的服务端异常由框架层处理
+
+### 客户端错误
+
+- 网络错误：`fetch` 异常会直接向上传播；非 2xx 响应会在 `workspace-client.ts` 中被包装为描述性错误
+- 版本冲突：`VersionConflictError` 在不同 UI 路径中分别由自动重试或刷新最新数据处理
+
+### 数据边界
+
+- **API 输入 / 输出**：`sanitizeWorkspace()` 确保无论输入如何畸形，输出始终是合法 workspace
+- **DB 读取**：jsonb 字段可能为 null / 格式错误 → `sanitizeWorkspace()` 回退到默认 workspace
+- **JSON 导入**：`prepareImport()` 失败时当前 UI 会拒绝导入并显示通用失败提示，不会静默接受非法数据
+
+## 可用性目标（建议）
+
+由于这是一个单人管理工具（非多租户 SaaS），可用性要求相对宽松：
+
+| 指标 | 目标 | 说明 |
+|---|---|---|
+| 可用性 | 99%（非关键） | 单人使用，短暂不可用可接受 |
+| 数据持久性 | 100% | 依赖 Supabase PostgreSQL 持久化保证 |
+| 恢复时间 | < 1 小时 | 通过 JSON 导入/导出恢复 |
+| 部署回滚 | < 5 分钟 | Next.js 单体应用，回滚即重新部署旧版本 |
+
+## 备份与恢复
+
+- **导出**：前端提供 JSON 导出功能（workspace 完整导出 / 单 scenario 导出）
+- **导入**：支持 workspace 和 scenario 两种导入模式，见 `references/import-json-format-llms.txt`
+- **DB 备份**：仓库中未记录数据库备份策略；如依赖托管服务备份，需要另外在运维文档中明确
+
+## 已知风险
+
+| 风险 | 影响 | 缓解措施 |
+|---|---|---|
+| 连接池耗尽（> 5 并发写） | 请求排队 / 超时 | 单人使用场景下概率极低 |
+| 乐观冲突循环 | 用户操作被反复拒绝 | 主工作区路径先自动重试 3 次；仍失败时刷新最新数据并提示用户 |
+| jsonb 字段损坏 | workspace 数据丢失 | `sanitizeWorkspace()` 回退到默认 workspace（含 12 示例球员） |
+| passcode 泄露 | 数据可被任意访问 | passcode 只在环境变量中，不写死代码 |

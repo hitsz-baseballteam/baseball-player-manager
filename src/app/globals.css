@@ -1,6 +1,80 @@
+/* === Theme System === */
+:root,
+[data-theme="classic"] {
+  --theme-bg: #f7f4eb;
+  --theme-fg: #15201a;
+  --theme-surface: #ffffff;
+  --theme-surface-alt: #f0ede4;
+  --theme-border: #d8d2c4;
+  --theme-muted: #6b7a6f;
+  --theme-accent: #1f6d43;
+  --theme-accent-hover: #18563a;
+  --theme-warm: #bd5b32;
+  --theme-cool: #173857;
+  --theme-gold: #e2b24d;
+  --theme-danger: #b32d2d;
+  --theme-shadow: rgba(21, 32, 26, 0.08);
+  --theme-shadow-strong: rgba(21, 32, 26, 0.16);
+}
+
+[data-theme="night"] {
+  --theme-bg: #1a1d21;
+  --theme-fg: #e8e6e1;
+  --theme-surface: #24282d;
+  --theme-surface-alt: #2d3238;
+  --theme-border: #3a3f46;
+  --theme-muted: #8a8d91;
+  --theme-accent: #4db88a;
+  --theme-accent-hover: #3da87a;
+  --theme-warm: #d4845e;
+  --theme-cool: #5a8ab5;
+  --theme-gold: #e2b24d;
+  --theme-danger: #e05555;
+  --theme-shadow: rgba(0, 0, 0, 0.3);
+  --theme-shadow-strong: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="field"] {
+  --theme-bg: #0d2818;
+  --theme-fg: #e8f0e8;
+  --theme-surface: #15352a;
+  --theme-surface-alt: #1d4235;
+  --theme-border: #2a5a40;
+  --theme-muted: #7a9a88;
+  --theme-accent: #84c7a6;
+  --theme-accent-hover: #6db894;
+  --theme-warm: #d4845e;
+  --theme-cool: #5a8ab5;
+  --theme-gold: #d9a95f;
+  --theme-danger: #e05555;
+  --theme-shadow: rgba(0, 0, 0, 0.4);
+  --theme-shadow-strong: rgba(0, 0, 0, 0.6);
+}
+
 :root {
   --background: #f2efe6;
   --foreground: #172019;
+}
+
+/* Profile-local variable mappings (used by player-profile-editor *.module.css) */
+:root {
+  --profile-bg: var(--theme-bg);
+  --profile-panel: var(--theme-surface);
+  --profile-panel-alt: var(--theme-surface-alt);
+  --profile-border: var(--theme-border);
+  --profile-text: var(--theme-fg);
+  --profile-text-muted: var(--theme-muted);
+  --profile-accent: var(--theme-accent);
+  --profile-accent-strong: var(--theme-gold);
+  --profile-warm: var(--theme-warm);
+  --profile-cool: var(--theme-cool);
+  --profile-danger: var(--theme-danger);
+  --profile-shadow: var(--theme-shadow);
+  --profile-ink: var(--theme-fg);
+  --profile-track: var(--theme-surface-alt);
+  --profile-grid-line: color-mix(in srgb, var(--theme-muted) 18%, transparent);
+  --profile-axis-line: color-mix(in srgb, var(--theme-muted) 22%, transparent);
+  --profile-polygon-fill: color-mix(in srgb, var(--theme-accent) 22%, transparent);
 }
 
 html {
@@ -10,9 +84,10 @@ html {
 body {
   min-height: 100%;
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--theme-bg);
+  color: var(--theme-fg);
   font-family: var(--font-geist-sans), "Avenir Next", "PingFang SC", sans-serif;
+  transition: background 0.3s, color 0.3s;
 }
 
 .unlock-shell {
