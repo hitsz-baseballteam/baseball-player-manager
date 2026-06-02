@@ -1,58 +1,31 @@
 import { describe, it, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert/strict";
+import { Pool } from "pg";
 import { createDefaultWorkspace } from "@/lib/workspace";
 
 const fakeWorkspace = createDefaultWorkspace(false);
 
 let GET: () => Promise<Response>;
 let PUT: (request: Request) => Promise<Response>;
-
-// Spread a Promise into a mock Supabase chain (thenable with chain methods)
-function mockChain(data: unknown[]): Record<string, unknown> {
-  const p = Promise.resolve({ data, error: null });
-  const chain = { then: (fn: (v: unknown) => unknown) => p.then(fn) } as Record<string, unknown>;
-  for (const m of ["select", "eq", "limit", "update", "upsert", "returns", "single", "order", "neq", "in", "gt"]) {
-    chain[m] = () => chain;
-  }
-  return chain;
-}
-
-function makeSupabaseClient() {
-  const row = { id: "ws-1", slug: "default", version: 5, data: fakeWorkspace, created_at: "", updated_at: "" };
-  return {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          limit: () => ({
-            returns: () => mockChain([row]),
-          }),
-        }),
-      }),
-      update: () => ({
-        eq: () => ({
-          eq: () => ({
-            select: () => ({
-              returns: () => mockChain([row]),
-            }),
-          }),
-        }),
-      }),
-      upsert: () => ({
-        select: () => ({
-          returns: () => mockChain([row]),
-        }),
-      }),
-    }),
-  };
-}
+const row = {
+  id: "ws-1",
+  slug: "default",
+  version: 5,
+  data: fakeWorkspace,
+  created_at: "",
+  updated_at: "",
+};
 
 describe("workspace route", () => {
   beforeEach(async () => {
-    process.env.SUPABASE_URL = "https://test.supabase.co";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+    process.env.DATABASE_URL = "postgres://test:test@127.0.0.1:5432/baseball_manager";
 
-    mock.module("@supabase/supabase-js", {
-      namedExports: { createClient: () => makeSupabaseClient() },
+    mock.method(Pool.prototype, "query", async (sql: string) => {
+      if (sql.includes("update app_workspace")) {
+        return { rows: [row] };
+      }
+
+      return { rows: [row] };
     });
 
     const route = await import("./workspace/route");
@@ -61,8 +34,7 @@ describe("workspace route", () => {
   });
 
   afterEach(() => {
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.DATABASE_URL;
     mock.reset();
   });
 

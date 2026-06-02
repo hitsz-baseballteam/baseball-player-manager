@@ -13,6 +13,7 @@ export function ToastProvider({ children, toastRef }: {
 }) {
   const [message, setMessage] = useState("");
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -27,15 +28,22 @@ export function ToastProvider({ children, toastRef }: {
     return () => { toastRef.current = null; };
   }, [showToast, toastRef]);
 
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   return (
     <>
       {children}
-      {createPortal(
-        <div id="toast" className={visible ? "show" : ""} role="status" aria-live="polite">
-          {message}
-        </div>,
-        document.body,
-      )}
+      {mounted
+        ? createPortal(
+            <div id="toast" className={visible ? "show" : ""} role="status" aria-live="polite">
+              {message}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

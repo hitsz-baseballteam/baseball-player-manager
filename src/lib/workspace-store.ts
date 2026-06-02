@@ -4,7 +4,7 @@ import {
   sanitizeWorkspace,
   type Workspace,
 } from "@/lib/workspace";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getPool } from "@/lib/db";
 
 type WorkspaceRow = {
   id: string;
@@ -22,16 +22,14 @@ export type WorkspaceSnapshot = {
 };
 
 export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
-  const supabase = getSupabaseAdmin();
-
-  const { data: rows, error: selectError } = await supabase
-    .from("app_workspace")
-    .select("id, slug, version, data, created_at, updated_at")
-    .eq("slug", DEFAULT_WORKSPACE_SLUG)
-    .limit(1)
-    .returns<WorkspaceRow[]>();
-
-  if (selectError) throw selectError;
+  const pool = getPool();
+  const { rows } = await pool.query<WorkspaceRow>(
+    `select id, slug, version, data, created_at, updated_at
+     from app_workspace
+     where slug = $1
+     limit 1`,
+    [DEFAULT_WORKSPACE_SLUG],
+  );
 
   if (rows && rows.length > 0) {
     const row = rows[0];
@@ -45,25 +43,18 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   const defaultWorkspace = createDefaultWorkspace(false);
   const now = new Date().toISOString();
 
-  const { data: inserted, error: insertError } = await supabase
-    .from("app_workspace")
-    .upsert(
-      {
-        slug: DEFAULT_WORKSPACE_SLUG,
-        version: 1,
-        data: defaultWorkspace as unknown as Record<string, unknown>,
-        created_at: now,
-        updated_at: now,
-      },
-      { onConflict: "slug", ignoreDuplicates: true },
-    )
-    .select("version, data, updated_at")
-    .returns<Pick<WorkspaceRow, "version" | "data" | "updated_at">[]>();
+  const inserted = await pool.query<
+    Pick<WorkspaceRow, "version" | "data" | "updated_at">
+  >(
+    `insert into app_workspace (slug, version, data, created_at, updated_at)
+     values ($1, $2, $3::jsonb, $4, $4)
+     on conflict (slug) do nothing
+     returning version, data, updated_at`,
+    [DEFAULT_WORKSPACE_SLUG, 1, JSON.stringify(defaultWorkspace), now],
+  );
 
-  if (insertError) throw insertError;
-
-  if (inserted && inserted.length > 0) {
-    const row = inserted[0];
+  if (inserted.rows.length > 0) {
+    const row = inserted.rows[0];
     return {
       workspace: sanitizeWorkspace(row.data as Workspace),
       version: row.version,
@@ -72,16 +63,15 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   }
 
   // Race condition: another instance created it between SELECT and INSERT
-  const { data: retry, error: retryError } = await supabase
-    .from("app_workspace")
-    .select("id, slug, version, data, created_at, updated_at")
-    .eq("slug", DEFAULT_WORKSPACE_SLUG)
-    .limit(1)
-    .returns<WorkspaceRow[]>();
+  const retry = await pool.query<WorkspaceRow>(
+    `select id, slug, version, data, created_at, updated_at
+     from app_workspace
+     where slug = $1
+     limit 1`,
+    [DEFAULT_WORKSPACE_SLUG],
+  );
 
-  if (retryError) throw retryError;
-
-  const row = retry![0];
+  const row = retry.rows[0];
   return {
     workspace: sanitizeWorkspace(row.data),
     version: row.version,
@@ -93,32 +83,37 @@ export async function updateWorkspaceSnapshot(params: {
   workspace: Workspace;
   version: number;
 }): Promise<WorkspaceSnapshot | null> {
-  const supabase = getSupabaseAdmin();
+  const pool = getPool();
   const nextWorkspace = sanitizeWorkspace(params.workspace);
   const nextVersion = params.version + 1;
   const updatedAt = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("app_workspace")
-    .update({
-      data: nextWorkspace as unknown as Record<string, unknown>,
-      version: nextVersion,
-      updated_at: updatedAt,
-    })
-    .eq("slug", DEFAULT_WORKSPACE_SLUG)
-    .eq("version", params.version)
-    .select("version, data, updated_at")
-    .returns<Pick<WorkspaceRow, "version" | "data" | "updated_at">[]>();
+  const { rows } = await pool.query<
+    Pick<WorkspaceRow, "version" | "data" | "updated_at">
+  >(
+    `update app_workspace
+     set data = $1::jsonb,
+         version = $2,
+         updated_at = $3
+     where slug = $4
+       and version = $5
+     returning version, data, updated_at`,
+    [
+      JSON.stringify(nextWorkspace),
+      nextVersion,
+      updatedAt,
+      DEFAULT_WORKSPACE_SLUG,
+      params.version,
+    ],
+  );
 
-  if (error) throw error;
-
-  if (!data || data.length === 0) {
+  if (rows.length === 0) {
     return null;
   }
 
   return {
-    workspace: sanitizeWorkspace(data[0].data as Workspace),
-    version: data[0].version,
-    updatedAt: data[0].updated_at,
+    workspace: sanitizeWorkspace(rows[0].data as Workspace),
+    version: rows[0].version,
+    updatedAt: rows[0].updated_at,
   };
 }
