@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-02.
+This document describes the repository as currently observed on 2026-06-03.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -70,7 +70,7 @@ This file is also where shared constants such as positions, labels, and guide st
 
 Database access is split across:
 
-- `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`
+- `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`, with Supabase-host detection that normalizes `sslmode` handling and applies explicit TLS options for Node/Vercel compatibility
 - `src/lib/workspace-store.ts` — read/create/update operations for the single shared workspace snapshot
 
 Observed behavior:
