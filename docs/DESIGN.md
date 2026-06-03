@@ -74,6 +74,6 @@
 
 ## 设计约束
 
-- 不要引入 CSS 框架（Bootstrap、Tailwind 等）——所有样式通过 CSS 自定义属性 + CSS Modules 实现
-- 主题变量是唯一配色入口：不要在组件中硬编码颜色值，始终使用 `var(--theme-*)`
-- 新旧 UI 共存期间，确保旧 DOM 元素的 className 不与新 React CSS Modules 冲突
+- 不要引入 CSS 框架（Bootstrap、Tailwind 等）——当前样式体系以 CSS 自定义属性 + 全局类名为主，局部复杂组件按需使用 CSS Modules
+- 主题化区域优先通过 `var(--theme-*)` 驱动；当前解锁页等独立视觉区仍存在少量硬编码颜色，这是现状而非目标态
+- 新旧 UI 共存期间，确保旧 DOM 元素的 className 不与新 React 组件样式冲突

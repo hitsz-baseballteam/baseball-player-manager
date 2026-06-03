@@ -10,33 +10,53 @@ export type HelpDrawerHandle = {
 
 type HelpDrawerProps = {
   isOpen: boolean;
+  onOpen: () => void;
   onClose: () => void;
   onReplayGuide: () => void;
   helpRef: React.MutableRefObject<HelpDrawerHandle | null>;
 };
 
-export function HelpDrawer({ isOpen, onClose, onReplayGuide, helpRef }: HelpDrawerProps) {
+export function HelpDrawer({
+  isOpen,
+  onOpen,
+  onClose,
+  onReplayGuide,
+  helpRef,
+}: HelpDrawerProps) {
   const drawerRef = useRef<HTMLElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   const open = useCallback(() => {
     restoreFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement : null;
-    requestAnimationFrame(() => closeBtnRef.current?.focus());
-  }, []);
+      ? document.activeElement
+      : null;
+    onOpen();
+  }, [onOpen]);
 
   const close = useCallback(() => {
-    if (restoreFocusRef.current?.isConnected) {
-      restoreFocusRef.current.focus();
-      restoreFocusRef.current = null;
-    }
-  }, []);
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
     helpRef.current = { open, close };
-    return () => { helpRef.current = null; };
+    return () => {
+      helpRef.current = null;
+    };
   }, [open, close, helpRef]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (restoreFocusRef.current?.isConnected) {
+        restoreFocusRef.current.focus();
+      }
+      restoreFocusRef.current = null;
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => closeBtnRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

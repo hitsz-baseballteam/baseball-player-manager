@@ -39,7 +39,7 @@ npm run build
 
 The repository currently includes one migration:
 
-- [`supabase/migrations/20260529172000_create_app_workspace.sql`](./supabase/migrations/20260529172000_create_app_workspace.sql)
+- [`supabase/migrations/20260529093022_create_app_workspace.sql`](./supabase/migrations/20260529093022_create_app_workspace.sql)
 
 That migration creates the `public.app_workspace` table used by the application and seeds a default shared workspace row when missing.
 

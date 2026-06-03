@@ -22,7 +22,7 @@
    - `docs/SECURITY.md`
    - 修正 cookie `secure` / `sameSite` 描述，匹配 `src/app/api/unlock/route.ts`
    - 修正限流现状，匹配 `src/lib/rate-limiter.ts`
-   - 修正 RLS 状态，匹配 `supabase/migrations/20260529172000_create_app_workspace.sql`
+   - 修正 RLS 状态，匹配 `supabase/migrations/20260529093022_create_app_workspace.sql`
 
 4. **可靠性文档**
    - `docs/RELIABILITY.md`

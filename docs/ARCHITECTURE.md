@@ -36,7 +36,7 @@ From `package.json`:
 - `npm run build` → `next build`
 - `npm run start` → `next start`
 - `npm run lint` → `eslint`
-- `npm test` → `node --require ./src/lib/test-setup.cjs --import tsx --test ...`
+- `npm test` → `node --experimental-test-module-mocks --require ./src/lib/test-setup.cjs --import tsx --test ...`
 
 ### Runtime entry points
 
@@ -91,7 +91,7 @@ Relevant files:
 
 - `src/lib/auth.ts` — derives an HMAC-SHA256 signature from `APP_ADMIN_PASSCODE`
 - `src/app/api/unlock/route.ts` — verifies the submitted passcode and sets the `baseball_manager_unlock` cookie
-- `src/lib/rate-limiter.ts` — in-memory sliding-window rate limiter used only by unlock requests
+- `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used only by unlock requests
 - `src/proxy.ts` — rejects unauthenticated `/api/workspace` requests with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
@@ -117,7 +117,7 @@ This means the repository currently has two UI styles living side by side:
 
 ### 5. Database schema
 
-`supabase/migrations/20260529172000_create_app_workspace.sql` currently defines a single table:
+`supabase/migrations/20260529093022_create_app_workspace.sql` currently defines a single table:
 
 - `public.app_workspace`
   - `id uuid primary key`

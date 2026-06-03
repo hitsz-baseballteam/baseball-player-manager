@@ -28,6 +28,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     !props.initialWorkspace.preferences.helpDismissed,
   );
 
+  const handleHelpOpen = useCallback(() => setHelpOpen(true), []);
   const handleHelpClose = useCallback(() => setHelpOpen(false), []);
   const handleGuideDismiss = useCallback(() => setGuideOpen(false), []);
   const handleReplayGuide = useCallback(() => {
@@ -59,6 +60,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
       <ThemeToggle />
       <HelpDrawer
         isOpen={helpOpen}
+        onOpen={handleHelpOpen}
         onClose={handleHelpClose}
         onReplayGuide={handleReplayGuide}
         helpRef={helpRef}

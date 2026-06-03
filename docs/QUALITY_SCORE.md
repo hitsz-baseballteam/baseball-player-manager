@@ -24,7 +24,7 @@
 | **旧 DOM 管理器** (`player-manager-dom.ts` + 提取模块) | B | 提取到 4 个模块（renderers/dialogs/io/scenario-ops），主文件 1525→841 行（-45%），显式接口替代闭包状态共享 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
 | **导入导出** | B | 功能完整、格式文档化，但缺少导入冲突的自动化解决 |
-| 测试 | A- | 53 个测试，覆盖业务逻辑、5 个组件、认证/限流工具、API 路由及方案操作 |
+| 测试 | A- | 57 个测试结果项（56 通过 + 1 todo），覆盖业务逻辑、5 个组件、认证/限流工具、API 路由及方案操作 |
 
 ## 按架构层级评分
 
@@ -34,8 +34,8 @@
 | Config | A | 明确、有边界校验 |
 | Repo | B+ | 乐观并发持久化 + 读写边界净化 |
 | Service | B | 核心逻辑有测试，边界覆盖可改进 |
-| Runtime | B+ | API 路由有集成测试（8 tests），解锁接口有限流 |
-| UI (React) | A- | 5 个组件已测试（33 tests）+ 2 个 API route 已测试（8 tests） |
+| Runtime | B+ | API 路由已覆盖主要路径（当前 7 个通过 + 1 个 todo），解锁接口有限流 |
+| UI (React) | A- | 5 个组件已测试（34 tests）+ 2 个 API route 已覆盖主要路径 |
 | UI (Legacy DOM) | B | 4 个提取模块，显式接口，可维护性显著提升 |
 
 ## 技术债务影响
@@ -43,9 +43,9 @@
 | 债务 | 影响分数 | 当前状态 |
 |---|---|---|
 | DOM 管理器过大 | UI (Legacy DOM) C+→B | ✅ 提取到 4 个模块，主文件 1525→841 行（-45%） |
-| 无前端组件测试 | UI (React) B→A- | ✅ 5 个组件已有测试（33 tests） || 无 CI/CD | —→B | ✅ GitHub Actions 已添加（lint + test + build） |
-| 无 API 集成测试 | Runtime B→B+ | ✅ 8 个 API route 测试 |
-| 无前端组件测试 | UI (React) B→A- | ✅ 5 个组件已有测试（33 tests） |
+| 无前端组件测试 | UI (React) B→A- | ✅ 5 个组件已有测试（34 tests） || 无 CI/CD | —→B | ✅ GitHub Actions 已添加（lint + test + build） |
+| 无 API 集成测试 | Runtime B→B+ | ✅ 2 个 API route 已覆盖主要路径（当前 7 个通过 + 1 个 todo） |
+| 无前端组件测试 | UI (React) B→A- | ✅ 5 个组件已有测试（34 tests） |
 | 无速率限制 | Runtime B→B+ | ✅ 内存速率限制（5 次/分钟） |
 | 无保存重试 | Repo B→B+ | ✅ saveWithRetry（409 自动重试 3 次） |
 | Turbopack 不兼容 | — | ✅ --webpack 已移除，Turbopack 正常 |
@@ -64,3 +64,4 @@
 | 2026-06-02 | DOM 管理器模块提取（Wave 2-4） | UI (Legacy DOM) C+→B-，提取 771 行到 3 个聚焦模块 |
 | 2026-06-02 | 技术债全部清零 | UI (Legacy DOM) B-→B、测试 B+→A-、UI (React) B+→A-；新增 dom-scenario-ops 模块 + ProfileEditor 测试 |
 | 2026-06-03 | 恢复 `pg` + `DATABASE_URL` 数据访问路径 | 数据访问 B→B+；修复解锁后页面因缺少 `SUPABASE_*` 环境变量而 500 的问题 |
+| 2026-06-03 | 文档与交互一致性修正 | 分数不变；补充 `workspace-client` / `HelpDrawer` 测试并修正文档描述 |

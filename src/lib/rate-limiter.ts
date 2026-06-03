@@ -1,5 +1,5 @@
 /**
- * In-memory rate limiter using a sliding-window counter per key.
+ * In-memory fixed-window rate limiter per key.
  * Not distributed — state resets on server restart.
  */
 

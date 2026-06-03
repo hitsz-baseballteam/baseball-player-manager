@@ -5,18 +5,19 @@
 当前 UI 处于 **React + 旧 DOM 混合** 过渡期：
 
 - **新功能**以 React 组件实现（Next.js App Router）
-- **主力交互 UI**（球员名册、守位球场、棒次、方案管理）仍由旧 DOM 管理器 `player-manager-dom.ts`（~1525 行）驱动
+- **主力交互 UI**（球员名册、守位球场、棒次、方案管理）仍由旧 DOM 管理器 `player-manager-dom.ts`（当前约 841 行）驱动
 - **迁移方向**：逐步将 DOM 管理器中的功能拆分为独立 React 组件
 
 ## 组件模式
 
 ### Server Components（默认）
 
-Next.js App Router 中，`page.tsx` 和 `layout.tsx` 默认是服务端组件。它们负责：
+Next.js App Router 中，`page.tsx`、`players/[playerId]/page.tsx` 和 `layout.tsx` 默认是服务端组件，但职责并不相同：
 
-- 认证守卫（读取 cookie、验证 HMAC 签名）
-- 从数据库加载 workspace
-- 将 workspace 作为 props 传递给客户端组件
+- `page.tsx` / `players/[playerId]/page.tsx` 负责认证守卫（读取 cookie、验证 HMAC 签名）
+- 这两个 page server component 直接调用 `getOrCreateWorkspaceSnapshot()` 从数据库加载 workspace
+- `layout.tsx` 主要负责全局字体与 metadata，不承担认证或数据加载
+- server component 将 workspace 作为 props 传递给客户端组件
 
 ```
 page.tsx (server)
@@ -33,7 +34,7 @@ page.tsx (server)
 | 组件 | 职责 |
 |---|---|
 | `UnlockForm` | 纯客户端：输入 passcode → POST /api/unlock |
-| `PlayerManagerClient` | 混合 UI 容器：挂载 legacy manager，管理 Toast/HelpDrawer/GuideOverlay 与帮助/引导开关；DOM 管理器通过回调 ref 调用 toast/help/guide |
+| `PlayerManagerClient` | 混合 UI 容器：挂载 legacy manager，管理 Toast/HelpDrawer/GuideOverlay 与帮助/引导开关；DOM 管理器当前通过回调 ref 调用 toast/help，Guide 的开关与重播由 React shell 协调 |
 | `PlayerProfilePageClient` | 状态管理：workspace 读写 + 版本冲突处理 |
 | `PlayerProfileEditor` | 纯客户端：完整档案编辑表单 + SVG 雷达图 |
 | `Toast` | Portal 渲染的 toast 通知 |
@@ -61,8 +62,8 @@ src/components/
 ### 核心状态流
 
 ```
-Server (page.tsx)
-  │  GET /api/workspace → workspace snapshot
+Server (`page.tsx` / `players/[playerId]/page.tsx`)
+  │  直接调用 `getOrCreateWorkspaceSnapshot()` → workspace snapshot
   │
   ▼
 Client Component / Legacy Manager
@@ -74,35 +75,36 @@ Client Component / Legacy Manager
   PUT /api/workspace → 服务器验证 + 乐观并发写入
   │
   ├── 200: 写入成功
-  └── 409: 版本冲突 → 重新加载最新数据 → 重试
+  ├── 409（主工作区）: 重新加载最新数据 → 自动重试
+  └── 409（球员档案页）: 刷新到最新数据并提示用户，不自动重放本次编辑
 ```
 
 ### 原则
 
 - **无全局状态库**：不使用 Redux、Zustand 等。状态通过 props 向下传递
-- **workspace 是唯一真实源**：所有数据（球员、方案、偏好）都在 workspace 对象中
+- **workspace 是主要业务真实源**：球员、方案等持久化业务数据都在 workspace 对象中；少量瞬时 UI 开关（如当前引导是否展开）仍由本地 React state 管理
 - **客户端 fetch 通过 `workspace-client.ts`**：封装 GET/PUT 请求，处理 409 冲突和错误
-- **无乐观更新**：客户端在服务器确认后才更新 UI，避免数据不一致
+- **主工作区使用乐观 UI + 后台保存**：DOM 管理器会先更新本地 `workspace` 并立即 `render()`，随后异步调用 `/api/workspace`；服务端仍通过版本号做乐观并发控制
 
 ## 样式方法
 
 | 范围 | 方法 |
 |---|---|
 | 全局主题 + 基础样式 | `src/app/globals.css`（CSS 自定义属性 + 全局选择器） |
-| React 组件样式 | CSS Modules（`*.module.css`） |
+| React 组件样式 | 以全局类名 + 主题变量为主；局部复杂组件按需使用 CSS Modules（当前主要是 `player-profile-editor.module.css`） |
 | 旧 DOM 管理器样式 | 内联在 `index.html`，由 `legacy-template.ts` 提取注入 |
 
 ### 约束
 
 - 不要在 JSX 中写 inline style（除动态计算值如雷达图坐标外）
-- 当前组件样式主要依赖 CSS Modules 自身类名和全局主题变量；仓库中目前没有使用 `composes:`
-- 颜色始终用 `var(--theme-*)`，不硬编码
+- 当前 React 组件样式主要依赖全局类名和全局主题变量；复杂局部样式按需使用 CSS Modules。仓库中目前没有使用 `composes:`
+- 主题化区域优先使用 `var(--theme-*)`；当前解锁页等少数独立视觉区仍存在硬编码颜色，这是已知现状而非统一约束
 
 ## 旧 DOM 管理器（`player-manager-dom.ts`）
 
 ### 当前状态
 
-- ~1525 行（从 1742 行减少 12%）
+- ~841 行（相较更早的 1742 行版本已明显收敛）
 - Toast、帮助抽屉、引导浮层、主题切换已迁移至 React 组件
 - 其余 UI 区域（名册、球场、棒次、方案管理、球员编辑）仍由 DOM 管理器驱动
 

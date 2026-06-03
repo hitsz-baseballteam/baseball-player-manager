@@ -387,7 +387,7 @@ export function mountPlayerManager(
       try {
         setSaveStatus("正在同步到云端...", false);
         const result = mutator
-          ? await saveWithRetry(remoteVersion, (latest) => {
+          ? await saveWithRetry(candidateSnapshot, remoteVersion, (latest) => {
               const draft = cloneWorkspace(latest);
               mutator(draft);
               return sanitizeWorkspace(draft);

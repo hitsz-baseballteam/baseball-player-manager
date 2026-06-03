@@ -14,7 +14,7 @@
 - `psql` 与 `pg_isready` 已安装
 - 本机 `5432` 端口 PostgreSQL 当前可连接
 - 项目数据库连接只依赖 `DATABASE_URL`
-- 仓库已有 SQL 迁移：`supabase/migrations/20260529172000_create_app_workspace.sql`
+- 仓库已有 SQL 迁移：`supabase/migrations/20260529093022_create_app_workspace.sql`
 - 本机已存在数据库：`baseball_manager`
 - `baseball_manager.public.app_workspace` 已存在且有 1 行种子数据
 
