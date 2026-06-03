@@ -202,24 +202,6 @@ export function mountPlayerManager(
     removeFromSelectedIds: (id) => selectedIds.delete(id),
   };
 
-  buildPositionFilter();
-  buildPositionChecks();
-  buildBulkPositionChecks();
-  syncBulkPositionMode(dialogEls);
-  bindEvents();
-  render();
-  setSaveStatus(saveStatusIdleMessage);
-
-  return () => {
-    destroyed = true;
-    window.removeEventListener("keydown", handleGlobalKeydown);
-    if (saveStatusTimer) {
-      window.clearTimeout(saveStatusTimer);
-    }
-    profileDrawerRoot.unmount();
-    profileDrawerContainer.remove();
-  };
-
   const renderCtx: RenderContext = {
     workspace,
     historyState,
@@ -248,6 +230,24 @@ export function mountPlayerManager(
     showToast: (msg) => callbacks.toast.current?.showToast(msg),
     commitWorkspace: (mutator, options) => commitWorkspace(mutator, options),
     els: { importInput: els.importInput, importDialog: els.importDialog },
+  };
+
+  buildPositionFilter();
+  buildPositionChecks();
+  buildBulkPositionChecks();
+  syncBulkPositionMode(dialogEls);
+  bindEvents();
+  render();
+  setSaveStatus(saveStatusIdleMessage);
+
+  return () => {
+    destroyed = true;
+    window.removeEventListener("keydown", handleGlobalKeydown);
+    if (saveStatusTimer) {
+      window.clearTimeout(saveStatusTimer);
+    }
+    profileDrawerRoot.unmount();
+    profileDrawerContainer.remove();
   };
 
   function queryElements(scope: ParentNode): Elements {
@@ -805,20 +805,35 @@ export function mountPlayerManager(
   }
 
   // Assignment operations delegated to dom-scenario-ops
-  const assignDefenseLocal = (position: PositionCode, playerId: string) =>
-    assignDefense(position, playerId, workspace, commitWorkspace);
-  const clearDefensePositionLocal = (position: PositionCode) =>
-    clearDefensePosition(position, commitWorkspace);
-  const assignLineupLocal = (index: number, playerId: string) =>
-    assignLineup(index, playerId, workspace, commitWorkspace);
-  const moveLineupLocal = (fromIndex: number, toIndex: number) =>
-    moveLineup(fromIndex, toIndex, commitWorkspace);
-  const clearLineupSlotLocal = (index: number) =>
-    clearLineupSlot(index, commitWorkspace);
-  const clearAssignmentsLocal = () =>
-    clearAssignments(commitWorkspace);
-  const resetExampleDataLocal = () =>
-    resetExampleData(workspace, commitWorkspace, () => { historyState.redo = []; });
+  function assignDefenseLocal(position: PositionCode, playerId: string) {
+    return assignDefense(position, playerId, workspace, commitWorkspace);
+  }
+
+  function clearDefensePositionLocal(position: PositionCode) {
+    return clearDefensePosition(position, commitWorkspace);
+  }
+
+  function assignLineupLocal(index: number, playerId: string) {
+    return assignLineup(index, playerId, workspace, commitWorkspace);
+  }
+
+  function moveLineupLocal(fromIndex: number, toIndex: number) {
+    return moveLineup(fromIndex, toIndex, commitWorkspace);
+  }
+
+  function clearLineupSlotLocal(index: number) {
+    return clearLineupSlot(index, commitWorkspace);
+  }
+
+  function clearAssignmentsLocal() {
+    return clearAssignments(commitWorkspace);
+  }
+
+  function resetExampleDataLocal() {
+    return resetExampleData(workspace, commitWorkspace, () => {
+      historyState.redo = [];
+    });
+  }
 
   function handleGlobalKeydown(event: KeyboardEvent) {
     const target = event.target as HTMLElement | null;
