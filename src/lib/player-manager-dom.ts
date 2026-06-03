@@ -181,8 +181,8 @@ export function mountPlayerManager(
   let saveQueue = Promise.resolve();
   let saveEpoch = 0;
   let lastMutator: ((draft: Workspace) => Workspace | void) | null = null;
-  let lastDrawerPlayer: { current: typeof workspace.players[number] | null } = { current: null };
-  let lastDrawerPlayerJson: { current: string } = { current: "" };
+  const lastDrawerPlayer: { current: typeof workspace.players[number] | null } = { current: null };
+  const lastDrawerPlayerJson: { current: string } = { current: "" };
   const saveStatusIdleMessage = "云端工作区已准备";
   const profileDrawerContainer = document.createElement("div");
   const profileDrawerRoot: ReactRoot = createRoot(profileDrawerContainer);

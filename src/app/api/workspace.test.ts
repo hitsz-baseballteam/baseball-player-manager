@@ -7,71 +7,30 @@ const fakeWorkspace = createDefaultWorkspace(false);
 let GET: () => Promise<Response>;
 let PUT: (request: Request) => Promise<Response>;
 const row = {
-  id: "ws-1",
   slug: "default",
   version: 5,
   data: fakeWorkspace,
-  created_at: "",
-  updated_at: "",
+  updated_at: new Date("2026-06-03T08:00:00.000Z"),
 };
 
-function fakeSupabaseAdmin() {
+function fakePool() {
   return {
-    from() {
-      return {
-        select() {
-          return {
-            eq() {
-              return {
-                maybeSingle() {
-                  return Promise.resolve({ data: row, error: null });
-                },
-              };
-            },
-          };
-        },
-        upsert() {
-          return {
-            select() {
-              return {
-                returns() {
-                  return Promise.resolve({ data: [row], error: null });
-                },
-              };
-            },
-          };
-        },
-        update() {
-          return {
-            eq() {
-              return {
-                eq() {
-                  return {
-                    select() {
-                      return {
-                        returns() {
-                          return Promise.resolve({ data: [row], error: null });
-                        },
-                      };
-                    },
-                  };
-                },
-              };
-            },
-          };
-        },
-      };
+    query(queryText: string) {
+      if (queryText.includes("update public.app_workspace")) {
+        return Promise.resolve({ rows: [row] });
+      }
+
+      return Promise.resolve({ rows: [row] });
     },
   };
 }
 
 describe("workspace route", () => {
   beforeEach(async () => {
-    process.env.SUPABASE_URL = "https://test.supabase.co";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+    process.env.DATABASE_URL = "postgres://test:test@127.0.0.1:5432/baseball_manager";
 
-    mock.module("@/lib/supabase", {
-      namedExports: { getSupabaseAdmin: fakeSupabaseAdmin },
+    mock.module("@/lib/db", {
+      namedExports: { getPool: fakePool },
     });
 
     const route = await import("./workspace/route");
@@ -80,8 +39,7 @@ describe("workspace route", () => {
   });
 
   afterEach(() => {
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.DATABASE_URL;
     mock.reset();
   });
 

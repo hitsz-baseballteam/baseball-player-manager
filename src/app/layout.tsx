@@ -31,7 +31,7 @@ const notoSansSc = Noto_Sans_SC({
 
 export const metadata: Metadata = {
   title: "Baseball Player Manager",
-  description: "Supabase-backed baseball roster and lineup manager",
+  description: "PostgreSQL-backed baseball roster and lineup manager",
 };
 
 export default function RootLayout({

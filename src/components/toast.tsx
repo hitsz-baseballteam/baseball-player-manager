@@ -1,11 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 export type ToastHandle = {
   showToast: (message: string) => void;
 };
+
+const subscribe = () => () => {};
 
 export function ToastProvider({ children, toastRef }: {
   children: ReactNode;
@@ -13,7 +22,7 @@ export function ToastProvider({ children, toastRef }: {
 }) {
   const [message, setMessage] = useState("");
   const [visible, setVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -25,13 +34,10 @@ export function ToastProvider({ children, toastRef }: {
 
   useEffect(() => {
     toastRef.current = { showToast };
-    return () => { toastRef.current = null; };
+    return () => {
+      toastRef.current = null;
+    };
   }, [showToast, toastRef]);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
 
   return (
     <>

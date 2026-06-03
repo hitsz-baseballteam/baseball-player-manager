@@ -4,15 +4,13 @@ import {
   sanitizeWorkspace,
   type Workspace,
 } from "@/lib/workspace";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getPool } from "@/lib/db";
 
 type WorkspaceRow = {
-  id: string;
   slug: string;
   version: number;
   data: Workspace;
-  created_at: string;
-  updated_at: string;
+  updated_at: Date | string;
 };
 
 export type WorkspaceSnapshot = {
@@ -21,68 +19,71 @@ export type WorkspaceSnapshot = {
   updatedAt: string;
 };
 
+function toIsoString(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
-  const supabase = getSupabaseAdmin();
+  const pool = getPool();
 
-  const { data, error: selectError } = await supabase
-    .from("app_workspace")
-    .select("id, slug, version, data, created_at, updated_at")
-    .eq("slug", DEFAULT_WORKSPACE_SLUG)
-    .maybeSingle<WorkspaceRow>();
+  const selectResult = await pool.query<WorkspaceRow>(
+    `
+      select slug, version, data, updated_at
+      from public.app_workspace
+      where slug = $1
+      limit 1
+    `,
+    [DEFAULT_WORKSPACE_SLUG],
+  );
 
-  if (selectError) throw selectError;
-
-  if (data) {
+  if (selectResult.rows[0]) {
+    const row = selectResult.rows[0];
     return {
-      workspace: sanitizeWorkspace(data.data),
-      version: data.version,
-      updatedAt: data.updated_at,
+      workspace: sanitizeWorkspace(row.data),
+      version: row.version,
+      updatedAt: toIsoString(row.updated_at),
     };
   }
 
   const defaultWorkspace = createDefaultWorkspace(false);
-  const now = new Date().toISOString();
+  const insertResult = await pool.query<WorkspaceRow>(
+    `
+      insert into public.app_workspace (slug, version, data)
+      values ($1, 1, $2::jsonb)
+      on conflict (slug) do nothing
+      returning slug, version, data, updated_at
+    `,
+    [DEFAULT_WORKSPACE_SLUG, JSON.stringify(defaultWorkspace)],
+  );
 
-  const { data: inserted, error: insertError } = await supabase
-    .from("app_workspace")
-    .upsert(
-      {
-        slug: DEFAULT_WORKSPACE_SLUG,
-        version: 1,
-        data: defaultWorkspace as unknown as Record<string, unknown>,
-        created_at: now,
-        updated_at: now,
-      },
-      { onConflict: "slug", ignoreDuplicates: true },
-    )
-    .select("version, data, updated_at")
-    .returns<Pick<WorkspaceRow, "version" | "data" | "updated_at">[]>();
-
-  if (insertError) throw insertError;
-
-  if (inserted && inserted.length > 0) {
-    const row = inserted[0];
+  if (insertResult.rows[0]) {
+    const row = insertResult.rows[0];
     return {
-      workspace: sanitizeWorkspace(row.data as Workspace),
-      version: row.version as number,
-      updatedAt: row.updated_at as string,
+      workspace: sanitizeWorkspace(row.data),
+      version: row.version,
+      updatedAt: toIsoString(row.updated_at),
     };
   }
 
-  // Race condition: another instance created it between SELECT and INSERT
-  const { data: retry, error: retryError } = await supabase
-    .from("app_workspace")
-    .select("id, slug, version, data, created_at, updated_at")
-    .eq("slug", DEFAULT_WORKSPACE_SLUG)
-    .maybeSingle<WorkspaceRow>();
+  const retryResult = await pool.query<WorkspaceRow>(
+    `
+      select slug, version, data, updated_at
+      from public.app_workspace
+      where slug = $1
+      limit 1
+    `,
+    [DEFAULT_WORKSPACE_SLUG],
+  );
 
-  if (retryError) throw retryError;
+  const row = retryResult.rows[0];
+  if (!row) {
+    throw new Error("Workspace row missing after create retry");
+  }
 
-  const row = retry!;
   return {
     workspace: sanitizeWorkspace(row.data),
     version: row.version,
-    updatedAt: row.updated_at,
+    updatedAt: toIsoString(row.updated_at),
   };
 }
 
@@ -90,32 +91,30 @@ export async function updateWorkspaceSnapshot(params: {
   workspace: Workspace;
   version: number;
 }): Promise<WorkspaceSnapshot | null> {
-  const supabase = getSupabaseAdmin();
+  const pool = getPool();
   const nextWorkspace = sanitizeWorkspace(params.workspace);
   const nextVersion = params.version + 1;
-  const updatedAt = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("app_workspace")
-    .update({
-      data: nextWorkspace as unknown as Record<string, unknown>,
-      version: nextVersion,
-      updated_at: updatedAt,
-    })
-    .eq("slug", DEFAULT_WORKSPACE_SLUG)
-    .eq("version", params.version)
-    .select("version, data, updated_at")
-    .returns<Pick<WorkspaceRow, "version" | "data" | "updated_at">[]>();
+  const result = await pool.query<WorkspaceRow>(
+    `
+      update public.app_workspace
+      set data = $1::jsonb,
+          version = $2,
+          updated_at = timezone('utc', now())
+      where slug = $3 and version = $4
+      returning slug, version, data, updated_at
+    `,
+    [JSON.stringify(nextWorkspace), nextVersion, DEFAULT_WORKSPACE_SLUG, params.version],
+  );
 
-  if (error) throw error;
-
-  if (!data || data.length === 0) {
+  if (!result.rows[0]) {
     return null;
   }
 
+  const row = result.rows[0];
   return {
-    workspace: sanitizeWorkspace(data[0].data as Workspace),
-    version: data[0].version as number,
-    updatedAt: data[0].updated_at as string,
+    workspace: sanitizeWorkspace(row.data),
+    version: row.version,
+    updatedAt: toIsoString(row.updated_at),
   };
 }

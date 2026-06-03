@@ -17,7 +17,7 @@
 |---|---|---|
 | **类型系统** (`workspace.ts` 类型定义) | A | 完整的 TypeScript 类型，常量和标签映射齐全 |
 | **业务逻辑** (`workspace.ts` 纯函数) | B | 测试覆盖 sanitize / auto-assign / warnings / cascade-delete，但部分边缘情况未覆盖 |
-| **数据访问** (`db.ts` + `workspace-store.ts`) | B | 乐观并发控制正确，但缺少连接池失败重试逻辑 |
+| **数据访问** (`db.ts` + `workspace-store.ts`) | B+ | 乐观并发控制正确；连接层重新与 `DATABASE_URL` / `pg` 约定保持一致，但缺少连接池失败重试逻辑 |
 | **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；仍是共享口令模型 |
 | **API 路由** (`api/*`) | B | 结构化错误返回，但缺少请求体校验中间件 |
 | **React 组件** (`components/`) | B+ | 新增 Toast、HelpDrawer、GuideOverlay、ThemeToggle 四个组件 |
@@ -63,3 +63,4 @@
 | 2026-06-02 | 计划规则收敛 | 分数不变；减少机械建计划文件的要求，和现有工作流保持一致 |
 | 2026-06-02 | DOM 管理器模块提取（Wave 2-4） | UI (Legacy DOM) C+→B-，提取 771 行到 3 个聚焦模块 |
 | 2026-06-02 | 技术债全部清零 | UI (Legacy DOM) B-→B、测试 B+→A-、UI (React) B+→A-；新增 dom-scenario-ops 模块 + ProfileEditor 测试 |
+| 2026-06-03 | 恢复 `pg` + `DATABASE_URL` 数据访问路径 | 数据访问 B→B+；修复解锁后页面因缺少 `SUPABASE_*` 环境变量而 500 的问题 |
