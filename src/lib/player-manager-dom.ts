@@ -210,14 +210,8 @@ export function mountPlayerManager(
     remoteVersion,
     els,
     onCommitWorkspace: (mutator, options) => commitWorkspace(mutator, options),
-    onOpenProfile: (playerId) => {
-      activeProfileId = playerId;
-      renderProfileDrawer(renderCtx);
-    },
-    onCloseProfile: () => {
-      activeProfileId = null;
-      renderProfileDrawer(renderCtx);
-    },
+    onOpenProfile: (playerId) => setActiveProfile(playerId),
+    onCloseProfile: () => setActiveProfile(null),
     profileDrawerRoot,
     lastDrawerPlayer,
     lastDrawerPlayerJson,
@@ -583,13 +577,22 @@ export function mountPlayerManager(
     ).join("");
   }
 
-  function render() {
-    // Update render context with latest state
+  function syncRenderContextState() {
     renderCtx.workspace = workspace;
     renderCtx.historyState = historyState;
     renderCtx.selectedIds = selectedIds;
     renderCtx.activeProfileId = activeProfileId;
     renderCtx.remoteVersion = remoteVersion;
+  }
+
+  function setActiveProfile(playerId: string | null) {
+    activeProfileId = playerId;
+    syncRenderContextState();
+    renderProfileDrawer(renderCtx);
+  }
+
+  function render() {
+    syncRenderContextState();
 
     reconcileSelectedIds();
     renderHeader(renderCtx);
@@ -637,8 +640,7 @@ export function mountPlayerManager(
         if (!playerId) {
           return;
         }
-        activeProfileId = playerId;
-        renderProfileDrawer(renderCtx);
+        setActiveProfile(playerId);
       });
     });
     root.querySelectorAll("[data-delete-id]").forEach((button) => {

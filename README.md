@@ -35,6 +35,18 @@ npm test
 npm run build
 ```
 
+## Deployment Flow
+
+This repository uses a two-branch Vercel workflow:
+
+- `dev` — primary development branch; pushes should produce **Vercel Preview** deployments
+- `main` — production branch; pushes should produce **Vercel Production** deployments
+
+Operational note:
+
+- the `main` → Production and non-`main` → Preview behavior is currently controlled by the linked Vercel project settings, not by a repo-local `vercel.json`
+- the linked Vercel project currently uses `main` as its Git production branch
+
 ## Database Schema
 
 The repository currently includes one migration:

@@ -24,7 +24,7 @@
 | **旧 DOM 管理器** (`player-manager-dom.ts` + 提取模块) | B | 提取到 4 个模块（renderers/dialogs/io/scenario-ops），主文件 1525→856 行（-44%），并新增挂载 smoke test 防止初始化时序回归 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
 | **导入导出** | B | 功能完整、格式文档化，但缺少导入冲突的自动化解决 |
-| 测试 | A- | 58 个测试结果项（57 通过 + 1 todo），覆盖业务逻辑、5 个组件、legacy manager 挂载、认证/限流工具、API 路由及方案操作 |
+| 测试 | A- | 59 个测试结果项（58 通过 + 1 todo），覆盖业务逻辑、5 个组件、legacy manager 挂载/档案抽屉打开、认证/限流工具、API 路由及方案操作 |
 
 ## 按架构层级评分
 
@@ -66,3 +66,4 @@
 | 2026-06-03 | 恢复 `pg` + `DATABASE_URL` 数据访问路径 | 数据访问 B→B+；修复解锁后页面因缺少 `SUPABASE_*` 环境变量而 500 的问题 |
 | 2026-06-03 | 文档与交互一致性修正 | 分数不变；补充 `workspace-client` / `HelpDrawer` 测试并修正文档描述 |
 | 2026-06-03 | Supabase 连接兼容与 legacy manager 初始化修复 | 分数不变；补充 `db.ts` 的 Supabase SSL 兼容逻辑，并新增 `player-manager-dom` 挂载 smoke test |
+| 2026-06-03 | 档案抽屉打开回归修复 | 分数不变；新增 `player-manager-dom` 测试覆盖点击“档案”按钮后成功打开抽屉 |
