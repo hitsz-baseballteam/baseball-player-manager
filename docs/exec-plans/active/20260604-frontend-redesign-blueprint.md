@@ -169,14 +169,15 @@
 - 首页新 React 外壳先包住 legacy manager
 - 逐步把首页中的高价值区域从 legacy 抽离成 React 模块
 
-执行计划：`docs/exec-plans/active/20260604-phase2-homepage-overview-design.md`
+执行计划：`docs/exec-plans/completed/20260604-phase2-homepage-overview-design.md`
 
 当前进度：
-- 已完成 Phase 2 页面设计与产品取舍确认
-- 已落地首页总控区首版：提醒 / 快捷动作 / 指标 / 方案切换 / 阵容概览
-- 下一活跃切片：深度桥接与交互细化
-  - 执行计划：`docs/exec-plans/active/20260604-phase2-deep-bridge-and-interaction-polish.md`
-- 仍保留后续增强空间：更深的动作桥接、移动端 polish、视觉验收
+- Phase 2 已完成：页面设计、总控区首版、深度桥接与交互细化均已落地
+- 完成记录：
+  - `docs/exec-plans/completed/20260604-phase2-homepage-overview-design.md`
+  - `docs/exec-plans/completed/20260604-phase2-deep-bridge-and-interaction-polish.md`
+- 仍保留后续增强空间：移动端 polish、截图级视觉验收
+- 下一活跃阶段建议进入 **Phase 3 — 名册与球员档案统一语言**
 
 当前已确认的 Phase 2 设计决策：
 - 首页首屏采用 **“总控台优先”**，先突出风险、人数状态、快捷动作和关键摘要
@@ -260,13 +261,13 @@
 - legacy manager 被包进新的视觉容器中
 - `npm test` / `npm run lint` / `npm run build` 通过
 
-### Slice 2：首页总览设计（进行中）
+### Slice 2：首页总览设计（已完成）
 目标：先完成首页总控台的信息架构、视觉重心和组件边界设计，再进入实现。
 
-执行计划：`docs/exec-plans/active/20260604-phase2-homepage-overview-design.md`
+完成记录：`docs/exec-plans/completed/20260604-phase2-homepage-overview-design.md`
 
-当前范围：
+完成内容：
 - 明确首页 section 顺序：判断 > 动作 > 概览 > 深入编辑
-- 设计 Alert Deck / Command Strip / Key Metrics / Scenario Snapshot / Lineup Pulse
+- 落地 Alert Deck / Command Strip / Key Metrics / Scenario Snapshot / Lineup Pulse
 - 明确哪些数据直接来自 `workspace`，哪些内容需要降级或延后
-- 为后续实现切出 2B / 2C 两个子切片
+- 完成 2D 深度桥接，把首页动作与 legacy 工作台面板精确打通
