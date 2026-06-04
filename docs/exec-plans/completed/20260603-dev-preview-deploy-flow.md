@@ -64,19 +64,33 @@
 5. **实际验证**
    - 从 `dev` 推送一个可识别提交，确认 Vercel 生成 Preview URL
    - 确认该部署没有绑定生产域名
-   - 确认 `main` 更新后仍走 Production 部署
+   - 确认 `main` 当前仍保持 Production 部署指向
+
+## 执行结果
+
+- 已用 Vercel Project API 确认 `link.productionBranch = "main"`
+- 已将仓库文档补充为明确的双分支流程说明（`README.md`）
+- 已将修复提交推送到 `origin/dev`：`fb1864e`
+- Vercel 已为该 `dev` 提交创建 Preview 部署：
+  - commit sha: `fb1864ec13048088cd0cb445d229a0b6de6a7cf4`
+  - preview url: `https://baseball-player-manager-r1xp86a02-kennys-projects-5914ded3.vercel.app`
+  - branch alias: `https://baseball-player-manager-git-dev-kennys-projects-5914ded3.vercel.app`
+  - target: `preview`（未绑定生产域名）
+- 当前 Production 仍指向 `main`：
+  - commit sha: `2c058523795b86374216f8ce3962fd48f5e64e0d`
+  - production alias 仍包含 `https://hitsz-baseball.online`
 
 ## 验证
 
-- [ ] `git push origin dev` 后，Vercel 自动生成 Preview Deployment
-- [ ] `dev` 部署不会接管 Production 域名
-- [ ] `main` 更新后，Vercel 仍自动生成 Production Deployment
-- [ ] 仓库文档与实际流程一致
+- [x] `git push origin dev` 后，Vercel 自动生成 Preview Deployment
+- [x] `dev` 部署不会接管 Production 域名
+- [x] `main` 当前仍保持 Production 部署
+- [x] 仓库文档与实际流程一致
 
 ## 进度
 
 - [x] 2026-06-03 — 读取仓库内 CI / 分支 / 文档现状
 - [x] 2026-06-03 — 确认 `dev` 分支策略边界（采用方案 A：`dev` 为主要开发分支，但不限制其他非 `main` 分支的 Preview）
 - [x] 2026-06-03 — 核对 Vercel 分支部署设置（已确认 GitHub 已连接，Production Branch = `main`，且 `dev` 最近一次部署为 Preview）
-- [ ] 2026-06-03 — 更新仓库文档
-- [ ] 2026-06-03 — 用真实推送验证 Preview / Production 行为
+- [x] 2026-06-03 — 更新仓库文档
+- [x] 2026-06-03 — 用真实推送验证 Preview / Production 行为
