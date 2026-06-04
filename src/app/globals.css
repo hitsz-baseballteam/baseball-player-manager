@@ -360,6 +360,38 @@ html body .toast {
   box-shadow: 0 18px 40px color-mix(in srgb, var(--theme-shadow-strong) 34%, transparent);
 }
 
+html body .bridge-focus {
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--theme-accent) 34%, transparent),
+    0 18px 44px color-mix(in srgb, var(--theme-shadow-strong) 26%, transparent);
+  animation: bridge-focus-pulse 1.6s ease;
+}
+
+@keyframes bridge-focus-pulse {
+  0% {
+    transform: translateY(0);
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--theme-accent) 0%, transparent),
+      0 0 0 color-mix(in srgb, var(--theme-shadow-strong) 0%, transparent);
+  }
+
+  18% {
+    transform: translateY(-2px);
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--theme-accent) 22%, transparent),
+      0 24px 54px color-mix(in srgb, var(--theme-shadow-strong) 30%, transparent);
+  }
+
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--theme-accent) 34%, transparent),
+      0 18px 44px color-mix(in srgb, var(--theme-shadow-strong) 26%, transparent);
+  }
+}
+
 @media (max-width: 640px) {
   .unlock-shell {
     padding: 18px;

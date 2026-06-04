@@ -77,7 +77,7 @@
 
 - **Global Header**：产品名、一级导航、帮助 / 主题动作
 - **Page Masthead**：比赛日总控台题头 + 当前方案身份卡
-- **HomeOverview**：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse
+- **HomeOverview**：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse，以及指向 legacy 工作台的精确跳转入口
 - **Legacy Frame**：把旧 DOM manager 收纳到统一的面板容器里，而不是直接裸露成整页入口
 
 壳层样式放在 `src/components/app-shell.module.css`，总控区样式放在 `src/components/home-overview.module.css`，并通过更高优先级的局部选择器覆盖 legacy `.app-shell` / `.topbar` / `.brand` 布局，避免和旧模板全局类名冲突。首页壳层根节点会显式恢复项目内置本地字体，避免 legacy `body` 样式把字体栈回退到旧模板。
@@ -91,7 +91,7 @@
 - **过渡动画**：主题切换使用 0.3s CSS transition；悬停态用 `:hover` 伪类
 - **焦点可见**：输入框聚焦时显示 4px 绿色光晕（`box-shadow`），确保可访问性
 - **禁用态**：按钮 `:disabled` 降低不透明度至 0.6 + 禁用光标
-- **响应式**：首页壳层的 hero / command desk / legacy frame 都基于网格和 `auto-fit` 卡片收缩；Alert Deck、Command Strip、Metrics 与 Lineup Pulse 会在窄屏回落为单列；解锁卡片 `width: min(620px, 100%)`，移动端回落到 24px 内边距；帮助抽屉、引导卡和 toast 通过 `globals.css` 的高优先级覆写继续沿用 portal 结构但贴近新壳层；档案编辑器支持 drawer（侧边抽屉）和 page（独立页面）两种展示模式
+- **响应式**：首页壳层的 hero / command desk / legacy frame 都基于网格和 `auto-fit` 卡片收缩；Alert Deck、Command Strip、Metrics 与 Lineup Pulse 会在窄屏回落为单列；次级桥接动作区会从五列回落到三列再到单列；解锁卡片 `width: min(620px, 100%)`，移动端回落到 24px 内边距；帮助抽屉、引导卡和 toast 通过 `globals.css` 的高优先级覆写继续沿用 portal 结构但贴近新壳层；档案编辑器支持 drawer（侧边抽屉）和 page（独立页面）两种展示模式
 
 ## 设计资产
 
@@ -101,5 +101,5 @@
 ## 设计约束
 
 - 不要引入 CSS 框架（Bootstrap、Tailwind 等）——当前样式体系以 CSS 自定义属性 + 全局类名为主，局部复杂组件按需使用 CSS Modules
-- 当前 React 组件样式分三层：全局 token 在 `globals.css`，首页壳层在 `app-shell.module.css`，首页总控区在 `home-overview.module.css`；解锁页仍保留少量硬编码颜色作为独立入口视觉
+- 当前 React 组件样式分三层：全局 token 在 `globals.css`，首页壳层在 `app-shell.module.css`，首页总控区在 `home-overview.module.css`；legacy 面板被 React 聚焦时通过 `globals.css` 中的 `.bridge-focus` 临时高亮；解锁页仍保留少量硬编码颜色作为独立入口视觉
 - 新旧 UI 共存期间，确保旧 DOM 元素的 className 不与新 React 组件样式冲突；首页壳层需要优先通过 CSS Modules + `:global(...)` 限定 legacy 覆盖范围

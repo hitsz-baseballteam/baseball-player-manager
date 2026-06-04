@@ -8,6 +8,7 @@ import { HelpDrawer, type HelpDrawerHandle } from "@/components/help-drawer";
 import { HomeOverview } from "@/components/home-overview";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
+import { createLegacyBridge } from "@/lib/legacy-bridge";
 import { mountPlayerManager } from "@/lib/player-manager-dom";
 import { getActiveScenario, type Workspace } from "@/lib/workspace";
 
@@ -63,37 +64,26 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
   const preparedMarkup = useMemo(() => prepareLegacyMarkup(props.markup), [props.markup]);
   const activeScenario = useMemo(() => getActiveScenario(workspace), [workspace]);
 
-  const clickLegacyControl = useCallback((selector: string) => {
-    const root = legacyRootRef.current;
-    if (!root) {
-      return false;
-    }
-
-    const target = root.querySelector<HTMLElement>(selector);
-    if (!target) {
-      toastRef.current?.showToast("入口暂时不可用，请在完整工作台中继续操作");
-      return false;
-    }
-
-    target.click();
-    return true;
+  const withBridge = useCallback(<T,>(run: (bridge: ReturnType<typeof createLegacyBridge>) => T) => {
+    return run(createLegacyBridge({
+      root: legacyRootRef.current,
+      onUnavailable: (message) => toastRef.current?.showToast(message),
+      onFeedback: (message) => message ? toastRef.current?.showToast(message) : undefined,
+    }));
   }, []);
 
-  const changeLegacyScenario = useCallback((scenarioId: string) => {
-    const root = legacyRootRef.current;
-    if (!root) {
-      return;
-    }
+  const triggerLegacy = useCallback((selector: string, focusSelector?: string, feedbackMessage?: string) => {
+    return withBridge((bridge) => bridge.trigger(selector, { focusSelector, feedbackMessage }));
+  }, [withBridge]);
 
+  const focusLegacy = useCallback((selector: string, feedbackMessage?: string) => {
+    return withBridge((bridge) => bridge.focus(selector, { feedbackMessage }));
+  }, [withBridge]);
+
+  const changeLegacyScenario = useCallback((scenarioId: string) => {
     const nextScenario = workspace.scenarios.find((scenario) => scenario.id === scenarioId);
     if (!nextScenario) {
-      return;
-    }
-
-    const select = root.querySelector<HTMLSelectElement>("#scenarioSelect");
-    if (!select) {
-      toastRef.current?.showToast("方案切换暂时不可用，请在完整工作台中继续操作");
-      return;
+      return false;
     }
 
     setWorkspace((current) => ({
@@ -101,9 +91,11 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
       activeScenarioId: scenarioId,
     }));
 
-    select.value = scenarioId;
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-  }, [workspace.scenarios]);
+    return withBridge((bridge) => bridge.changeSelect("#scenarioSelect", scenarioId, {
+      focusSelector: "#scenarioPanel",
+      feedbackMessage: `已切换到 ${nextScenario.name}`,
+    }));
+  }, [withBridge, workspace.scenarios]);
 
   const scrollToWorkspace = useCallback(() => {
     legacyFrameAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -164,12 +156,22 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
               workspace={workspace}
               remoteVersion={remoteVersion}
               saveStatus={saveStatus}
-              onAutoAssign={() => void clickLegacyControl("#autoAssignBtn")}
-              onAddPlayer={() => void clickLegacyControl("#addPlayerBtn")}
-              onImport={() => void clickLegacyControl("#importBtn")}
-              onCreateScenario={() => void clickLegacyControl("#newScenarioBtn")}
+              onAutoAssign={() => void triggerLegacy("#autoAssignBtn", "#fieldPanel")}
+              onAddPlayer={() => void triggerLegacy("#addPlayerBtn", "#rosterPanel")}
+              onImport={() => void triggerLegacy("#importBtn", "#scenarioPanel")}
+              onCreateScenario={() => void triggerLegacy("#newScenarioBtn", "#scenarioPanel")}
+              onExportWorkspace={() => void triggerLegacy("#exportWorkspaceBtn", "#scenarioPanel", "已触发导出工作区")}
+              onExportScenario={() => void triggerLegacy("#exportScenarioBtn", "#scenarioPanel", "已触发导出当前方案")}
+              onRenameScenario={() => void triggerLegacy("#renameScenarioBtn", "#scenarioPanel")}
+              onDuplicateScenario={() => void triggerLegacy("#duplicateScenarioBtn", "#scenarioPanel")}
+              onClearAssignments={() => void triggerLegacy("#clearAssignmentsBtn", "#fieldPanel", "已触发清空当前阵容")}
               onScenarioChange={changeLegacyScenario}
               onOpenWorkspace={scrollToWorkspace}
+              onOpenScenarioPanel={() => void focusLegacy("#scenarioPanel")}
+              onOpenRosterPanel={() => void focusLegacy("#rosterPanel")}
+              onOpenFieldPanel={() => void focusLegacy("#fieldPanel")}
+              onOpenLineupPanel={() => void focusLegacy("#lineupPanel")}
+              onOpenWarningsPanel={() => void focusLegacy("#warnings")}
             />
           )}
           frameEyebrow="Deep Edit Workspace"

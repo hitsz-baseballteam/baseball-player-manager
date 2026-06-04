@@ -106,10 +106,12 @@ Observed limits and boundaries:
 
 The main UI is a hybrid of React and legacy DOM rendering.
 
-- `src/components/player-manager-client.tsx` renders `AppShell` + `HomeOverview`, prepares the legacy HTML fragment, and mounts the legacy manager into the shell's legacy frame
+- `src/components/player-manager-client.tsx` renders `AppShell` + `HomeOverview`, prepares the legacy HTML fragment, mounts the legacy manager into the shell's legacy frame, and uses `legacy-bridge` to trigger legacy actions or focus specific panels from React
 - `src/lib/player-manager-dom.ts` still owns most roster, scenario, field, lineup, import/export, and interaction logic
 - `src/lib/legacy-template.ts` extracts `<style>` and `<body>` fragments from `index.html`
+- `src/lib/legacy-bridge.ts` provides structured React → legacy DOM bridging for button triggers, select changes, panel focus, and temporary highlight feedback
 - React-managed overlays and adjunct UI currently include `AppShell`, `HomeOverview`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
+- homepage overview interactions now split into two layers: React renders summary/actions, while `legacy-bridge` routes those actions into the legacy workspace without duplicating the underlying business logic
 
 This means the repository currently has two UI styles living side by side:
 

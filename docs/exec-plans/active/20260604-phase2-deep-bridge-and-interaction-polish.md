@@ -175,6 +175,14 @@ React 首页不复制 legacy 布局；只承载：
 - 可上场人数卡 → `#rosterPanel`
 - 守位 mini board / 棒次列表 → 对应面板聚焦
 
+## 进度
+- [x] 2026-06-04 — 明确深度桥接范围，并确认本轮排除“删除方案”
+- [x] 2026-06-04 — 新增 `src/lib/legacy-bridge.ts`，统一 trigger / changeSelect / focus / highlight 逻辑
+- [x] 2026-06-04 — 首页补充导出 / 重命名 / 复制 / 清空阵容等桥接动作
+- [x] 2026-06-04 — Alert Deck / Metrics / Scenario Snapshot / Lineup Pulse 接入精确跳转
+- [x] 2026-06-04 — 在 `globals.css` 中新增 `.bridge-focus` 高亮反馈
+- [x] 2026-06-04 — 新增 `legacy-bridge.test.ts` 并增强 `PlayerManagerClient` 深桥接测试
+
 ## 文件计划
 
 ### 预计修改
@@ -195,12 +203,12 @@ React 首页不复制 legacy 布局；只承载：
 - 当前 Phase 2 计划文件进度
 
 ## 验证
-- [ ] 首页新增桥接动作能触发对应 legacy 行为
-- [ ] 提醒 / 指标 / 阵容概览能准确跳到对应 legacy 区域
-- [ ] 被定位到的区域有明确高亮反馈
-- [ ] `npm test`
-- [ ] `npm run lint`
-- [ ] `npm run build`
+- [x] 首页新增桥接动作能触发对应 legacy 行为
+- [x] 提醒 / 指标 / 阵容概览能准确跳到对应 legacy 区域
+- [x] 被定位到的区域有明确高亮反馈
+- [x] `npm test`
+- [x] `npm run lint`（保留既有 warning，无新增 error）
+- [x] `npm run build`
 - [ ] 手动检查：
   - 首页点击动作后的反馈是否明确
   - 桌面端滚动定位是否自然

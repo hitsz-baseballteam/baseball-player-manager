@@ -16,8 +16,18 @@ type HomeOverviewProps = {
   onAddPlayer: () => void;
   onImport: () => void;
   onCreateScenario: () => void;
+  onExportWorkspace: () => void;
+  onExportScenario: () => void;
+  onRenameScenario: () => void;
+  onDuplicateScenario: () => void;
+  onClearAssignments: () => void;
   onScenarioChange: (scenarioId: string) => void;
   onOpenWorkspace: () => void;
+  onOpenScenarioPanel: () => void;
+  onOpenRosterPanel: () => void;
+  onOpenFieldPanel: () => void;
+  onOpenLineupPanel: () => void;
+  onOpenWarningsPanel: () => void;
 };
 
 const FORMATTER = new Intl.DateTimeFormat("zh-CN", {
@@ -35,8 +45,18 @@ export function HomeOverview({
   onAddPlayer,
   onImport,
   onCreateScenario,
+  onExportWorkspace,
+  onExportScenario,
+  onRenameScenario,
+  onDuplicateScenario,
+  onClearAssignments,
   onScenarioChange,
   onOpenWorkspace,
+  onOpenScenarioPanel,
+  onOpenRosterPanel,
+  onOpenFieldPanel,
+  onOpenLineupPanel,
+  onOpenWarningsPanel,
 }: HomeOverviewProps) {
   const activeScenario = getActiveScenario(workspace);
   const { critical, advisory } = analyzeScenarioWarnings(workspace, activeScenario);
@@ -93,6 +113,42 @@ export function HomeOverview({
     },
   ] as const;
 
+  const supportActions = [
+    {
+      label: "导出工作区",
+      detail: "备份全部球员与全部方案",
+      onClick: onExportWorkspace,
+    },
+    {
+      label: "导出当前方案",
+      detail: "只导出当前阵容与引用球员",
+      onClick: onExportScenario,
+    },
+    {
+      label: "重命名方案",
+      detail: "调整当前方案标题与备注",
+      onClick: onRenameScenario,
+    },
+    {
+      label: "复制方案",
+      detail: "基于当前方案快速派生变体",
+      onClick: onDuplicateScenario,
+    },
+    {
+      label: "清空当前阵容",
+      detail: "快速清空守位与棒次后重新排",
+      onClick: onClearAssignments,
+    },
+  ] as const;
+
+  const warningActions = {
+    onOpenScenarioPanel,
+    onOpenRosterPanel,
+    onOpenFieldPanel,
+    onOpenLineupPanel,
+    onOpenWarningsPanel,
+  };
+
   return (
     <>
       <section className={styles.alertDeck} aria-label="比赛日提醒">
@@ -108,10 +164,34 @@ export function HomeOverview({
           </div>
           <p className={styles.alertSummary}>{statusSummary}</p>
           <ul className={styles.alertList}>
-            {(critical.length > 0 ? critical.slice(0, 3) : ["守位与棒次均已形成完整骨架，可把注意力转向细节风险与战术微调。"]).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
+            {(critical.length > 0
+              ? critical.slice(0, 3)
+              : ["守位与棒次均已形成完整骨架，可把注意力转向细节风险与战术微调。"])
+              .map((item) => {
+                const action = resolveWarningAction(item, warningActions);
+                return (
+                  <li key={item} className={styles.alertItem}>
+                    <span className={styles.alertItemText}>{item}</span>
+                    {action ? (
+                      <button className={styles.alertAction} type="button" onClick={action.onClick}>
+                        {action.label}
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
           </ul>
+          <div className={styles.alertFooter}>
+            <button className={styles.jumpButton} type="button" onClick={onOpenFieldPanel}>
+              去守位区
+            </button>
+            <button className={styles.jumpButton} type="button" onClick={onOpenLineupPanel}>
+              去棒次区
+            </button>
+            <button className={styles.jumpButton} type="button" onClick={onOpenWarningsPanel}>
+              去提醒区
+            </button>
+          </div>
         </article>
 
         <article className={styles.alertNotes}>
@@ -120,13 +200,29 @@ export function HomeOverview({
           <ul className={styles.notesList}>
             {(advisory.length > 0
               ? advisory.slice(0, 4)
-              : ["当前没有额外建议提醒。可以直接进入下方工作台做最终排阵微调。"]).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
+              : ["当前没有额外建议提醒。可以直接进入下方工作台做最终排阵微调。"])
+              .map((item) => {
+                const action = resolveWarningAction(item, warningActions);
+                return (
+                  <li key={item} className={styles.noteItem}>
+                    <span className={styles.alertItemText}>{item}</span>
+                    {action ? (
+                      <button className={styles.noteAction} type="button" onClick={action.onClick}>
+                        {action.label}
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
           </ul>
-          <button className={styles.jumpButton} type="button" onClick={onOpenWorkspace}>
-            进入完整工作台
-          </button>
+          <div className={styles.noteFooter}>
+            <button className={styles.jumpButton} type="button" onClick={onOpenWarningsPanel}>
+              定位到提醒区
+            </button>
+            <button className={styles.jumpButton} type="button" onClick={onOpenWorkspace}>
+              进入完整工作台
+            </button>
+          </div>
         </article>
       </section>
 
@@ -151,6 +247,14 @@ export function HomeOverview({
             </button>
           ))}
         </div>
+        <div className={styles.commandSubgrid}>
+          {supportActions.map((action) => (
+            <button key={action.label} type="button" className={styles.commandSubButton} onClick={action.onClick}>
+              <span className={styles.commandSubLabel}>{action.label}</span>
+              <span className={styles.commandSubDetail}>{action.detail}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className={styles.overviewGrid} aria-label="总控台概览">
@@ -164,37 +268,37 @@ export function HomeOverview({
           </div>
 
           <div className={styles.metricGrid}>
-            <article className={`${styles.metricCard} ${styles.metricCardAccent}`}>
-              <div className={styles.metricLabel}>可上场人数</div>
-              <div className={styles.metricValue}>{availableCount}</div>
-              <div className={styles.metricDetail}>
+            <button type="button" className={`${styles.metricButton} ${styles.metricCardAccent}`} onClick={onOpenRosterPanel}>
+              <span className={styles.metricLabel}>可上场人数</span>
+              <span className={styles.metricValue}>{availableCount}</span>
+              <span className={styles.metricDetail}>
                 共 {workspace.players.length} 人；{availableCount >= 9 ? "基础人数够排一套阵容。" : `人数仍短缺 ${9 - availableCount} 人。`}
-              </div>
-            </article>
+              </span>
+            </button>
 
-            <article className={`${styles.metricCard} ${styles.metricCardWarm}`}>
-              <div className={styles.metricLabel}>轮休 / 伤停</div>
-              <div className={styles.metricValue}>{restCount + injuredCount}</div>
-              <div className={styles.metricDetail}>
+            <button type="button" className={`${styles.metricButton} ${styles.metricCardWarm}`} onClick={onOpenRosterPanel}>
+              <span className={styles.metricLabel}>轮休 / 伤停</span>
+              <span className={styles.metricValue}>{restCount + injuredCount}</span>
+              <span className={styles.metricDetail}>
                 轮休 {restCount} 人，伤停 {injuredCount} 人。
-              </div>
-            </article>
+              </span>
+            </button>
 
-            <article className={styles.metricCard}>
-              <div className={styles.metricLabel}>守位完成度</div>
-              <div className={styles.metricValue}>{assignedDefenseCount}/9</div>
-              <div className={styles.metricDetail}>
+            <button type="button" className={styles.metricButton} onClick={onOpenFieldPanel}>
+              <span className={styles.metricLabel}>守位完成度</span>
+              <span className={styles.metricValue}>{assignedDefenseCount}/9</span>
+              <span className={styles.metricDetail}>
                 {missingPositions.length > 0 ? `还缺 ${missingPositions.join("、")}` : "九个守位均已有人。"}
-              </div>
-            </article>
+              </span>
+            </button>
 
-            <article className={`${styles.metricCard} ${styles.metricCardCool}`}>
-              <div className={styles.metricLabel}>棒次完成度</div>
-              <div className={styles.metricValue}>{assignedLineupCount}/9</div>
-              <div className={styles.metricDetail}>
+            <button type="button" className={`${styles.metricButton} ${styles.metricCardCool}`} onClick={onOpenLineupPanel}>
+              <span className={styles.metricLabel}>棒次完成度</span>
+              <span className={styles.metricValue}>{assignedLineupCount}/9</span>
+              <span className={styles.metricDetail}>
                 {assignedLineupCount === 9 ? "九个棒次已排满。" : `还缺 ${9 - assignedLineupCount} 个棒次。`}
-              </div>
-            </article>
+              </span>
+            </button>
           </div>
         </article>
 
@@ -204,7 +308,7 @@ export function HomeOverview({
               <div className={styles.kicker}>Scenario Snapshot</div>
               <h2 className={styles.panelTitle}>当前方案</h2>
             </div>
-            <button className={styles.inlineLink} type="button" onClick={onOpenWorkspace}>
+            <button className={styles.inlineLink} type="button" onClick={onOpenScenarioPanel}>
               去工作台完整管理
             </button>
           </div>
@@ -229,6 +333,18 @@ export function HomeOverview({
           <p className={styles.scenarioNote}>
             {activeScenario.note || "当前方案还没有备注。建议在完整工作台里补充适用场景说明。"}
           </p>
+
+          <div className={styles.scenarioActions}>
+            <button className={styles.inlineLink} type="button" onClick={onRenameScenario}>
+              重命名
+            </button>
+            <button className={styles.inlineLink} type="button" onClick={onDuplicateScenario}>
+              复制方案
+            </button>
+            <button className={styles.inlineLink} type="button" onClick={onExportScenario}>
+              导出当前方案
+            </button>
+          </div>
 
           <dl className={styles.statusGrid}>
             <div>
@@ -258,16 +374,23 @@ export function HomeOverview({
               <div className={styles.kicker}>Lineup Pulse</div>
               <h2 className={styles.panelTitle}>守位概览</h2>
             </div>
-            <div className={styles.panelMeta}>{assignedDefenseCount}/9 已落位</div>
+            <button className={styles.inlineLink} type="button" onClick={onOpenFieldPanel}>
+              去守位区
+            </button>
           </div>
 
           <div className={styles.defenseGrid}>
             {defenseAssignments.map((entry) => (
-              <div key={entry.code} className={entry.player ? styles.defenseCardFilled : styles.defenseCardEmpty}>
-                <div className={styles.defenseCode}>{entry.code}</div>
-                <div className={styles.defenseLabel}>{entry.label}</div>
-                <div className={styles.defensePlayer}>{entry.player?.name || "待补位"}</div>
-              </div>
+              <button
+                key={entry.code}
+                type="button"
+                className={entry.player ? styles.defenseCardFilled : styles.defenseCardEmpty}
+                onClick={onOpenFieldPanel}
+              >
+                <span className={styles.defenseCode}>{entry.code}</span>
+                <span className={styles.defenseLabel}>{entry.label}</span>
+                <span className={styles.defensePlayer}>{entry.player?.name || "待补位"}</span>
+              </button>
             ))}
           </div>
         </article>
@@ -278,17 +401,21 @@ export function HomeOverview({
               <div className={styles.kicker}>Batting Order</div>
               <h2 className={styles.panelTitle}>棒次概览</h2>
             </div>
-            <div className={styles.panelMeta}>{assignedLineupCount}/9 已排定</div>
+            <button className={styles.inlineLink} type="button" onClick={onOpenLineupPanel}>
+              去棒次区
+            </button>
           </div>
 
           <ol className={styles.lineupList}>
             {lineupAssignments.map((entry) => (
-              <li key={entry.slot} className={styles.lineupItem}>
-                <span className={styles.lineupSlot}>{entry.slot}</span>
-                <span className={styles.lineupName}>{entry.player?.name || "待定"}</span>
-                <span className={styles.lineupMeta}>
-                  {entry.player ? entry.player.positions.join(" / ") : "等待分配"}
-                </span>
+              <li key={entry.slot}>
+                <button type="button" className={styles.lineupItem} onClick={onOpenLineupPanel}>
+                  <span className={styles.lineupSlot}>{entry.slot}</span>
+                  <span className={styles.lineupName}>{entry.player?.name || "待定"}</span>
+                  <span className={styles.lineupMeta}>
+                    {entry.player ? entry.player.positions.join(" / ") : "等待分配"}
+                  </span>
+                </button>
               </li>
             ))}
           </ol>
@@ -304,4 +431,23 @@ function formatTimestamp(value: string) {
     return "未记录";
   }
   return FORMATTER.format(date);
+}
+
+function resolveWarningAction(
+  message: string,
+  actions: Pick<HomeOverviewProps, "onOpenRosterPanel" | "onOpenFieldPanel" | "onOpenLineupPanel" | "onOpenWarningsPanel" | "onOpenScenarioPanel">,
+) {
+  if (message.includes("守位未满") || message.includes("重复占用守位") || message.includes("可守位置不包含") || message.includes("当前被放在")) {
+    return { label: "去守位区", onClick: actions.onOpenFieldPanel };
+  }
+
+  if (message.includes("棒次未满") || (message.includes("第 ") && message.includes("棒"))) {
+    return { label: "去棒次区", onClick: actions.onOpenLineupPanel };
+  }
+
+  if (message.includes("非可上场球员已进入阵容")) {
+    return { label: "去名单区", onClick: actions.onOpenRosterPanel };
+  }
+
+  return { label: "去提醒区", onClick: actions.onOpenWarningsPanel };
 }

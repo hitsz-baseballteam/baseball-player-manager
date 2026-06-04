@@ -11,6 +11,7 @@
 .metricsPanel,
 .scenarioPanel,
 .pulsePanel {
+  position: relative;
   border: 1px solid var(--shell-panel-border);
   border-radius: calc(var(--shell-panel-radius) - 6px);
   background: color-mix(in srgb, var(--theme-surface) 95%, transparent);
@@ -18,16 +19,25 @@
 }
 
 .alertHeroCritical,
+.alertHeroHealthy,
+.alertNotes,
+.commandStrip,
+.metricsPanel,
+.scenarioPanel,
+.pulsePanel {
+  overflow: clip;
+}
+
+.alertHeroCritical,
 .alertHeroHealthy {
-  position: relative;
   display: grid;
   gap: 14px;
   padding: 24px;
-  overflow: clip;
 }
 
 .alertHeroCritical::before,
 .alertHeroHealthy::before,
+.alertNotes::before,
 .commandStrip::before,
 .metricsPanel::before,
 .scenarioPanel::before,
@@ -88,6 +98,13 @@
   line-height: 0.96;
 }
 
+.notesTitle,
+.panelTitle,
+.commandTitle {
+  font-size: 26px;
+  line-height: 1.04;
+}
+
 .alertBadge,
 .panelMeta {
   display: inline-flex;
@@ -113,7 +130,8 @@
 }
 
 .alertList,
-.notesList {
+.notesList,
+.lineupList {
   display: grid;
   gap: 10px;
   margin: 0;
@@ -121,8 +139,22 @@
   list-style: none;
 }
 
-.alertList li,
-.notesList li {
+.alertItem,
+.noteItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+}
+
+.alertItemText {
+  flex: 1;
+  min-width: 220px;
   position: relative;
   padding-left: 18px;
   color: var(--shell-hero-ink);
@@ -130,8 +162,7 @@
   line-height: 1.6;
 }
 
-.alertList li::before,
-.notesList li::before {
+.alertItemText::before {
   content: "";
   position: absolute;
   top: 0.62em;
@@ -142,35 +173,28 @@
   background: color-mix(in srgb, var(--theme-warm) 72%, var(--theme-gold));
 }
 
-.alertNotes {
-  display: grid;
-  align-content: start;
-  gap: 14px;
-  padding: 22px;
-}
-
-.notesTitle,
-.panelTitle,
-.commandTitle {
-  font-size: 26px;
-  line-height: 1.04;
-}
-
+.alertAction,
+.noteAction,
 .jumpButton,
 .inlineLink,
+.commandSubButton,
+.metricButton,
 .select,
-.commandButton,
-.commandPrimary {
+.defenseCardFilled,
+.defenseCardEmpty,
+.lineupItem {
   font: inherit;
 }
 
+.alertAction,
+.noteAction,
 .jumpButton,
 .inlineLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 40px;
+  min-height: 38px;
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
@@ -180,12 +204,34 @@
   cursor: pointer;
 }
 
+.alertAction,
+.noteAction {
+  min-height: 34px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.alertFooter,
+.noteFooter,
+.scenarioActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.alertNotes,
 .commandStrip,
 .metricsPanel,
 .scenarioPanel,
 .pulsePanel {
-  position: relative;
   padding: 22px;
+}
+
+.alertNotes {
+  display: grid;
+  align-content: start;
+  gap: 14px;
 }
 
 .commandStrip {
@@ -231,22 +277,54 @@
   color: var(--shell-hero-ink);
 }
 
+.commandSubgrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.commandSubButton {
+  display: grid;
+  gap: 6px;
+  min-height: 92px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  color: var(--shell-hero-ink);
+  cursor: pointer;
+}
+
 .commandButton:hover,
 .commandPrimary:hover,
+.commandSubButton:hover,
+.alertAction:hover,
+.noteAction:hover,
 .jumpButton:hover,
-.inlineLink:hover {
+.inlineLink:hover,
+.metricButton:hover,
+.defenseCardFilled:hover,
+.defenseCardEmpty:hover,
+.lineupItem:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
   box-shadow: 0 16px 34px color-mix(in srgb, var(--theme-shadow-strong) 24%, transparent);
 }
 
-.commandLabel {
+.commandLabel,
+.commandSubLabel {
   font-size: 18px;
   font-weight: 800;
   line-height: 1.08;
 }
 
-.commandDetail {
+.commandSubLabel {
+  font-size: 15px;
+}
+
+.commandDetail,
+.commandSubDetail {
   color: var(--shell-muted);
   font-size: 13px;
   line-height: 1.55;
@@ -266,14 +344,16 @@
   margin-top: 18px;
 }
 
-.metricCard {
+.metricButton {
   display: grid;
   gap: 8px;
   min-height: 154px;
   padding: 18px;
+  text-align: left;
   border-radius: 20px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
   background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  cursor: pointer;
 }
 
 .metricCardAccent {
@@ -374,9 +454,11 @@
   gap: 6px;
   min-height: 120px;
   padding: 16px;
+  text-align: left;
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
   background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  cursor: pointer;
 }
 
 .defenseCardFilled {
@@ -401,23 +483,18 @@
   font-weight: 700;
 }
 
-.lineupList {
-  display: grid;
-  gap: 10px;
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
 .lineupItem {
   display: grid;
+  width: 100%;
   grid-template-columns: 36px minmax(0, 1fr) minmax(96px, 150px);
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
+  text-align: left;
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
   background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  cursor: pointer;
 }
 
 .lineupSlot {
@@ -431,6 +508,12 @@
   color: var(--shell-hero-ink);
   font-size: 13px;
   font-weight: 800;
+}
+
+@media (max-width: 1240px) {
+  .commandSubgrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1080px) {
@@ -447,6 +530,7 @@
 
 @media (max-width: 720px) {
   .commandGrid,
+  .commandSubgrid,
   .metricGrid,
   .statusGrid,
   .defenseGrid {

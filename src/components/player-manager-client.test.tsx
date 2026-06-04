@@ -60,9 +60,10 @@ describe("PlayerManagerClient", () => {
     document.body.innerHTML = "";
   });
 
-  it("renders phase 2 overview, bridges quick actions, and keeps shell actions interactive", async () => {
+  it("renders the overview and performs deep bridge interactions", async () => {
     const user = userEvent.setup();
     const autoAssignClicks: string[] = [];
+    const exportWorkspaceClicks: string[] = [];
     const scenarioChanges: string[] = [];
 
     render(
@@ -75,11 +76,20 @@ describe("PlayerManagerClient", () => {
             <button id="addPlayerBtn" type="button">新增球员</button>
             <button id="importBtn" type="button">导入数据</button>
             <button id="newScenarioBtn" type="button">新建方案</button>
+            <button id="exportWorkspaceBtn" type="button">导出工作区</button>
+            <button id="exportScenarioBtn" type="button">导出当前方案</button>
+            <button id="renameScenarioBtn" type="button">重命名方案</button>
+            <button id="duplicateScenarioBtn" type="button">复制方案</button>
+            <button id="clearAssignmentsBtn" type="button">清空当前阵容</button>
             <select id="scenarioSelect">
               <option value="${baseWorkspace.scenarios[0].id}">${baseWorkspace.scenarios[0].name}</option>
               <option value="scenario-b">决胜方案</option>
             </select>
             <section id="scenarioPanel">legacy scenario panel</section>
+            <section id="rosterPanel">legacy roster panel</section>
+            <section id="fieldPanel">legacy field panel</section>
+            <section id="lineupPanel">legacy lineup panel</section>
+            <section id="warnings">legacy warnings panel</section>
             <div id="saveStatus">本地工作区已准备</div>
           </main>
         `}
@@ -88,10 +98,16 @@ describe("PlayerManagerClient", () => {
     );
 
     const autoAssignBtn = document.querySelector<HTMLButtonElement>("#autoAssignBtn");
+    const exportWorkspaceBtn = document.querySelector<HTMLButtonElement>("#exportWorkspaceBtn");
     const legacyScenarioSelect = document.querySelector<HTMLSelectElement>("#scenarioSelect");
+    const fieldPanel = document.querySelector<HTMLElement>("#fieldPanel");
     assert.ok(autoAssignBtn);
+    assert.ok(exportWorkspaceBtn);
     assert.ok(legacyScenarioSelect);
+    assert.ok(fieldPanel);
+
     autoAssignBtn.addEventListener("click", () => autoAssignClicks.push("clicked"));
+    exportWorkspaceBtn.addEventListener("click", () => exportWorkspaceClicks.push("clicked"));
     legacyScenarioSelect.addEventListener("change", () => scenarioChanges.push(legacyScenarioSelect.value));
 
     await screen.findByRole("heading", { name: "比赛日总控台" });
@@ -102,15 +118,23 @@ describe("PlayerManagerClient", () => {
     assert.doesNotMatch(mountedRoot.textContent ?? "", /比赛日总控台/);
 
     assert.ok(screen.getByText(/先处理强提醒/));
-    assert.ok(screen.getAllByRole("button", { name: /自动排阵/ }).length >= 2);
     assert.ok(screen.getByLabelText("切换当前方案"));
+    assert.ok(screen.getByRole("button", { name: "导出工作区" }));
+    assert.ok(screen.getAllByRole("button", { name: "去守位区" }).length >= 2);
 
     await user.click(screen.getAllByRole("button", { name: /自动排阵/ })[0]);
     assert.equal(autoAssignClicks.length, 1);
+    assert.ok(fieldPanel.classList.contains("bridge-focus"));
+
+    await user.click(screen.getByRole("button", { name: "导出工作区" }));
+    assert.equal(exportWorkspaceClicks.length, 1);
 
     await user.selectOptions(screen.getByLabelText("切换当前方案"), baseWorkspace.scenarios[0].id);
     assert.equal(legacyScenarioSelect.value, baseWorkspace.scenarios[0].id);
     assert.deepEqual(scenarioChanges, [baseWorkspace.scenarios[0].id]);
+
+    await user.click(screen.getAllByRole("button", { name: "去守位区" })[0]);
+    assert.ok(fieldPanel.classList.contains("bridge-focus"));
 
     assert.equal(document.querySelectorAll(".help-drawer").length, 1);
 

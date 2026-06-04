@@ -26,6 +26,7 @@ page.tsx (server)
   └── 渲染 <PlayerManagerClient initialWorkspace={...} initialVersion={...} markup={...} styles={...} />
        ├── 渲染 React `AppShell`
        ├── 渲染 `HomeOverview`（提醒 / 快捷动作 / 指标 / 方案切换 / 阵容概览）
+       ├── 通过 `legacy-bridge` 触发 legacy 按钮 / select，并滚动高亮对应工作台面板
        ├── 通过 `onStateChange` 同步 legacy manager 的最新 workspace 到 React 概览层
        └── 在 shell 根节点内挂载旧 DOM 管理器
 ```
@@ -38,8 +39,8 @@ page.tsx (server)
 |---|---|
 | `UnlockForm` | 纯客户端：输入 passcode → POST /api/unlock，并渲染比赛日入口卡片 |
 | `AppShell` | React 外壳：全局导航、页面题头、概览内容槽位、legacy frame 与 shell 级动作区 |
-| `HomeOverview` | 首页总控区：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot 与 Lineup Pulse |
-| `PlayerManagerClient` | 混合 UI 容器：渲染 `AppShell` + `HomeOverview`，预处理 legacy markup（移除旧帮助/引导 DOM，避免重复 overlay），并在 shell 根节点挂载 legacy manager；DOM 管理器通过回调 ref 调用 toast/help，同时用 `onStateChange` 把最新 workspace / version / saveStatus 回推给 React 概览层 |
+| `HomeOverview` | 首页总控区：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse，以及面向 legacy 工作台的精确跳转入口 |
+| `PlayerManagerClient` | 混合 UI 容器：渲染 `AppShell` + `HomeOverview`，预处理 legacy markup（移除旧帮助/引导 DOM，避免重复 overlay），并在 shell 根节点挂载 legacy manager；DOM 管理器通过回调 ref 调用 toast/help，同时用 `onStateChange` 把最新 workspace / version / saveStatus 回推给 React 概览层；桥接动作与面板定位由 `legacy-bridge` 协调 |
 | `PlayerProfilePageClient` | 状态管理：workspace 读写 + 版本冲突处理 |
 | `PlayerProfileEditor` | 纯客户端：完整档案编辑表单 + SVG 雷达图 |
 | `Toast` | Portal 渲染的 toast 通知 |
@@ -53,7 +54,7 @@ page.tsx (server)
 src/components/
 ├── app-shell.tsx                    # 首页全局壳层
 ├── app-shell.module.css             # 壳层与 legacy frame 样式隔离
-├── home-overview.tsx                # 首页总控区（提醒 / 动作 / 指标 / 阵容概览）
+├── home-overview.tsx                # 首页总控区（提醒 / 动作 / 指标 / 阵容概览 / 精确跳转）
 ├── home-overview.module.css         # 总控区样式
 ├── unlock-form.tsx                  # 认证表单 / 比赛日入口卡片
 ├── player-manager-client.tsx        # 状态桥接 + shell 内 DOM 管理器挂载点
@@ -64,6 +65,9 @@ src/components/
 ├── help-drawer.tsx                  # 帮助抽屉
 ├── guide-overlay.tsx                # 新手引导浮层
 └── theme-toggle.tsx                 # 主题切换按钮
+
+src/lib/
+└── legacy-bridge.ts                 # React → legacy DOM 的结构化桥接（trigger / changeSelect / focus）
 ```
 
 ## 状态管理
@@ -91,7 +95,7 @@ Client Component / Legacy Manager
 ### 原则
 
 - **无全局状态库**：不使用 Redux、Zustand 等。状态通过 props 向下传递
-- **workspace 是主要业务真实源**：球员、方案等持久化业务数据都在 workspace 对象中；首页总控区不会自建第二套业务状态，而是消费 legacy manager 通过 `onStateChange` 回推的最新 workspace；少量瞬时 UI 开关（如当前引导是否展开）仍由本地 React state 管理
+- **workspace 是主要业务真实源**：球员、方案等持久化业务数据都在 workspace 对象中；首页总控区不会自建第二套业务状态，而是消费 legacy manager 通过 `onStateChange` 回推的最新 workspace；首页桥接只负责入口与定位，不复制底层业务实现；少量瞬时 UI 开关（如当前引导是否展开）仍由本地 React state 管理
 - **客户端 fetch 通过 `workspace-client.ts`**：封装 GET/PUT 请求，处理 409 冲突和错误
 - **主工作区使用乐观 UI + 后台保存**：DOM 管理器会先更新本地 `workspace` 并立即 `render()`，随后异步调用 `/api/workspace`；服务端仍通过版本号做乐观并发控制
 
@@ -115,6 +119,7 @@ Client Component / Legacy Manager
 
 - ~876 行（相较更早的 1742 行版本已明显收敛）
 - Toast、帮助抽屉、引导浮层、主题切换、首页壳层与首页总控区已迁移至 React 组件
+- 首页高频动作、指标卡与阵容概览现在还会通过 `legacy-bridge` 精确聚焦到 `scenarioPanel` / `rosterPanel` / `fieldPanel` / `lineupPanel` / `warnings`
 - 其余 UI 区域（名册、球场、棒次、方案管理、球员编辑）仍由 DOM 管理器驱动
 
 ### 已知问题
