@@ -25,6 +25,7 @@ import {
 type PlayerProfileEditorProps = {
   player: Player | null;
   variant: "page" | "drawer";
+  pageSurface?: "standalone" | "embedded";
   saving?: boolean;
   statusMessage?: string;
   backHref?: string;
@@ -101,9 +102,13 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
     };
   }, [onClose, variant]);
 
+  const pageShellClassName = props.pageSurface === "embedded"
+    ? styles.pageEmbeddedShell
+    : styles.pageShell;
+
   if (!draft) {
     return (
-      <div className={`${styles.shell} ${styles.pageShell} ${styles.empty}`}>
+      <div className={`${styles.shell} ${pageShellClassName} ${styles.empty}`}>
         <div className={styles.emptyCard}>
           <div className={styles.kicker}>Player Record</div>
           <h2>球员不存在</h2>
@@ -318,7 +323,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
   }
 
   const shellClass = props.variant === "page"
-    ? styles.pageShell
+    ? pageShellClassName
     : styles.drawerShell;
 
   const frameContent = (

@@ -32,7 +32,12 @@ Database migrations live in `supabase/migrations/`.
 | `src/components/app-shell.tsx` | New global shell for the homepage: masthead, nav, summary rail, content slots, and legacy workspace frame |
 | `src/components/home-overview.tsx` | Phase 2 homepage command desk: alert deck, command strip, metrics, scenario snapshot, lineup pulse, and bridge-driven entry actions |
 | `src/lib/legacy-bridge.ts` | Structured bridge from React homepage actions into legacy DOM buttons, selects, panel focus, and highlight feedback |
-| `src/components/player-profile-editor.tsx` | React-based player profile editor used in both page and drawer flows |
+| `src/app/roster/page.tsx` | Roster server route: auth gate, workspace snapshot load, renders `RosterPageClient` |
+| `src/components/roster-page-client.tsx` | Roster workbench page state hub: workspace/version, filters, selection, dialogs, save and conflict handling |
+| `src/components/roster-overview.tsx` | Roster workbench UI: action bar, filters, counts, player cards, bulk actions |
+| `src/lib/roster-actions.ts` | Shared roster business actions: upsert/bulk-edit/delete — single source of truth used by both React and legacy |
+| `src/components/player-profile-editor.tsx` | React-based player profile editor for both page (`pageSurface="embedded"`) and drawer flows |
+| `src/components/player-profile-page-client.tsx` | Player profile page client state and AppShell shell integration |
 | `src/lib/auth.ts` | Shared-passcode cookie signing and verification |
 | `src/lib/rate-limiter.ts` | In-memory unlock rate limiter used by `POST /api/unlock` |
 | `src/lib/legacy-template.ts` | Extracts legacy markup and styles from `index.html` for the hybrid UI |

@@ -1,16 +1,21 @@
 import {
   createId,
-  createDefaultPlayerProfile,
   createEmptyAssignments,
   createScenario,
   createUniqueScenarioName,
-  inferPlayerProfileType,
-  removePlayersFromWorkspace,
-  sanitizePositions,
   type Player,
   type PositionCode,
   type Workspace,
 } from "@/lib/workspace";
+import {
+  applyBulkEdit,
+  deletePlayers,
+  upsertPlayer,
+  validateBulkEdit,
+  validatePlayerUpsert,
+  type BulkEditInput,
+  type PlayerUpsertInput,
+} from "@/lib/roster-actions";
 
 export type DialogElements = {
   playerDialog: HTMLDialogElement;
@@ -83,41 +88,32 @@ export function handlePlayerSubmit(
   const positions = Array.from(
     els.positionChecks.querySelectorAll("input:checked"),
   ).map((checkbox) => (checkbox as HTMLInputElement).value as PositionCode);
-  const player: Player = {
-    id,
+
+  const input: PlayerUpsertInput = {
+    id: id || undefined,
     name: els.playerName.value.trim(),
     number: els.playerNumber.value.trim(),
     bats: els.playerBats.value as Player["bats"],
     throws: els.playerThrows.value as Player["throws"],
     positions,
     status: els.playerStatus.value as Player["status"],
-    profile:
-      existingPlayer?.profile
-        ? { ...existingPlayer.profile, profileType: inferPlayerProfileType(positions) }
-        : createDefaultPlayerProfile(inferPlayerProfileType(positions)),
   };
 
-  if (!player.name || !player.number) {
-    callbacks.showToast("姓名和背号不能为空");
-    return;
-  }
-
   const workspace = callbacks.getWorkspace();
-  const isDuplicateNumber = workspace.players.some(
-    (p) => p.number === player.number && p.id !== id,
+  const validation = validatePlayerUpsert(
+    input.name,
+    input.number,
+    input.positions,
+    workspace.players,
+    input.id,
   );
-  if (isDuplicateNumber) {
-    callbacks.showToast(`背号 ${player.number} 已被使用，请更换`);
+  if (!validation.valid) {
+    callbacks.showToast(validation.error);
     return;
   }
 
   callbacks.commitWorkspace((draft) => {
-    const existingIndex = draft.players.findIndex((item) => item.id === id);
-    if (existingIndex >= 0) {
-      draft.players[existingIndex] = player as typeof draft.players[number];
-    } else {
-      draft.players.push(player as typeof draft.players[number]);
-    }
+    upsertPlayer(draft, input, existingPlayer);
   }, { message: "球员已保存" });
 
   els.playerDialog.close();
@@ -160,66 +156,27 @@ export function handleBulkPlayerSubmit(
 ) {
   event.preventDefault();
   const ids = callbacks.getSelectedPlayerIds();
-  if (!ids.length) {
-    callbacks.showToast("没有可批量修改的球员");
-    return;
-  }
-
-  const positionMode = els.bulkPositionMode.value;
+  const positionMode = els.bulkPositionMode.value as BulkEditInput["positionMode"];
   const nextPositions = Array.from(
     els.bulkPositionChecks.querySelectorAll("input:checked"),
   ).map((checkbox) => (checkbox as HTMLInputElement).value as PositionCode);
-  const hasFieldChange =
-    els.bulkStatus.value !== "keep" ||
-    els.bulkBats.value !== "keep" ||
-    els.bulkThrows.value !== "keep" ||
-    positionMode !== "keep";
 
-  if (!hasFieldChange) {
-    callbacks.showToast("请至少选择一个批量修改项");
-    return;
-  }
-  if (positionMode !== "keep" && !nextPositions.length) {
-    callbacks.showToast("请选择至少一个守位");
+  const input: BulkEditInput = {
+    status: els.bulkStatus.value as BulkEditInput["status"],
+    bats: els.bulkBats.value as BulkEditInput["bats"],
+    throws: els.bulkThrows.value as BulkEditInput["throws"],
+    positionMode,
+    positions: nextPositions,
+  };
+
+  const validation = validateBulkEdit(ids, input);
+  if (!validation.valid) {
+    callbacks.showToast(validation.error);
     return;
   }
 
   callbacks.commitWorkspace((draft) => {
-    const selectedSet = new Set(ids);
-    draft.players = draft.players.map((player) => {
-      if (!selectedSet.has(player.id)) {
-        return player;
-      }
-      const updatedPlayer = { ...player };
-      if (els.bulkStatus.value !== "keep") {
-        updatedPlayer.status = els.bulkStatus.value as typeof updatedPlayer.status;
-      }
-      if (els.bulkBats.value !== "keep") {
-        updatedPlayer.bats = els.bulkBats.value as typeof updatedPlayer.bats;
-      }
-      if (els.bulkThrows.value !== "keep") {
-        updatedPlayer.throws = els.bulkThrows.value as typeof updatedPlayer.throws;
-      }
-      if (positionMode === "append") {
-        updatedPlayer.positions = sanitizePositions([
-          ...updatedPlayer.positions,
-          ...nextPositions,
-        ]);
-      } else if (positionMode === "replace") {
-        updatedPlayer.positions = sanitizePositions(nextPositions);
-      } else if (positionMode === "remove") {
-        updatedPlayer.positions = updatedPlayer.positions.filter(
-          (position) => !nextPositions.includes(position),
-        );
-      }
-      if (positionMode !== "keep") {
-        updatedPlayer.profile = {
-          ...updatedPlayer.profile,
-          profileType: inferPlayerProfileType(updatedPlayer.positions),
-        };
-      }
-      return updatedPlayer;
-    });
+    applyBulkEdit(draft, ids, input);
   }, { message: `已批量修改 ${ids.length} 名球员` });
 
   els.bulkPlayerDialog.close();
@@ -239,7 +196,7 @@ export function deletePlayer(
   }
 
   callbacks.commitWorkspace((draft) => {
-    removePlayersFromWorkspace(draft, [id]);
+    deletePlayers(draft, [id]);
   }, { message: "球员已删除" });
 
   callbacks.removeFromSelectedIds(id);
@@ -257,7 +214,7 @@ export function bulkDeletePlayers(callbacks: DialogCallbacks) {
   }
 
   callbacks.commitWorkspace((draft) => {
-    removePlayersFromWorkspace(draft, ids);
+    deletePlayers(draft, ids);
   }, { message: `已删除 ${ids.length} 名球员` });
   callbacks.clearSelectedIds();
 }

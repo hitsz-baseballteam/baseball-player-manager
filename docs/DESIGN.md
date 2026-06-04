@@ -78,6 +78,7 @@
 - **Global Header**：产品名、一级导航、帮助 / 主题动作
 - **Page Masthead**：比赛日总控台题头 + 当前方案身份卡
 - **HomeOverview**：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse，以及指向 legacy 工作台的精确跳转入口
+- **RosterOverview**：名册工作台页面，包含筛选、统计、球员卡片列表、批量动作条、抽屉档案入口与完整档案页跳转
 - **Legacy Frame**：把旧 DOM manager 收纳到统一的面板容器里，而不是直接裸露成整页入口
 
 壳层样式放在 `src/components/app-shell.module.css`，总控区样式放在 `src/components/home-overview.module.css`，并通过更高优先级的局部选择器覆盖 legacy `.app-shell` / `.topbar` / `.brand` 布局，避免和旧模板全局类名冲突。首页壳层根节点会显式恢复项目内置本地字体，避免 legacy `body` 样式把字体栈回退到旧模板。

@@ -20,11 +20,11 @@
 | **数据访问** (`db.ts` + `workspace-store.ts`) | B+ | 乐观并发控制正确；连接层与 `DATABASE_URL` / `pg` 约定保持一致，并补充了 Supabase/Vercel SSL 兼容处理，但缺少连接池失败重试逻辑 |
 | **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；仍是共享口令模型 |
 | **API 路由** (`api/*`) | B | 结构化错误返回，但缺少请求体校验中间件 |
-| **React 组件** (`components/`) | A- | 首页已扩展为 `AppShell` + `HomeOverview`：React 总控区直接呈现提醒 / 指标 / 方案切换 / 阵容概览，并通过 `onStateChange` 与 legacy manager 保持同步；进一步引入 `legacy-bridge` 做动作触发与面板聚焦，边界比之前更清晰 |
+| **React 组件** (`components/`) | A- | 首页已扩展为 `AppShell` + `HomeOverview`：React 总控区直接呈现提醒 / 指标 / 方案切换 / 阵容概览，并通过 `onStateChange` 与 legacy manager 保持同步；进一步引入 `legacy-bridge` 做动作触发与面板聚焦；Phase 3 新增 `RosterOverview` + `RosterPageClient` 完整名册工作台 |
 | **旧 DOM 管理器** (`player-manager-dom.ts` + 提取模块) | B | 提取到 4 个模块（renderers/dialogs/io/scenario-ops），主文件 1525→876 行（-43%），并新增挂载 smoke test 防止初始化时序回归 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
 | **导入导出** | B | 功能完整、格式文档化，但缺少导入冲突的自动化解决 |
-| 测试 | A- | 64 个测试结果项（63 通过 + 1 todo），覆盖业务逻辑、7 个组件、Phase 2 首页总控区桥接行为、`legacy-bridge` 动作/高亮、legacy manager 挂载/档案抽屉打开、开发入口断管保护、认证/限流工具、API 路由及方案操作 |
+| 测试 | A- | 87 个测试结果项（86 通过 + 1 todo），覆盖业务逻辑、9 个组件、4 个页面级集成测试、Phase 2 首页总控区桥接行为、`legacy-bridge` 动作/高亮、Phase 3 `roster-actions` 共享逻辑（20 tests）、legacy manager 挂载/档案抽屉打开、开发入口断管保护、认证/限流工具、API 路由及方案操作 |
 
 ## 按架构层级评分
 
@@ -35,7 +35,7 @@
 | Repo | B+ | 乐观并发持久化 + 读写边界净化 |
 | Service | B | 核心逻辑有测试，边界覆盖可改进 |
 | Runtime | B+ | API 路由已覆盖主要路径（当前 7 个通过 + 1 个 todo），解锁接口有限流 |
-| UI (React) | A- | 首页壳层与总控区已独立成 `AppShell` + `HomeOverview` + CSS Modules，7 个组件已有测试（36 tests）+ 2 个 API route 已覆盖主要路径；Phase 2 继续补上首页动作桥接、方案切换、面板聚焦测试，但仍未做自动化视觉断言，因此分数先维持 |
+| UI (React) | A- | Phase 3 新增 `/roster` 完整工作台（9 个组件已测试）、档案页壳层统一，浏览器自动验收通过；尚无自动化视觉回归断言，分数先维持 |
 | UI (Legacy DOM) | B | 4 个提取模块，显式接口，可维护性显著提升，并有基础挂载回归测试 |
 
 ## 技术债务影响
@@ -72,3 +72,5 @@
 | 2026-06-04 | 首页全局壳层重建（Slice 1 收尾） | React 组件 B+→A-；新增 `AppShell`、首页摘要轨与 legacy frame，并补上 `PlayerManagerClient` 集成测试；HelpDrawer / GuideOverlay / Toast 已接入 shell 级视觉覆写，且通过 `npm test`、`npm run lint`、`npm run build` 与本地 `curl` 锁定/解锁首页检查完成核验 |
 | 2026-06-04 | Phase 2 首页总控区首版实现 | 分数不变；新增 `HomeOverview`、首页提醒/动作/指标/方案切换/阵容概览，以及 legacy→React 的 `onStateChange` 同步桥；补充首页桥接行为测试与 manager snapshot 测试 |
 | 2026-06-04 | Phase 2 深度桥接与交互细化 | 分数不变；新增 `legacy-bridge`，把首页动作、提醒、指标与阵容概览精确桥接到 legacy 面板，并补充 `legacy-bridge.test.ts` 与 `PlayerManagerClient` 深桥接测试 |
+| 2026-06-04 | Phase 3 名册工作台与共享逻辑 | 分数不变；新增 `/roster` 路由、`RosterPageClient`、`RosterOverview`、`roster-actions` 共享逻辑层，legacy 名册区改接共享 `roster-actions`，独立档案页纳入 `AppShell` 统一壳层 |
+| 2026-06-04 | Phase 3 完整收尾 | 分数不变；新增页面级测试（`roster-page-client.test.tsx`、`player-profile-page-client.test.tsx`），修正弹层层叠错误与档案页嵌套设计，Playwright 自动验收 6 项均通过 |

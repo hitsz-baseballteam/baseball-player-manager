@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { AppShell } from "@/components/app-shell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { PlayerProfileEditor } from "@/components/player-profile-editor";
 import {
   cloneWorkspace,
@@ -14,6 +16,15 @@ import {
   loadWorkspaceSnapshot,
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
+
+const NAV_ITEMS = [
+  { label: "总览", href: "/" },
+  { label: "名册", href: "/roster", active: true },
+  { label: "排阵", disabled: true, status: "规划中" },
+  { label: "战术场景", disabled: true, status: "规划中" },
+  { label: "数据中心", disabled: true, status: "规划中" },
+  { label: "设置", disabled: true, status: "规划中" },
+] as const;
 
 type PlayerProfilePageClientProps = {
   initialWorkspace: Workspace;
@@ -70,14 +81,35 @@ export function PlayerProfilePageClient(
   }
 
   return (
-    <PlayerProfileEditor
-      key={player ? `${player.id}:${version}` : `missing:${props.playerId}:${version}`}
-      player={player}
-      variant="page"
-      saving={saving}
-      statusMessage={statusMessage}
-      backHref="/"
-      onSave={handleSave}
+    <AppShell
+      eyebrow="Player Profile"
+      title={player ? player.name : "球员档案"}
+      description={
+        player
+          ? `#${player.number} · ${player.positions.join(" / ") || "待定守位"}`
+          : "当前链接没有对应球员，或该球员已从共享工作区移除。"
+      }
+      statusLabel="工作区"
+      statusValue={`v${version}`}
+      statusMeta={statusMessage}
+      navItems={NAV_ITEMS.map((item) => ({ ...item }))}
+      actions={<ThemeToggle />}
+      content={
+        <PlayerProfileEditor
+          key={
+            player
+              ? `${player.id}:${version}`
+              : `missing:${props.playerId}:${version}`
+          }
+          player={player}
+          variant="page"
+          pageSurface="embedded"
+          saving={saving}
+          statusMessage={statusMessage}
+          backHref="/roster"
+          onSave={handleSave}
+        />
+      }
     />
   );
 }

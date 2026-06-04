@@ -194,13 +194,12 @@
 - 优化 `/players/[playerId]`
 - 抽屉编辑与详情页视觉统一
 
-执行计划：`docs/exec-plans/active/20260604-phase3-roster-and-player-profile-unification.md`
+执行计划：`docs/exec-plans/completed/20260604-phase3-roster-and-player-profile-unification.md`
 
 当前进度：
-- 已启动详细计划草案
-- 已确认 `/roster` 首波采用 **完整名册工作台**，而不只是浏览入口
-- 已确认球员点击主路径采用 **抽屉优先**
-- 已确认独立档案页将在 Phase 3 纳入统一一级壳层/导航语言
+- Phase 3 已完成：`/roster` 完整名册工作台、共享 `roster-actions`、档案页壳层统一均已落地
+- Playwright 浏览器验收通过
+- 下一活跃阶段：**Phase 4 — 排阵与战术场景专业化**
 
 ### Phase 4 — 排阵与战术场景专业化
 目标：把“真正的管理价值”做出来。

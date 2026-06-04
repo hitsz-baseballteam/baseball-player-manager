@@ -26,6 +26,12 @@
     linear-gradient(180deg, color-mix(in srgb, var(--profile-bg) 94%, white), var(--profile-bg));
 }
 
+.pageEmbeddedShell {
+  padding: 0;
+  min-height: auto;
+  background: transparent;
+}
+
 .drawerShell {
   width: min(840px, 100vw);
   height: 100vh;

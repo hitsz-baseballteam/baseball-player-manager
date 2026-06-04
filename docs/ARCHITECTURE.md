@@ -43,7 +43,8 @@ From `package.json`:
 | Entry point | Role |
 |---|---|
 | `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot + legacy template and renders the hybrid manager UI inside `AppShell` |
-| `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor |
+| `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor inside `AppShell` |
+| `src/app/roster/page.tsx` | Roster workbench page; checks auth, loads workspace, renders React roster workbench inside `AppShell` |
 | `src/app/api/unlock/route.ts` | Verifies shared passcode, applies rate limiting, sets signed cookie |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads and writes the shared workspace snapshot |
@@ -110,8 +111,9 @@ The main UI is a hybrid of React and legacy DOM rendering.
 - `src/lib/player-manager-dom.ts` still owns most roster, scenario, field, lineup, import/export, and interaction logic
 - `src/lib/legacy-template.ts` extracts `<style>` and `<body>` fragments from `index.html`
 - `src/lib/legacy-bridge.ts` provides structured React → legacy DOM bridging for button triggers, select changes, panel focus, and temporary highlight feedback
-- React-managed overlays and adjunct UI currently include `AppShell`, `HomeOverview`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
+- React-managed overlays and adjunct UI currently include `AppShell`, `HomeOverview`, `RosterOverview`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
 - homepage overview interactions now split into two layers: React renders summary/actions, while `legacy-bridge` routes those actions into the legacy workspace without duplicating the underlying business logic
+- `src/lib/roster-actions.ts` provides shared create/edit/delete player logic for both the React roster workbench and the legacy DOM manager
 
 This means the repository currently has two UI styles living side by side:
 
