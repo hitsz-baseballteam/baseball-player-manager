@@ -202,17 +202,31 @@
 - 下一活跃阶段：**Phase 4 — 排阵与战术场景专业化**
 
 ### Phase 4 — 排阵与战术场景专业化
-目标：把“真正的管理价值”做出来。
+目标：把"真正的管理价值"做出来。
 范围：
 - `/lineup`
 - `/scenarios`
 - 可视化守位板、拖拽、场景对比
+
+执行计划：`docs/exec-plans/active/20260605-phase4-5-lineup-scenarios-data-settings.md`
+
+已确认决策：
+- 排阵页采用 **全拖拽**（SVG 球场图守备 + 打线列表拖拽排序）
+- 场景页范围：场景管理 + 对比视图
+- 实现策略：完全新写 React（共享逻辑层 `lineup-actions.ts` + 纯 React UI）
 
 ### Phase 5 — 数据中心与设置收尾
 范围：
 - `/import-export`
 - `/settings`
 - 帮助与引导整合
+
+执行计划：`docs/exec-plans/active/20260605-phase4-5-lineup-scenarios-data-settings.md`（与 Phase 4 共用）
+
+已确认决策：
+- 数据中心：JSON 导入导出迁移 + 新增 CSV 球员列表导出
+- 设置：独立 `/settings` 页面
+- 串行推进：Phase 4 完成后再开始 Phase 5
 
 ## 实施策略（避免一次性重写）
 - **不直接推翻 legacy manager**，而是先用 React 壳层统一视觉和导航
