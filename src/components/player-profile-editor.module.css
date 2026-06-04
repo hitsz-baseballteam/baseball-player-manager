@@ -12,7 +12,7 @@
 
 .shell {
   color: var(--profile-text);
-  font-family: var(--font-body-sc), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-body-sc), var(--font-ui), sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -132,10 +132,11 @@
 
 .title {
   margin: 0;
-  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-display), var(--font-ui), var(--font-body-sc), sans-serif;
   font-size: clamp(34px, 6vw, 74px);
   line-height: 0.94;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: var(--profile-text);
   text-transform: uppercase;
 }
@@ -166,8 +167,9 @@
 
 .numberPlate strong {
   color: var(--profile-accent-strong);
-  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-display), var(--font-ui), var(--font-body-sc), sans-serif;
   font-size: clamp(34px, 5vw, 52px);
+  font-weight: 700;
   line-height: 0.9;
 }
 
@@ -469,8 +471,9 @@
 
 .legendRow strong {
   color: var(--profile-text);
-  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-display), var(--font-ui), var(--font-body-sc), sans-serif;
   font-size: 18px;
+  font-weight: 700;
 }
 
 .footerBar {

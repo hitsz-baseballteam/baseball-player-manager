@@ -68,3 +68,4 @@
 | 2026-06-03 | Supabase 连接兼容与 legacy manager 初始化修复 | 分数不变；补充 `db.ts` 的 Supabase SSL 兼容逻辑，并新增 `player-manager-dom` 挂载 smoke test |
 | 2026-06-03 | 档案抽屉打开回归修复 | 分数不变；新增 `player-manager-dom` 测试覆盖点击“档案”按钮后成功打开抽屉 |
 | 2026-06-03 | `next dev` EPIPE 死循环修复 | 分数不变；将开发入口改为 resilient wrapper，并为断管后继续写日志的行为补充测试 |
+| 2026-06-03 | 字体改为项目内置本地字体 | 分数不变；移除 Google Fonts 运行时依赖，改用 `src/fonts/` 内置的 Inter 与 Noto Sans SC 子集 |

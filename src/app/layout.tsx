@@ -1,32 +1,49 @@
 import type { Metadata } from "next";
-import {
-  Bebas_Neue,
-  Geist,
-  Geist_Mono,
-  Noto_Sans_SC,
-} from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const inter = localFont({
+  variable: "--font-ui",
+  display: "swap",
+  src: [
+    {
+      path: "../fonts/inter-latin-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/inter-latin-500-normal.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../fonts/inter-latin-700-normal.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const bebasNeue = Bebas_Neue({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: "400",
-});
-
-const notoSansSc = Noto_Sans_SC({
+const notoSansSc = localFont({
   variable: "--font-body-sc",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  display: "swap",
+  src: [
+    {
+      path: "../fonts/noto-sans-sc-chinese-simplified-400-normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/noto-sans-sc-chinese-simplified-500-normal.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../fonts/noto-sans-sc-chinese-simplified-700-normal.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -42,7 +59,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${notoSansSc.variable}`}
+      className={`${inter.variable} ${notoSansSc.variable}`}
     >
       <body>{children}</body>
     </html>

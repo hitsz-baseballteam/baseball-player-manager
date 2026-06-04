@@ -41,12 +41,11 @@
 
 | 用途 | 字体 | 来源 |
 |---|---|---|
-| 正文 / UI | Geist Sans | `next/font/google` |
-| 数字 / 标题 | Bebas Neue | `next/font/google` |
-| 中文 | Noto Sans SC | `next/font/google` |
-| 后备 | "Avenir Next", "PingFang SC", sans-serif | 系统字体 |
+| 正文 / UI / 标题 | Inter | 项目内置本地字体（`src/fonts/`，`next/font/local`） |
+| 中文 | Noto Sans SC（简体子集） | 项目内置本地字体（`src/fonts/`，`next/font/local`） |
+| 后备 | ui-monospace / 系统 sans | 本地字体不可用时的回退 |
 
-字体设置在 `src/app/layout.tsx` 中，通过 CSS 变量暴露了 `--font-geist-sans`、`--font-geist-mono`、`--font-display` 和 `--font-body-sc`。
+字体在 `src/app/layout.tsx` 中通过 `next/font/local` 注入，并暴露 `--font-ui`、`--font-body-sc`；`--font-display` 作为 UI 字体别名供标题样式复用。
 
 ## 配色原则
 

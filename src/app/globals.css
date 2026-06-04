@@ -54,6 +54,8 @@
 :root {
   --background: #f2efe6;
   --foreground: #172019;
+  --font-display: var(--font-ui);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* Profile-local variable mappings (used by player-profile-editor *.module.css) */
@@ -86,7 +88,7 @@ body {
   margin: 0;
   background: var(--theme-bg);
   color: var(--theme-fg);
-  font-family: var(--font-geist-sans), "Avenir Next", "PingFang SC", sans-serif;
+  font-family: var(--font-ui), var(--font-body-sc), sans-serif;
   transition: background 0.3s, color 0.3s;
 }
 
