@@ -32,7 +32,7 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 
 From `package.json`:
 
-- `npm run dev` → `next dev`
+- `npm run dev` → `tsx scripts/next-dev.ts` → `next dev`
 - `npm run build` → `next build`
 - `npm run start` → `next start`
 - `npm run lint` → `eslint`
@@ -48,6 +48,7 @@ From `package.json`:
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads and writes the shared workspace snapshot |
 | `src/proxy.ts` | Protects `/api/workspace` routes by validating the signed unlock cookie |
+| `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components
 
