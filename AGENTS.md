@@ -29,6 +29,8 @@ Database migrations live in `supabase/migrations/`.
 | `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export, and other pure workspace rules |
 | `src/lib/workspace-store.ts` | PostgreSQL read/write for the workspace snapshot with version-based optimistic concurrency |
 | `src/lib/player-manager-dom.ts` | Legacy DOM-based manager that still owns most of the main roster/scenario UI |
+| `src/components/app-shell.tsx` | New global shell for the homepage: masthead, nav, summary rail, content slots, and legacy workspace frame |
+| `src/components/home-overview.tsx` | Phase 2 homepage command desk: alert deck, command strip, metrics, scenario snapshot, and lineup pulse |
 | `src/components/player-profile-editor.tsx` | React-based player profile editor used in both page and drawer flows |
 | `src/lib/auth.ts` | Shared-passcode cookie signing and verification |
 | `src/lib/rate-limiter.ts` | In-memory unlock rate limiter used by `POST /api/unlock` |

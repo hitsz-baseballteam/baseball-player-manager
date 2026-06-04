@@ -27,7 +27,7 @@ describe("Toast", () => {
     assert.ok(screen.getByTestId("child"));
     const toast = document.getElementById("toast");
     assert.ok(toast);
-    assert.equal(toast.className, "");
+    assert.equal(toast.className, "toast");
     assert.equal(toast.textContent, "");
   });
 
@@ -38,7 +38,7 @@ describe("Toast", () => {
     });
     const toast = document.getElementById("toast");
     assert.ok(toast);
-    assert.equal(toast.className, "show");
+    assert.equal(toast.className, "toast show");
     assert.equal(toast.textContent, "保存成功");
   });
 
@@ -48,10 +48,10 @@ describe("Toast", () => {
       toastRef.current?.showToast("test message");
     });
     const toast = document.getElementById("toast")!;
-    assert.equal(toast.className, "show");
+    assert.equal(toast.className, "toast show");
 
     await act(() => new Promise((resolve) => setTimeout(resolve, 1900)));
-    assert.equal(toast.className, "");
+    assert.equal(toast.className, "toast");
   });
 
   it("resets timer on repeated calls", async () => {
@@ -69,11 +69,11 @@ describe("Toast", () => {
 
     // 1000ms after second call, it should still be visible
     await act(() => new Promise((resolve) => setTimeout(resolve, 1000)));
-    assert.equal(toast.className, "show");
+    assert.equal(toast.className, "toast show");
     assert.equal(toast.textContent, "second");
 
     // After full 1800ms from second call, it should hide
     await act(() => new Promise((resolve) => setTimeout(resolve, 900)));
-    assert.equal(toast.className, "");
+    assert.equal(toast.className, "toast");
   });
 });

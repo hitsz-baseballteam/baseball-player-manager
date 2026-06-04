@@ -17,6 +17,8 @@ describe("player manager DOM mount", () => {
     root.innerHTML = template.markup;
     document.body.appendChild(root);
 
+    const snapshots: Array<{ version: number; saveStatus: string }> = [];
+
     const cleanup = mountPlayerManager(
       root,
       {
@@ -28,11 +30,17 @@ describe("player manager DOM mount", () => {
         toast: { current: null },
         helpDrawer: { current: null },
         guide: { current: null },
+        onStateChange: (snapshot) => {
+          snapshots.push({ version: snapshot.version, saveStatus: snapshot.saveStatus });
+        },
       },
     );
 
     assert.equal(typeof cleanup, "function");
     assert.notEqual(document.querySelector("#saveStatus")?.textContent, "");
+    assert.ok(snapshots.length >= 1);
+    assert.equal(snapshots.at(-1)?.version, 1);
+    assert.notEqual(snapshots.at(-1)?.saveStatus, "");
 
     cleanup();
   });

@@ -56,6 +56,17 @@
   --foreground: #172019;
   --font-display: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --shell-max-width: 1480px;
+  --shell-page-gutter: clamp(20px, 3vw, 40px);
+  --shell-header-height: 72px;
+  --shell-panel-radius: 28px;
+  --shell-panel-border: color-mix(in srgb, var(--theme-border) 88%, transparent);
+  --shell-panel-shadow: 0 26px 72px color-mix(in srgb, var(--theme-shadow-strong) 48%, transparent);
+  --shell-hero-ink: color-mix(in srgb, var(--theme-fg) 94%, transparent);
+  --shell-muted: color-mix(in srgb, var(--theme-muted) 96%, transparent);
+  --shell-accent-soft: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  --shell-panel-soft: color-mix(in srgb, var(--theme-surface-alt) 84%, var(--theme-surface));
+  --shell-grid-line: color-mix(in srgb, var(--theme-border) 84%, transparent);
 }
 
 /* Profile-local variable mappings (used by player-profile-editor *.module.css) */
@@ -98,22 +109,26 @@ body {
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(31, 109, 67, 0.15), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(23, 56, 87, 0.18), transparent 36%),
+    radial-gradient(circle at top left, rgba(31, 109, 67, 0.16), transparent 32%),
+    radial-gradient(circle at top right, rgba(226, 178, 77, 0.14), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(23, 56, 87, 0.2), transparent 38%),
     linear-gradient(180deg, #eff3e7 0%, #f8f1df 100%);
 }
 
 .unlock-card {
-  width: min(460px, 100%);
-  padding: 32px;
+  width: min(620px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: clamp(28px, 4vw, 40px);
   border: 1px solid rgba(16, 70, 46, 0.15);
-  border-radius: 24px;
-  background: rgba(255, 252, 246, 0.92);
-  box-shadow: 0 24px 60px rgba(20, 32, 26, 0.16);
+  border-radius: 28px;
+  background:
+    linear-gradient(150deg, rgba(255, 252, 246, 0.97), rgba(248, 244, 232, 0.94));
+  box-shadow: 0 30px 72px rgba(20, 32, 26, 0.16);
 }
 
+.unlock-crest,
 .unlock-eyebrow {
-  margin-bottom: 12px;
   color: #1f6d43;
   font-size: 12px;
   font-weight: 800;
@@ -121,35 +136,76 @@ body {
   text-transform: uppercase;
 }
 
+.unlock-crest {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(31, 109, 67, 0.12);
+  border-radius: 999px;
+  background: rgba(31, 109, 67, 0.08);
+}
+
 .unlock-card h1 {
   margin: 0;
-  font-size: 34px;
-  line-height: 1.1;
+  color: #15201a;
+  font-size: clamp(34px, 5vw, 48px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
 }
 
 .unlock-card p {
-  margin: 14px 0 0;
+  margin: 0;
   color: #55625a;
-  line-height: 1.6;
+  line-height: 1.75;
+}
+
+.unlock-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.unlock-highlight {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(16, 70, 46, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.unlock-highlight strong {
+  color: #15201a;
+  font-size: 14px;
+}
+
+.unlock-highlight span {
+  color: #5a675f;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .unlock-form {
   display: grid;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 6px;
 }
 
 .unlock-form label {
+  color: #243028;
   font-size: 14px;
   font-weight: 700;
 }
 
 .unlock-form input {
-  min-height: 46px;
-  padding: 0 14px;
+  min-height: 52px;
+  padding: 0 16px;
   border: 1px solid #cfccb9;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fffef9;
+  color: #15201a;
   outline: none;
 }
 
@@ -159,14 +215,20 @@ body {
 }
 
 .unlock-form button {
-  min-height: 46px;
-  margin-top: 4px;
+  min-height: 52px;
+  margin-top: 6px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #10462e, #1f6d43);
   color: #fff;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.unlock-form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 30px rgba(16, 70, 46, 0.18);
 }
 
 .unlock-form button:disabled {
@@ -175,8 +237,135 @@ body {
 }
 
 .unlock-error {
-  margin-top: 14px;
   color: #9b2f25;
   font-size: 14px;
   font-weight: 700;
+}
+
+.unlock-note {
+  padding-top: 2px;
+  border-top: 1px solid rgba(16, 70, 46, 0.08);
+  font-size: 13px;
+}
+
+html body .drawer-scrim {
+  background: color-mix(in srgb, var(--theme-fg) 42%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+html body .help-drawer {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 24px;
+  color: var(--shell-hero-ink);
+  font-family: var(--font-ui), var(--font-body-sc), sans-serif;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-surface) 94%, transparent), color-mix(in srgb, var(--theme-surface-alt) 90%, transparent)),
+    linear-gradient(0deg, color-mix(in srgb, var(--theme-gold) 5%, transparent), transparent 50%);
+  border-left: 1px solid color-mix(in srgb, var(--theme-accent) 16%, var(--shell-panel-border));
+  box-shadow: -24px 0 72px color-mix(in srgb, var(--theme-shadow-strong) 42%, transparent);
+  font-size: 14px;
+}
+
+html body .help-drawer .panel-title {
+  align-items: center;
+  margin: 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--shell-panel-border);
+}
+
+html body .help-drawer h2 {
+  color: var(--shell-hero-ink);
+  font-family: var(--font-display), var(--font-ui), sans-serif;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+html body .help-drawer > p {
+  color: var(--shell-muted);
+}
+
+html body .help-block {
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--theme-surface) 94%, transparent);
+}
+
+html body .help-block:first-of-type {
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+}
+
+html body .help-block h3 {
+  color: var(--shell-hero-ink);
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+html body .help-actions {
+  margin-top: 2px;
+}
+
+html body .help-drawer .btn.secondary,
+html body .guide-card .btn.secondary {
+  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  color: var(--shell-hero-ink);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, transparent);
+}
+
+html body .help-drawer .btn.secondary:hover,
+html body .guide-card .btn.secondary:hover {
+  background: color-mix(in srgb, var(--theme-surface-alt) 92%, transparent);
+}
+
+html body .help-drawer .btn.icon.secondary {
+  border-radius: 999px;
+}
+
+html body .guide-card {
+  font-family: var(--font-ui), var(--font-body-sc), sans-serif;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 16%, var(--shell-panel-border));
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-surface) 95%, transparent), color-mix(in srgb, var(--theme-surface-alt) 90%, transparent)),
+    linear-gradient(0deg, color-mix(in srgb, var(--theme-gold) 6%, transparent), transparent 55%);
+  box-shadow: var(--shell-panel-shadow);
+}
+
+html body .guide-progress {
+  color: var(--theme-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+html body .guide-card h3 {
+  color: var(--shell-hero-ink);
+  font-family: var(--font-display), var(--font-ui), sans-serif;
+}
+
+html body .guide-card p {
+  color: var(--shell-muted);
+}
+
+html body .toast {
+  color: var(--shell-hero-ink);
+  font-family: var(--font-ui), var(--font-body-sc), sans-serif;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, var(--shell-panel-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--theme-shadow-strong) 34%, transparent);
+}
+
+@media (max-width: 640px) {
+  .unlock-shell {
+    padding: 18px;
+  }
+
+  .unlock-card {
+    padding: 24px;
+  }
 }

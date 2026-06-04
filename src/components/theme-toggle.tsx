@@ -35,7 +35,13 @@ function applyTheme(theme: Theme) {
   localStorage.setItem(STORAGE_KEY, theme);
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({
+  id,
+  className,
+}: {
+  id?: string;
+  className?: string;
+} = {}) {
   const [theme, setTheme] = useState<Theme>(readTheme);
 
   useEffect(() => {
@@ -51,7 +57,8 @@ export function ThemeToggle() {
 
   return (
     <button
-      id="theme-toggle-btn"
+      id={id}
+      className={className}
       type="button"
       onClick={cycleTheme}
       aria-label={`切换主题，当前：${THEME_LABELS[theme]}`}

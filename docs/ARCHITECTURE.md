@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-03.
+This document describes the repository as currently observed on 2026-06-04.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -18,7 +18,7 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 | Path | What it currently owns |
 |---|---|
 | `src/app/` | Next.js routes, pages, global styles, and API endpoints |
-| `src/components/` | React UI components, including the unlock form, help UI, theme toggle, and player profile editor |
+| `src/components/` | React UI components, including the homepage app shell, command-desk overview, unlock form, help UI, theme toggle, toast/guide overlays, and player profile editor |
 | `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and legacy DOM manager |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
@@ -42,7 +42,7 @@ From `package.json`:
 
 | Entry point | Role |
 |---|---|
-| `src/app/page.tsx` | Home page; checks unlock cookie, loads workspace snapshot, then renders the hybrid manager UI |
+| `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot + legacy template and renders the hybrid manager UI inside `AppShell` |
 | `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor |
 | `src/app/api/unlock/route.ts` | Verifies shared passcode, applies rate limiting, sets signed cookie |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
@@ -106,15 +106,15 @@ Observed limits and boundaries:
 
 The main UI is a hybrid of React and legacy DOM rendering.
 
-- `src/components/player-manager-client.tsx` mounts the legacy manager into a React page shell
+- `src/components/player-manager-client.tsx` renders `AppShell` + `HomeOverview`, prepares the legacy HTML fragment, and mounts the legacy manager into the shell's legacy frame
 - `src/lib/player-manager-dom.ts` still owns most roster, scenario, field, lineup, import/export, and interaction logic
 - `src/lib/legacy-template.ts` extracts `<style>` and `<body>` fragments from `index.html`
-- React-managed overlays and adjunct UI currently include `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
+- React-managed overlays and adjunct UI currently include `AppShell`, `HomeOverview`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
 
 This means the repository currently has two UI styles living side by side:
 
-1. a DOM-driven manager loaded from legacy markup
-2. newer React components integrated around it
+1. a DOM-driven manager loaded from legacy markup and still owning most roster / lineup interactions
+2. newer React shell, homepage command desk, and adjunct components integrated around it
 
 ### 5. Database schema
 
@@ -144,6 +144,7 @@ These notes are based on current code imports and call sites, not aspirational r
 - client persistence goes through `fetch('/api/workspace')` in `workspace-client.ts`
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
 - the legacy DOM manager depends on many shared modules and remains the highest-coupling part of the UI
+- homepage React overview state is intentionally synchronized from the legacy manager via `ManagerCallbacks.onStateChange`, rather than reimplementing workspace mutation logic in parallel
 
 ## Tooling and Enforcement
 

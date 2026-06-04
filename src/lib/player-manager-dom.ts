@@ -254,6 +254,13 @@ export function mountPlayerManager(
       }
       return element;
     };
+    const requiredFromScopeOrDocument = <T extends Element>(selector: string) => {
+      const element = query<T>(selector) ?? (document.querySelector(selector) as T | null);
+      if (!element) {
+        throw new Error(`Missing required element: ${selector}`);
+      }
+      return element;
+    };
 
     return {
       saveStatus: required("#saveStatus"),
@@ -295,7 +302,7 @@ export function mountPlayerManager(
       importInput: required("#importInput"),
       clearAssignmentsBtn: required("#clearAssignmentsBtn"),
       resetBtn: required("#resetBtn"),
-      helpBtn: required("#helpBtn"),
+      helpBtn: requiredFromScopeOrDocument("#helpBtn"),
       clearSelectionBtn: required("#clearSelectionBtn"),
       selectFilteredBtn: required("#selectFilteredBtn"),
       bulkEditBtn: required("#bulkEditBtn"),
@@ -351,8 +358,17 @@ export function mountPlayerManager(
     return getPlayer(workspace, id);
   }
 
+  function emitUiSnapshot() {
+    callbacks.onStateChange?.({
+      workspace: cloneWorkspace(workspace),
+      version: remoteVersion,
+      saveStatus: els.saveStatus.textContent || saveStatusIdleMessage,
+    });
+  }
+
   function setSaveStatus(message: string, autoReset = true) {
     els.saveStatus.textContent = message;
+    emitUiSnapshot();
     if (saveStatusTimer) {
       window.clearTimeout(saveStatusTimer);
     }
@@ -361,6 +377,7 @@ export function mountPlayerManager(
     }
     saveStatusTimer = window.setTimeout(() => {
       els.saveStatus.textContent = saveStatusIdleMessage;
+      emitUiSnapshot();
     }, 1800);
   }
 
@@ -605,6 +622,7 @@ export function mountPlayerManager(
     renderProfileDrawer(renderCtx);
     updateSelectedCount();
     updateHistoryButtons();
+    emitUiSnapshot();
   }
 
   function renderPlayers() {
