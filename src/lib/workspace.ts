@@ -42,6 +42,27 @@ export type FielderRadar = {
   instinct: number | null;
 };
 
+export type GameRecord = {
+  id: string;
+  date: string;
+  opponent: string;
+  gameType: "official" | "training";
+  pa: number;
+  ab: number;
+  h: number;
+  hr: number;
+  rbi: number;
+  r: number;
+  sb: number;
+  bb: number;
+  so: number;
+  ip: number | null;
+  er: number | null;
+  soPitching: number | null;
+  bbPitching: number | null;
+  hPitching: number | null;
+};
+
 export type PlayerProfile = {
   profileType: PlayerProfileType;
   age: number | null;
@@ -49,14 +70,15 @@ export type PlayerProfile = {
   weightKg: number | null;
   fastballTopKmh: number | null;
   fastballAvgKmh: number | null;
-  armStrengthKmh: number | null;
-  sixtyMeterSec: number | null;
+  armStrengthM: number | null;
+  thirtyMeterSec: number | null;
   pitchTypes: string[];
   scoutingSummary: string;
   radar: {
     pitcher: PitcherRadar;
     fielder: FielderRadar;
   };
+  games: GameRecord[];
 };
 
 export type ScenarioAssignments = {
@@ -369,8 +391,9 @@ export function createDefaultPlayerProfile(
     weightKg: null,
     fastballTopKmh: null,
     fastballAvgKmh: null,
-    armStrengthKmh: null,
-    sixtyMeterSec: null,
+    armStrengthM: null,
+    thirtyMeterSec: null,
+    games: [],
     pitchTypes: [],
     scoutingSummary: "",
     radar: {
@@ -391,8 +414,8 @@ function createDemoPlayerProfile(
   profile.age = 18 + (index % 6);
   profile.heightCm = 171 + index * 2 + handedBias;
   profile.weightKg = 67 + index * 2;
-  profile.armStrengthKmh = 118 + index + handedBias;
-  profile.sixtyMeterSec = Number((7.8 - index * 0.08).toFixed(2));
+  profile.armStrengthM = 72 + index * 2 + handedBias;
+  profile.thirtyMeterSec = Number((4.6 - index * 0.05).toFixed(2));
 
   profile.radar.fielder = {
     contact: 42 + (index % 5) * 6,
@@ -578,8 +601,17 @@ export function sanitizePlayerProfile(
     weightKg: sanitizeNullableNumber(source?.weightKg, 30, 200, true),
     fastballTopKmh: sanitizeNullableNumber(source?.fastballTopKmh, 60, 180),
     fastballAvgKmh: sanitizeNullableNumber(source?.fastballAvgKmh, 60, 180),
-    armStrengthKmh: sanitizeNullableNumber(source?.armStrengthKmh, 60, 180),
-    sixtyMeterSec: sanitizeNullableNumber(source?.sixtyMeterSec, 5, 12),
+    armStrengthM: sanitizeNullableNumber(
+      source?.armStrengthM ?? (source as Record<string, unknown>)?.armStrengthKmh,
+      10,
+      150,
+    ),
+    thirtyMeterSec: sanitizeNullableNumber(
+      source?.thirtyMeterSec ?? (source as Record<string, unknown>)?.sixtyMeterSec,
+      3,
+      8,
+    ),
+    games: sanitizeGameRecords((source as Record<string, unknown>)?.games),
     pitchTypes: sanitizeStringList(source?.pitchTypes, 6, 10),
     scoutingSummary: String(source?.scoutingSummary ?? "").trim().slice(0, 180),
     radar: {
@@ -593,6 +625,39 @@ export function sanitizePlayerProfile(
       ) as FielderRadar,
     },
   };
+}
+
+function sanitizeGameRecords(value: unknown): GameRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
+    .map((item) => ({
+      id: String((item as Record<string, unknown>).id ?? ""),
+      date: String((item as Record<string, unknown>).date ?? ""),
+      opponent: String((item as Record<string, unknown>).opponent ?? "").trim().slice(0, 40),
+      gameType: (item as Record<string, unknown>).gameType === "training" ? "training" : "official",
+      pa: sanitizeGameInt((item as Record<string, unknown>).pa),
+      ab: sanitizeGameInt((item as Record<string, unknown>).ab),
+      h: sanitizeGameInt((item as Record<string, unknown>).h),
+      hr: sanitizeGameInt((item as Record<string, unknown>).hr),
+      rbi: sanitizeGameInt((item as Record<string, unknown>).rbi),
+      r: sanitizeGameInt((item as Record<string, unknown>).r),
+      sb: sanitizeGameInt((item as Record<string, unknown>).sb),
+      bb: sanitizeGameInt((item as Record<string, unknown>).bb),
+      so: sanitizeGameInt((item as Record<string, unknown>).so),
+      ip: sanitizeNullableNumber((item as Record<string, unknown>).ip, 0, 30),
+      er: sanitizeNullableNumber((item as Record<string, unknown>).er, 0, 99),
+      soPitching: sanitizeNullableNumber((item as Record<string, unknown>).soPitching, 0, 99, true),
+      bbPitching: sanitizeNullableNumber((item as Record<string, unknown>).bbPitching, 0, 99, true),
+      hPitching: sanitizeNullableNumber((item as Record<string, unknown>).hPitching, 0, 99, true),
+    } as GameRecord))
+    .filter((item) => item.id && item.date && item.opponent);
+}
+
+function sanitizeGameInt(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
 }
 
 export function sanitizeScenario(

@@ -44,7 +44,9 @@ Database migrations live in `supabase/migrations/`.
 | `src/components/import-export-page-client.tsx` | React data center: JSON import preview, workspace/scenario JSON export, player CSV export |
 | `src/app/settings/page.tsx` | Settings server route: auth gate, workspace snapshot load, renders `SettingsPageClient` |
 | `src/components/settings-page-client.tsx` | React settings/help page: theme, reset example data, logout, guide/help entry points |
+| `src/components/games-page-client.tsx` | React games page: official/training tabs, game-by-game records, summary cards, add/edit/delete |
 | `src/lib/export-actions.ts` | Shared pure import/export helpers used by the React data center and homepage export actions |
+| `src/app/players/[playerId]/games/page.tsx` | Games server route: auth gate, workspace snapshot load, renders `GamesPageClient` |
 | `src/components/player-profile-editor.tsx` | React-based player profile editor for both page (`pageSurface="embedded"`) and drawer flows |
 | `src/components/player-profile-page-client.tsx` | Player profile page client state and AppShell shell integration |
 | `src/lib/auth.ts` | Shared-passcode cookie signing and verification |

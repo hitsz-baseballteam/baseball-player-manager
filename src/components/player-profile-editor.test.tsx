@@ -18,10 +18,11 @@ function createTestPlayer(overrides: Partial<Player> = {}): Player {
       age: 25,
       heightCm: 185,
       weightKg: 85,
-      sixtyMeterSec: null,
+      thirtyMeterSec: null,
       fastballTopKmh: 150,
       fastballAvgKmh: 142,
-      armStrengthKmh: null,
+      armStrengthM: null,
+      games: [],
       pitchTypes: ["四缝线", "滑球"],
       scoutingSummary: "快速球有尾劲",
       radar: {

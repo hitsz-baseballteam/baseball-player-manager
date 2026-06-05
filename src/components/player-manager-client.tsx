@@ -177,7 +177,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     <ToastProvider toastRef={toastRef}>
       <div ref={appRootRef}>
         <AppShell
-          eyebrow="Game Day Command Desk"
+          eyebrow="球队作战指挥台"
           title="比赛日总控台"
           description={heroDescription}
           statusLabel="当前方案"

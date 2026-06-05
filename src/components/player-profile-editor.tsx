@@ -110,7 +110,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
     return (
       <div className={`${styles.shell} ${pageShellClassName} ${styles.empty}`}>
         <div className={styles.emptyCard}>
-          <div className={styles.kicker}>Player Record</div>
+          <div className={styles.kicker}>球员记录</div>
           <h2>球员不存在</h2>
           <p>当前链接没有对应球员，或该球员已从共享工作区移除。</p>
           {props.backHref ? (
@@ -147,18 +147,18 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
   ].filter(Boolean).join(" / ") || "待补充";
   const primaryMetric = profile.profileType === "pitcher"
     ? formatMetric(profile.fastballTopKmh, "km/h")
-    : formatMetric(profile.armStrengthKmh, "km/h");
+    : formatMetric(profile.armStrengthM, "m");
   const secondaryMetric = profile.profileType === "pitcher"
     ? formatMetric(profile.fastballAvgKmh, "km/h")
-    : formatMetric(profile.sixtyMeterSec, "s");
+    : formatMetric(profile.thirtyMeterSec, "s");
 
   const overviewItems = [
     {
-      label: profile.profileType === "pitcher" ? "最快球速" : "臂力",
+      label: profile.profileType === "pitcher" ? "最快球速" : "掷远",
       value: primaryMetric,
     },
     {
-      label: profile.profileType === "pitcher" ? "均速" : "60m",
+      label: profile.profileType === "pitcher" ? "均速" : "30m",
       value: secondaryMetric,
     },
     {
@@ -365,7 +365,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
       <form className={styles.form} onSubmit={handleSubmit}>
         <section className={styles.masthead}>
           <div className={styles.mastheadMain}>
-            <div className={styles.kicker}>Scouting Record</div>
+            <div className={styles.kicker}>球探记录</div>
             <div className={styles.titleRow}>
               <div className={styles.titleBlock}>
                 <h1
@@ -400,7 +400,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
           </div>
 
           <aside className={styles.identityCard}>
-            <div className={styles.kickerMuted}>Player Notes</div>
+            <div className={styles.kickerMuted}>球员备注</div>
             <dl className={styles.identityList}>
               <div>
                 <dt>年龄</dt>
@@ -427,7 +427,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
             <article className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
                 <div>
-                  <div className={styles.kickerMuted}>Identity</div>
+                  <div className={styles.kickerMuted}>基本信息</div>
                   <h2>身份与角色</h2>
                 </div>
                 <p>先完善最常被查看的信息，保证档案首屏可快速扫读。</p>
@@ -517,7 +517,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
             <article className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
                 <div>
-                  <div className={styles.kickerMuted}>Athletic Baseline</div>
+                  <div className={styles.kickerMuted}>身体素质</div>
                   <h2>身体素质与模型</h2>
                 </div>
                 <p>球员可在同一份档案中保存投手与野手两套观察维度。</p>
@@ -619,26 +619,26 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   />
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="profile-60m">60m 秒</label>
+                  <label htmlFor="profile-30m">30m 秒</label>
                   <input
-                    id="profile-60m"
+                    id="profile-30m"
                     type="number"
                     step="0.01"
-                    value={numericInputValue("sixtyMeterSec", profile.sixtyMeterSec)}
+                    value={numericInputValue("thirtyMeterSec", profile.thirtyMeterSec)}
                     onChange={(event) =>
                       updateNumericDraft(
-                        "sixtyMeterSec",
+                        "thirtyMeterSec",
                         event.target.value,
-                        5,
-                        15,
-                        (value) => updateProfile({ sixtyMeterSec: value }),
+                        3,
+                        8,
+                        (value) => updateProfile({ thirtyMeterSec: value }),
                       )}
                     onBlur={() =>
                       finalizeNumericDraft(
-                        "sixtyMeterSec",
-                        5,
-                        15,
-                        (value) => updateProfile({ sixtyMeterSec: value }),
+                        "thirtyMeterSec",
+                        3,
+                        8,
+                        (value) => updateProfile({ thirtyMeterSec: value }),
                       )}
                   />
                 </div>
@@ -692,25 +692,25 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   />
                 </div>
                 <div className={styles.field}>
-                  <label htmlFor="profile-arm">臂力 km/h</label>
+                  <label htmlFor="profile-arm">掷远 m</label>
                   <input
                     id="profile-arm"
                     type="number"
-                    value={numericInputValue("armStrengthKmh", profile.armStrengthKmh)}
+                    value={numericInputValue("armStrengthM", profile.armStrengthM)}
                     onChange={(event) =>
                       updateNumericDraft(
-                        "armStrengthKmh",
+                        "armStrengthM",
                         event.target.value,
-                        50,
-                        180,
-                        (value) => updateProfile({ armStrengthKmh: value }),
+                        10,
+                        150,
+                        (value) => updateProfile({ armStrengthM: value }),
                       )}
                     onBlur={() =>
                       finalizeNumericDraft(
-                        "armStrengthKmh",
-                        50,
-                        180,
-                        (value) => updateProfile({ armStrengthKmh: value }),
+                        "armStrengthM",
+                        10,
+                        150,
+                        (value) => updateProfile({ armStrengthM: value }),
                       )}
                   />
                 </div>
@@ -720,7 +720,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
             <article className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
                 <div>
-                  <div className={styles.kickerMuted}>Narrative</div>
+                  <div className={styles.kickerMuted}>球探纪要</div>
                   <h2>球探纪要</h2>
                 </div>
                 <p>用简洁、可复读的语言记录这个球员最值得记住的特征。</p>
@@ -760,7 +760,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
             <article className={`${styles.sectionCard} ${styles.radarCard}`}>
               <div className={styles.sectionHeader}>
                 <div>
-                  <div className={styles.kickerMuted}>Ability Shape</div>
+                  <div className={styles.kickerMuted}>能力轮廓</div>
                   <h2>六维能力图</h2>
                 </div>
                 <p>按当前模型切换标签，保持一眼可读的轮廓感。</p>
@@ -783,7 +783,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
             <article className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
                 <div>
-                  <div className={styles.kickerMuted}>Grades</div>
+                  <div className={styles.kickerMuted}>六维评分</div>
                   <h2>六维评分</h2>
                 </div>
                 <p>使用 20–80 球探刻度，空值表示暂未观察。</p>

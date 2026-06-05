@@ -153,7 +153,7 @@ export function HomeOverview({
     <>
       <section id="alertDeck" className={styles.alertDeck} aria-label="比赛日提醒">
         <article className={critical.length > 0 ? styles.alertHeroCritical : styles.alertHeroHealthy}>
-          <div className={styles.kicker}>Alert Deck</div>
+          <div className={styles.kicker}>比赛日提醒</div>
           <div className={styles.alertHeroHeader}>
             <h2 className={styles.alertTitle}>
               {critical.length > 0 ? "先处理强提醒，再谈阵容美观。" : "当前方案可用，先做赛前确认。"}
@@ -195,7 +195,7 @@ export function HomeOverview({
         </article>
 
         <article className={styles.alertNotes}>
-          <div className={styles.kicker}>Advisory Notes</div>
+          <div className={styles.kicker}>建议提醒</div>
           <h3 className={styles.notesTitle}>建议提醒</h3>
           <ul className={styles.notesList}>
             {(advisory.length > 0
@@ -228,7 +228,7 @@ export function HomeOverview({
 
       <section id="commandStrip" className={styles.commandStrip} aria-label="快捷动作">
         <div className={styles.commandIntro}>
-          <div className={styles.kicker}>Command Strip</div>
+          <div className={styles.kicker}>快捷动作</div>
           <h2 className={styles.commandTitle}>今天先做哪一步，不该藏在旧工作台里。</h2>
           <p className={styles.commandDescription}>
             首页只保留判断、入口和高频直接动作；复杂编辑统一进入专属页面完成。
@@ -261,7 +261,7 @@ export function HomeOverview({
         <article id="metricsPanel" className={styles.metricsPanel}>
           <div className={styles.panelHeader}>
             <div>
-              <div className={styles.kicker}>Key Metrics</div>
+              <div className={styles.kicker}>关键指标</div>
               <h2 className={styles.panelTitle}>今天能不能开打，先看这四格。</h2>
             </div>
             <div className={styles.panelMeta}>Workspace v{remoteVersion}</div>
@@ -305,7 +305,7 @@ export function HomeOverview({
         <article id="scenarioPanel" className={styles.scenarioPanel}>
           <div className={styles.panelHeader}>
             <div>
-              <div className={styles.kicker}>Scenario Snapshot</div>
+              <div className={styles.kicker}>当前方案</div>
               <h2 className={styles.panelTitle}>当前方案</h2>
             </div>
             <button className={styles.inlineLink} type="button" onClick={onOpenScenarioPanel}>
@@ -371,7 +371,7 @@ export function HomeOverview({
         <article className={styles.pulsePanel}>
           <div className={styles.panelHeader}>
             <div>
-              <div className={styles.kicker}>Lineup Pulse</div>
+              <div className={styles.kicker}>守位概览</div>
               <h2 className={styles.panelTitle}>守位概览</h2>
             </div>
             <button className={styles.inlineLink} type="button" onClick={onOpenFieldPanel}>
@@ -398,7 +398,7 @@ export function HomeOverview({
         <article className={styles.pulsePanel}>
           <div className={styles.panelHeader}>
             <div>
-              <div className={styles.kicker}>Batting Order</div>
+              <div className={styles.kicker}>棒次顺序</div>
               <h2 className={styles.panelTitle}>棒次概览</h2>
             </div>
             <button className={styles.inlineLink} type="button" onClick={onOpenLineupPanel}>

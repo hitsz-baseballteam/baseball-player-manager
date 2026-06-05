@@ -47,6 +47,7 @@ From `package.json`:
 | `src/app/scenarios/page.tsx` | Scenario management page; checks auth, loads workspace, renders React scenario list/compare UI inside `AppShell` |
 | `src/app/import-export/page.tsx` | Data-center page; checks auth, loads workspace, renders JSON import + export actions inside `AppShell` |
 | `src/app/settings/page.tsx` | Settings/help page; checks auth, loads workspace, renders theme/reset/logout/help controls inside `AppShell` |
+| `src/app/players/[playerId]/games/page.tsx` | Game-data page; checks auth, loads workspace, renders React game records with official/training tabs inside `AppShell` |
 | `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor inside `AppShell` |
 | `src/app/api/unlock/route.ts` | Verifies shared passcode, applies rate limiting, sets signed cookie |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |

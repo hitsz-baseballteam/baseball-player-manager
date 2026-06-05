@@ -39,8 +39,8 @@ describe("workspace sanitizers", () => {
           age: 19,
           heightCm: 178,
           weightKg: 72,
-          armStrengthKmh: 132,
-          sixtyMeterSec: 7.11,
+          armStrengthM: 72,
+          thirtyMeterSec: 4.52,
           pitchTypes: ["滑球"],
           scoutingSummary: "中外野覆盖范围大",
           radar: {
@@ -53,10 +53,31 @@ describe("workspace sanitizers", () => {
 
     assert.equal(player.profile.profileType, "fielder");
     assert.equal(player.profile.age, 19);
-    assert.equal(player.profile.armStrengthKmh, 132);
-    assert.equal(player.profile.sixtyMeterSec, 7.11);
+    assert.equal(player.profile.armStrengthM, 72);
+    assert.equal(player.profile.thirtyMeterSec, 4.52);
     assert.deepEqual(player.profile.pitchTypes, ["滑球"]);
     assert.equal(player.profile.radar.fielder.speed, 62);
+  });
+
+  it("maps legacy armStrengthKmh / sixtyMeterSec to new field names", () => {
+    const [player] = sanitizePlayers([
+      {
+        id: "1",
+        name: "A",
+        number: "10",
+        bats: "R",
+        throws: "R",
+        positions: ["RF"],
+        profile: {
+          profileType: "fielder",
+          armStrengthKmh: 132,
+          sixtyMeterSec: 7.11,
+        },
+      },
+    ]);
+
+    assert.equal(player.profile.armStrengthM, 132);
+    assert.equal(player.profile.thirtyMeterSec, 7.11);
   });
 
   it("builds a fallback workspace when input is malformed", () => {
