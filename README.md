@@ -1,7 +1,7 @@
 # Baseball Player Manager
 
 A Next.js 16 application for managing a shared baseball roster, defensive assignments, and batting-order scenarios.
-The current UI is hybrid: a legacy DOM-based manager is hosted inside a newer React/Next.js shell, and workspace data is persisted through protected server-side APIs backed by PostgreSQL.
+The current UI is fully React/Next.js App Router: the homepage is a command desk, and deeper editing flows live in dedicated roster, lineup, scenarios, import/export, settings, and player-profile pages. Workspace data is persisted through protected server-side APIs backed by PostgreSQL.
 
 ## Stack
 

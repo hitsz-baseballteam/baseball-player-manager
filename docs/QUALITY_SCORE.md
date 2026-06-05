@@ -20,11 +20,11 @@
 | **数据访问** (`db.ts` + `workspace-store.ts`) | B+ | 乐观并发控制正确；连接层与 `DATABASE_URL` / `pg` 约定保持一致，并补充了 Supabase/Vercel SSL 兼容处理，但缺少连接池失败重试逻辑 |
 | **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；仍是共享口令模型 |
 | **API 路由** (`api/*`) | B | 结构化错误返回，但缺少请求体校验中间件 |
-| **React 组件** (`components/`) | A | `AppShell` 已统一承载首页、名册、排阵、场景、数据中心、设置与档案页；Phase 4 新增 `LineupPageClient` / `ScenariosPageClient`，Phase 5 新增 `ImportExportPageClient` / `SettingsPageClient`，主要高频页面均已有组件或页面级测试覆盖 |
-| **旧 DOM 管理器** (`player-manager-dom.ts` + 提取模块) | B | 提取到 4 个模块（renderers/dialogs/io/scenario-ops），主文件 1525→879 行（-42%），并新增挂载 smoke test 防止初始化时序回归；首页仍挂载 legacy frame，部分旧路径仅标注 `// MIGRATED` |
+| **React 组件** (`components/`) | A | `AppShell` 已统一承载首页、名册、排阵、场景、数据中心、设置与档案页；首页 command desk 也已改为纯 React，主要高频页面均已有组件或页面级测试覆盖 |
+| **旧 DOM 运行时** | A | 首页 legacy runtime（`index.html` / `legacy-template.ts` / `legacy-bridge.ts` / `player-manager-dom.ts` / `dom-*`）已从仓库运行路径清退，不再构成当前实现复杂度 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
 | **导入导出** | B+ | 已迁入 `export-actions.ts` + `/import-export` 数据中心页面，支持工作区 JSON、当前方案 JSON、球员 CSV 导出与 JSON 导入预览；仍缺少导入冲突自动解决与 CSV 导入 |
-| 测试 | A- | 当前 162 个测试结果项（161 通过 + 1 todo），覆盖业务逻辑、页面级工作台（首页 / 名册 / 排阵 / 场景 / 档案 / 数据中心 / 设置）、共享逻辑层（`roster-actions` / `lineup-actions` / `export-actions`）、legacy bridge、legacy manager 挂载、开发入口断管保护、认证/限流工具与 API 路由 |
+| 测试 | A- | 当前 158 个测试结果项（157 通过 + 1 todo），覆盖业务逻辑、页面级工作台（首页 / 名册 / 排阵 / 场景 / 档案 / 数据中心 / 设置）、共享逻辑层（`roster-actions` / `lineup-actions` / `export-actions`）、开发入口断管保护、认证/限流工具与 API 路由 |
 
 ## 按架构层级评分
 
@@ -35,15 +35,16 @@
 | Repo | B+ | 乐观并发持久化 + 读写边界净化 |
 | Service | B | 核心逻辑有测试，边界覆盖可改进 |
 | Runtime | B+ | API 路由已覆盖主要路径（当前 7 个通过 + 1 个 todo），解锁接口有限流 |
-| UI (React) | A- | `/roster`、`/lineup`、`/scenarios`、`/import-export`、`/settings` 与档案页均已落入统一 React 壳层并有组件测试；仓库仍缺少自动化浏览器 / 视觉回归脚本，分数暂不继续上调 |
-| UI (Legacy DOM) | B | 4 个提取模块，显式接口，可维护性显著提升，并有基础挂载回归测试；首页仍保留 legacy workspace frame |
+| UI (React) | A | 首页、名册、排阵、场景、数据中心、设置与档案页都已落入统一 React 壳层并有组件测试；当前主要缺口不再是迁移，而是后续体验深化与视觉回归自动化 |
+| UI (Legacy DOM) | A | legacy homepage runtime 已清退；当前无活跃 legacy UI 运行路径 |
 
 ## 技术债务影响
 
 | 债务 | 影响分数 | 当前状态 |
 |---|---|---|
-| DOM 管理器过大 | UI (Legacy DOM) C+→B | ✅ 提取到 4 个模块，主文件 1525→879 行（-42%），并补充挂载 smoke test |
+| DOM 管理器过大 | UI (Legacy DOM) C+→A | ✅ 先提取为 4 个模块，再在首页 legacy retirement 中彻底删除运行时链 |
 | 无前端组件测试 | UI (React) B→A | ✅ 主要 React 工作台与页面客户端均已有测试，覆盖首页 / 名册 / 排阵 / 场景 / 数据中心 / 设置 |
+| 首页 legacy runtime | UI (Legacy DOM) B→A | ✅ `index.html` / `legacy-template.ts` / `legacy-bridge.ts` / `player-manager-dom.ts` / `dom-*` 已从运行路径清退 |
 | 无 CI/CD | —→B | ✅ GitHub Actions 已添加（lint + test + build） |
 | 无 API 集成测试 | Runtime B→B+ | ✅ 2 个 API route 已覆盖主要路径（当前 7 个通过 + 1 个 todo） |
 | 无速率限制 | Runtime B→B+ | ✅ 内存速率限制（5 次/分钟） |
@@ -75,3 +76,4 @@
 | 2026-06-04 | Phase 3 名册工作台与共享逻辑 | 分数不变；新增 `/roster` 路由、`RosterPageClient`、`RosterOverview`、`roster-actions` 共享逻辑层，legacy 名册区改接共享 `roster-actions`，独立档案页纳入 `AppShell` 统一壳层 |
 | 2026-06-04 | Phase 3 完整收尾 | 分数不变；新增页面级测试（`roster-page-client.test.tsx`、`player-profile-page-client.test.tsx`），修正弹层层叠错误与档案页嵌套设计，Playwright 自动验收 6 项均通过 |
 | 2026-06-05 | Phase 4 + 5 收尾 | React 组件 A-→A、导入导出 B→B+；新增 `lineup-actions` / `export-actions`、`/lineup` / `/scenarios` / `/import-export` / `/settings` 页面与对应测试；通过 `npm test`、`npm run lint`、`npm run build` 核验 |
+| 2026-06-05 | 首页 legacy runtime 退役 | UI (React) A-→A、UI (Legacy DOM) B→A；首页改为纯 React command desk，删除 `index.html` / `legacy-template.ts` / `legacy-bridge.ts` / `player-manager-dom.ts` / `dom-*` 运行时链，并通过 `npm test`、`npm run lint`、`npm run build` 核验 |

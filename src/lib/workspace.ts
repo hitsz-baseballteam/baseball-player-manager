@@ -186,24 +186,24 @@ export const FIELDER_RADAR_LABELS: Record<keyof FielderRadar, string> = {
 
 export const GUIDE_STEPS = [
   {
+    target: "alertDeck",
+    title: "比赛日提醒",
+    body: "首页先看强提醒与建议提醒。先确认当前方案是否可用，再决定进入排阵页还是先回名册补人。",
+  },
+  {
+    target: "commandStrip",
+    title: "快捷动作区",
+    body: "这里保留高频动作：自动排阵、新建方案、导入导出，以及通往名册 / 场景 / 数据中心的入口。",
+  },
+  {
+    target: "metricsPanel",
+    title: "关键指标",
+    body: "可上场人数、轮休伤停、守位完成度和棒次完成度会直接告诉你今天能不能排出一套可用阵容。",
+  },
+  {
     target: "scenarioPanel",
-    title: "方案区",
-    body: "这里管理多套阵容方案。你可以保存常规先发、守备优先或对左投等不同方案。",
-  },
-  {
-    target: "rosterPanel",
-    title: "球员池",
-    body: "搜索、筛选、勾选或拖拽球员。编辑球员不会只影响当前方案，而是影响整个工作区。",
-  },
-  {
-    target: "fieldPanel",
-    title: "守备球场",
-    body: "把球员拖到守位，或者先勾选球员再点守位。自动排阵也会直接覆盖当前方案的守位分配。",
-  },
-  {
-    target: "lineupPanel",
-    title: "棒次与提醒",
-    body: "棒次支持拖拽排序。下方提醒区分强提醒和建议提醒，先处理强提醒再看建议提醒。",
+    title: "当前方案摘要",
+    body: "这里可以快速切换当前方案，并查看最近更新时间、方案数和当前状态；更复杂的方案管理进入战术场景页。",
   },
   {
     target: "helpBtn",

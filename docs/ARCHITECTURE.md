@@ -19,12 +19,11 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 |---|---|
 | `src/app/` | Next.js routes, pages, global styles, and API endpoints |
 | `src/components/` | React UI components, including the homepage app shell, command-desk overview, unlock form, help UI, theme toggle, toast/guide overlays, and player profile editor |
-| `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and legacy DOM manager |
+| `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and cross-page client helpers |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
 | `docs/` | Architecture, planning, design docs, quality notes, references, and session history |
 | `.github/workflows/` | CI workflow for lint, test, and build |
-| `index.html` | Legacy single-page template whose body/style are embedded into the Next.js UI |
 
 ## Entry Points
 
@@ -42,7 +41,7 @@ From `package.json`:
 
 | Entry point | Role |
 |---|---|
-| `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot + legacy template and renders the hybrid homepage inside `AppShell` |
+| `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot and renders the React command-desk homepage |
 | `src/app/roster/page.tsx` | Roster workbench page; checks auth, loads workspace, renders React roster workbench inside `AppShell` |
 | `src/app/lineup/page.tsx` | Lineup workbench page; checks auth, loads workspace, renders React lineup board inside `AppShell` |
 | `src/app/scenarios/page.tsx` | Scenario management page; checks auth, loads workspace, renders React scenario list/compare UI inside `AppShell` |
@@ -107,22 +106,18 @@ Observed limits and boundaries:
 - the unlock cookie is `httpOnly`, `sameSite=lax`, and `secure` in production
 - API route protection is applied only to `/api/workspace/:path*`
 
-### 4. Hybrid UI architecture
+### 4. React page-shell architecture
 
-The current UI is hybrid, but the hybrid boundary has moved.
+The legacy homepage runtime has been retired. The current UI is now route-based React throughout.
 
-- `src/components/player-manager-client.tsx` renders `AppShell` + `HomeOverview`, prepares the legacy HTML fragment, mounts the legacy manager into the shell's legacy frame, and uses `legacy-bridge` to trigger legacy actions or focus specific panels from React
-- `src/lib/player-manager-dom.ts` now primarily survives as the homepage legacy workspace surface; dedicated React routes exist for roster, lineup, scenarios, import/export, settings, and player profile
-- `src/lib/legacy-template.ts` extracts `<style>` and `<body>` fragments from `index.html`
-- `src/lib/legacy-bridge.ts` provides structured React → legacy DOM bridging for button triggers, select changes, panel focus, and temporary highlight feedback
-- React-managed page surfaces now include `AppShell`, `HomeOverview`, `RosterPageClient`, `LineupPageClient`, `ScenariosPageClient`, `ImportExportPageClient`, `SettingsPageClient`, `PlayerProfilePageClient`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
-- shared business logic is increasingly factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
-- homepage overview interactions still split into two layers: React renders summary/actions, while `legacy-bridge` routes those actions into the remaining legacy workspace without duplicating the underlying business logic
+- `src/components/player-manager-client.tsx` renders the homepage command desk using `AppShell` + `HomeOverview`
+- `src/components/roster-page-client.tsx`, `lineup-page-client.tsx`, `scenarios-page-client.tsx`, `import-export-page-client.tsx`, `settings-page-client.tsx`, and `player-profile-page-client.tsx` each own one dedicated workbench/page surface
+- shared business logic is factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
+- `Toast`, `HelpDrawer`, `GuideOverlay`, and `ThemeToggle` are reusable adjunct UI layered around the page shells rather than around a DOM manager
 
-This means the repository currently has two UI modes living side by side:
+This means the repository now has one primary UI mode:
 
-1. a homepage-only legacy workspace mounted from extracted DOM markup
-2. newer React routes and shell-driven workbenches for roster / lineup / scenarios / import-export / settings / player profile
+1. React route pages and shell-driven workbenches for home / roster / lineup / scenarios / import-export / settings / player profile
 
 ### 5. Database schema
 
@@ -151,9 +146,9 @@ These notes are based on current code imports and call sites, not aspirational r
 - browser code does not import `pg`; database access stays in `db.ts` / `workspace-store.ts`
 - client persistence goes through `fetch('/api/workspace')` in `workspace-client.ts`
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
-- the legacy DOM manager depends on many shared modules and remains the highest-coupling part of the UI
-- homepage React overview state is intentionally synchronized from the legacy manager via `ManagerCallbacks.onStateChange`, rather than reimplementing workspace mutation logic in parallel
 - React route pages persist through `workspace-client.ts` and the shared `/api/workspace` boundary rather than calling database code directly
+- homepage direct actions reuse shared pure logic (`lineup-actions.ts`, `export-actions.ts`) instead of selector-based DOM bridge calls
+- `roster-actions.ts` now also owns roster filter helpers used by the roster workbench
 
 ## Tooling and Enforcement
 
@@ -166,6 +161,5 @@ Evidence-backed enforcement currently present in the repo:
 
 ## Open Questions
 
-- The repo documents a gradual migration away from `src/lib/player-manager-dom.ts`, but the target end-state structure is not yet specified in a product spec or newer architecture ADR.
 - `docs/product-specs/` exists, but implemented features are not yet backed by formal per-feature specs.
 - No repository-local deployment configuration beyond the generic Next.js app structure is present; operational hosting details are therefore out of scope for this document.

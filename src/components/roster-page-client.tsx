@@ -15,9 +15,9 @@ import {
   validateBulkEdit,
   validatePlayerUpsert,
   type BulkEditInput,
+  type PlayerFilterState,
   type PlayerUpsertInput,
 } from "@/lib/roster-actions";
-import { type PlayerFilterState } from "@/lib/dom-scenario-ops";
 import {
   cloneWorkspace,
   getActiveScenario,

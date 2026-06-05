@@ -460,4 +460,4 @@ src/components/
 
 - `src/lib/export-actions.ts` 已作为 React 数据中心的共享导入导出逻辑层落地。
 - `src/app/import-export/page.tsx` 与 `src/app/settings/page.tsx` 已加入主导航并通过 `next build` 路由收集。
-- legacy 首页仍挂载 `player-manager-dom.ts`；导入导出与排阵相关旧路径目前仅标注 `// MIGRATED`，未物理删除，已转入技术债跟踪。
+- 该计划完成时，legacy 首页仍挂载 `player-manager-dom.ts`；后续已在 `docs/exec-plans/completed/20260605-legacy-homepage-retirement.md` 中完成 homepage legacy runtime 清退。

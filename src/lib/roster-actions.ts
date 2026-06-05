@@ -1,6 +1,7 @@
 import {
   createDefaultPlayerProfile,
   createId,
+  getPlayerAssignmentState,
   inferPlayerProfileType,
   removePlayersFromWorkspace,
   sanitizePositions,
@@ -8,6 +9,7 @@ import {
   type Player,
   type PlayerStatus,
   type PositionCode,
+  type Scenario,
   type Workspace,
 } from "@/lib/workspace";
 
@@ -98,6 +100,15 @@ export type BulkEditInput = {
   positions: PositionCode[];
 };
 
+export type PlayerFilterState = {
+  query: string;
+  position: string;
+  status: string;
+  bats: string;
+  throws: string;
+  assignment: string;
+};
+
 export type BulkEditValidation = {
   valid: false;
   error: string;
@@ -185,4 +196,42 @@ export function deletePlayers(
   const before = draft.players.length;
   removePlayersFromWorkspace(draft, ids);
   return before - draft.players.length;
+}
+
+export function filterPlayers(
+  players: Player[],
+  activeScenario: Scenario,
+  filter: PlayerFilterState,
+) {
+  return players.filter((player) => {
+    const assignmentState = getPlayerAssignmentState(activeScenario, player.id);
+    const matchesSearch =
+      !filter.query ||
+      player.name.toLowerCase().includes(filter.query) ||
+      player.number.toLowerCase().includes(filter.query);
+    const matchesPosition =
+      filter.position === "all" || player.positions.includes(filter.position as PositionCode);
+    const matchesStatus = filter.status === "all" || player.status === filter.status;
+    const matchesBats = filter.bats === "all" || player.bats === filter.bats;
+    const matchesThrows = filter.throws === "all" || player.throws === filter.throws;
+    const matchesAssignment =
+      filter.assignment === "all" ||
+      (filter.assignment === "unassigned" &&
+        !assignmentState.defense &&
+        !assignmentState.lineup) ||
+      (filter.assignment === "defenseAssigned" && assignmentState.defense) ||
+      (filter.assignment === "lineupAssigned" && assignmentState.lineup) ||
+      (filter.assignment === "fullyAssigned" &&
+        assignmentState.defense &&
+        assignmentState.lineup);
+
+    return (
+      matchesSearch &&
+      matchesPosition &&
+      matchesStatus &&
+      matchesBats &&
+      matchesThrows &&
+      matchesAssignment
+    );
+  });
 }

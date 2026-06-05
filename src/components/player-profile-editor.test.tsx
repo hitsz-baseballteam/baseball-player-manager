@@ -122,10 +122,8 @@ describe("PlayerProfileEditor", () => {
     if (!result) {
       throw new Error("onSave should have been called");
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    const p = result as Player;
-    assert.equal(p.name, "更新的球员");
-    assert.equal(p.id, "test-player-1");
+    assert.equal(result.name, "更新的球员");
+    assert.equal(result.id, "test-player-1");
   });
 
   it("shows validation error when name is empty", async () => {

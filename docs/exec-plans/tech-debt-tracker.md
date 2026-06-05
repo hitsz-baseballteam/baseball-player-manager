@@ -4,14 +4,13 @@
 
 ## 活跃债务
 
-| ID | 描述 | 影响域 | 严重程度 | 计划 |
-|---|---|---|---|---|
-| TD-08 | 首页仍挂载 `player-manager-dom.ts` legacy workspace frame；排阵与导入导出旧路径目前仅标注 `// MIGRATED`，尚未物理删除 | UI / 可维护性 | 中 | 单独规划 legacy retirement phase：把首页剩余工作台能力迁出 React 外壳后删除废弃 DOM 路径 |
+当前无活跃技术债务。
 
 ## 已解决债务
 
 | ID | 描述 | 解决日期 | 解决方案 |
 |---|---|---|---|
+| TD-08 | 首页 legacy runtime 仍依赖 `player-manager-dom.ts` / `legacy-bridge.ts` / `legacy-template.ts` / `index.html` | 2026-06-05 | 首页收敛为纯 React command desk，删除 legacy homepage runtime chain，并将首页动作改为共享逻辑或显式导航 |
 | TD-01 | DOM 管理器过大（1525 行单文件） | 2026-06-02 | 提取到 4 个模块（dom-renderers/dom-dialogs/dom-io/dom-scenario-ops），主文件 1525→841 行（-45%） |
 | TD-02 | 无 React 组件测试（旧组件） | 2026-06-02 | PlayerProfileEditor 11 个测试 + CSS module mock loader，总计 53 个测试覆盖 5 个组件 |
 | TD-03 | 无 API 集成测试 | 2026-06-02 | unlock route（4 tests）+ workspace route（4 tests），mock pg.Pool.prototype.connect |

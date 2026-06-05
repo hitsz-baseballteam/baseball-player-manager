@@ -84,30 +84,30 @@ export function HomeOverview({
     ? `阵容接近可用：还差 ${9 - assignedDefenseCount} 个守位、${9 - assignedLineupCount} 个棒次。`
     : advisory.length > 0
     ? `阵容已可用，但还有 ${advisory.length} 条建议提醒值得复查。`
-    : "当前方案已具备完整首发框架，可以直接进入完整工作台微调。";
+    : "当前方案已具备完整首发框架，可以直接进入排阵页微调。";
 
   const quickActions = [
     {
       label: "自动排阵",
-      detail: "用当前可上场球员生成初稿",
+      detail: "直接用当前可上场球员生成初稿",
       onClick: onAutoAssign,
       tone: "primary",
     },
     {
       label: "新增球员",
-      detail: "直接打开 legacy 新建球员对话框",
+      detail: "前往名册页新增、编辑和批量管理球员",
       onClick: onAddPlayer,
       tone: "default",
     },
     {
       label: "导入数据",
-      detail: "导入工作区或单套方案文件",
+      detail: "前往数据中心导入工作区或单套方案文件",
       onClick: onImport,
       tone: "default",
     },
     {
       label: "新建方案",
-      detail: "为不同比赛条件建立新方案",
+      detail: "直接基于当前工作区创建一套新方案",
       onClick: onCreateScenario,
       tone: "default",
     },
@@ -125,8 +125,8 @@ export function HomeOverview({
       onClick: onExportScenario,
     },
     {
-      label: "重命名方案",
-      detail: "调整当前方案标题与备注",
+      label: "去场景页改名",
+      detail: "在场景页调整当前方案标题与备注",
       onClick: onRenameScenario,
     },
     {
@@ -151,7 +151,7 @@ export function HomeOverview({
 
   return (
     <>
-      <section className={styles.alertDeck} aria-label="比赛日提醒">
+      <section id="alertDeck" className={styles.alertDeck} aria-label="比赛日提醒">
         <article className={critical.length > 0 ? styles.alertHeroCritical : styles.alertHeroHealthy}>
           <div className={styles.kicker}>Alert Deck</div>
           <div className={styles.alertHeroHeader}>
@@ -183,13 +183,13 @@ export function HomeOverview({
           </ul>
           <div className={styles.alertFooter}>
             <button className={styles.jumpButton} type="button" onClick={onOpenFieldPanel}>
-              去守位区
+              去排阵页守位区
             </button>
             <button className={styles.jumpButton} type="button" onClick={onOpenLineupPanel}>
-              去棒次区
+              去排阵页棒次区
             </button>
             <button className={styles.jumpButton} type="button" onClick={onOpenWarningsPanel}>
-              去提醒区
+              去排阵页提醒区
             </button>
           </div>
         </article>
@@ -200,7 +200,7 @@ export function HomeOverview({
           <ul className={styles.notesList}>
             {(advisory.length > 0
               ? advisory.slice(0, 4)
-              : ["当前没有额外建议提醒。可以直接进入下方工作台做最终排阵微调。"])
+              : ["当前没有额外建议提醒。可以直接进入排阵页做最终微调。"])
               .map((item) => {
                 const action = resolveWarningAction(item, warningActions);
                 return (
@@ -217,21 +217,21 @@ export function HomeOverview({
           </ul>
           <div className={styles.noteFooter}>
             <button className={styles.jumpButton} type="button" onClick={onOpenWarningsPanel}>
-              定位到提醒区
+              去排阵页提醒区
             </button>
             <button className={styles.jumpButton} type="button" onClick={onOpenWorkspace}>
-              进入完整工作台
+              前往排阵页
             </button>
           </div>
         </article>
       </section>
 
-      <section className={styles.commandStrip} aria-label="快捷动作">
+      <section id="commandStrip" className={styles.commandStrip} aria-label="快捷动作">
         <div className={styles.commandIntro}>
           <div className={styles.kicker}>Command Strip</div>
-          <h2 className={styles.commandTitle}>今天先做哪一步，不该藏在旧工具栏里。</h2>
+          <h2 className={styles.commandTitle}>今天先做哪一步，不该藏在旧工作台里。</h2>
           <p className={styles.commandDescription}>
-            首页动作以直接桥接为主：高频操作从总控台直接触发，复杂编辑再进入下方完整工作台。
+            首页只保留判断、入口和高频直接动作；复杂编辑统一进入专属页面完成。
           </p>
         </div>
         <div className={styles.commandGrid}>
@@ -258,7 +258,7 @@ export function HomeOverview({
       </section>
 
       <section className={styles.overviewGrid} aria-label="总控台概览">
-        <article className={styles.metricsPanel}>
+        <article id="metricsPanel" className={styles.metricsPanel}>
           <div className={styles.panelHeader}>
             <div>
               <div className={styles.kicker}>Key Metrics</div>
@@ -302,14 +302,14 @@ export function HomeOverview({
           </div>
         </article>
 
-        <article className={styles.scenarioPanel}>
+        <article id="scenarioPanel" className={styles.scenarioPanel}>
           <div className={styles.panelHeader}>
             <div>
               <div className={styles.kicker}>Scenario Snapshot</div>
               <h2 className={styles.panelTitle}>当前方案</h2>
             </div>
             <button className={styles.inlineLink} type="button" onClick={onOpenScenarioPanel}>
-              去工作台完整管理
+              去场景页完整管理
             </button>
           </div>
 
@@ -331,12 +331,12 @@ export function HomeOverview({
 
           <div className={styles.scenarioName}>{activeScenario.name}</div>
           <p className={styles.scenarioNote}>
-            {activeScenario.note || "当前方案还没有备注。建议在完整工作台里补充适用场景说明。"}
+            {activeScenario.note || "当前方案还没有备注。可前往场景页补充适用条件与说明。"}
           </p>
 
           <div className={styles.scenarioActions}>
             <button className={styles.inlineLink} type="button" onClick={onRenameScenario}>
-              重命名
+              去场景页改名
             </button>
             <button className={styles.inlineLink} type="button" onClick={onDuplicateScenario}>
               复制方案
@@ -375,7 +375,7 @@ export function HomeOverview({
               <h2 className={styles.panelTitle}>守位概览</h2>
             </div>
             <button className={styles.inlineLink} type="button" onClick={onOpenFieldPanel}>
-              去守位区
+              去排阵页
             </button>
           </div>
 
@@ -402,7 +402,7 @@ export function HomeOverview({
               <h2 className={styles.panelTitle}>棒次概览</h2>
             </div>
             <button className={styles.inlineLink} type="button" onClick={onOpenLineupPanel}>
-              去棒次区
+              去排阵页
             </button>
           </div>
 
@@ -438,16 +438,16 @@ function resolveWarningAction(
   actions: Pick<HomeOverviewProps, "onOpenRosterPanel" | "onOpenFieldPanel" | "onOpenLineupPanel" | "onOpenWarningsPanel" | "onOpenScenarioPanel">,
 ) {
   if (message.includes("守位未满") || message.includes("重复占用守位") || message.includes("可守位置不包含") || message.includes("当前被放在")) {
-    return { label: "去守位区", onClick: actions.onOpenFieldPanel };
+    return { label: "去排阵页守位区", onClick: actions.onOpenFieldPanel };
   }
 
   if (message.includes("棒次未满") || (message.includes("第 ") && message.includes("棒"))) {
-    return { label: "去棒次区", onClick: actions.onOpenLineupPanel };
+    return { label: "去排阵页棒次区", onClick: actions.onOpenLineupPanel };
   }
 
   if (message.includes("非可上场球员已进入阵容")) {
-    return { label: "去名单区", onClick: actions.onOpenRosterPanel };
+    return { label: "去名册页", onClick: actions.onOpenRosterPanel };
   }
 
-  return { label: "去提醒区", onClick: actions.onOpenWarningsPanel };
+  return { label: "去场景/排阵页", onClick: actions.onOpenWarningsPanel };
 }

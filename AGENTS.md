@@ -28,29 +28,27 @@ Database migrations live in `supabase/migrations/`.
 |---|---|
 | `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export, and other pure workspace rules |
 | `src/lib/workspace-store.ts` | PostgreSQL read/write for the workspace snapshot with version-based optimistic concurrency |
-| `src/lib/player-manager-dom.ts` | Legacy DOM-based homepage workspace manager; homepage still mounts it inside the legacy frame, but `/roster` `/lineup` `/scenarios` `/import-export` `/settings` are now React routes |
+| `src/components/player-manager-client.tsx` | Homepage command-desk client: pure React overview, direct high-frequency actions, and page navigation — no legacy DOM runtime |
 | `src/components/app-shell.tsx` | Global shell shared by homepage, roster, lineup, scenarios, data center, settings, and player profile pages |
-| `src/components/home-overview.tsx` | Phase 2 homepage command desk: alert deck, command strip, metrics, scenario snapshot, lineup pulse, and bridge-driven entry actions |
-| `src/lib/legacy-bridge.ts` | Structured bridge from React homepage actions into legacy DOM buttons, selects, panel focus, and highlight feedback |
+| `src/components/home-overview.tsx` | Homepage command desk: alert deck, command strip, metrics, scenario snapshot, and lineup pulse |
 | `src/app/roster/page.tsx` | Roster server route: auth gate, workspace snapshot load, renders `RosterPageClient` |
 | `src/components/roster-page-client.tsx` | Roster workbench page state hub: workspace/version, filters, selection, dialogs, save and conflict handling |
 | `src/components/roster-overview.tsx` | Roster workbench UI: action bar, filters, counts, player cards, bulk actions |
-| `src/lib/roster-actions.ts` | Shared roster business actions: upsert/bulk-edit/delete — single source of truth used by both React and legacy |
+| `src/lib/roster-actions.ts` | Shared roster logic: upsert/bulk-edit/delete plus roster filtering helpers |
 | `src/app/lineup/page.tsx` | Lineup server route: auth gate, workspace snapshot load, renders `LineupPageClient` |
 | `src/components/lineup-page-client.tsx` | React lineup workbench page state hub: scenario switch, drag/drop assignments, save and conflict handling |
 | `src/app/scenarios/page.tsx` | Scenarios server route: auth gate, workspace snapshot load, renders `ScenariosPageClient` |
 | `src/components/scenarios-page-client.tsx` | React scenarios page: scenario CRUD, active switch, compare mode, save and conflict handling |
-| `src/lib/lineup-actions.ts` | Shared lineup/scenario pure actions used by React lineup/scenarios flows |
+| `src/lib/lineup-actions.ts` | Shared lineup/scenario pure actions used by React lineup/scenarios flows and homepage direct actions |
 | `src/app/import-export/page.tsx` | Data-center server route: auth gate, workspace snapshot load, renders `ImportExportPageClient` |
 | `src/components/import-export-page-client.tsx` | React data center: JSON import preview, workspace/scenario JSON export, player CSV export |
 | `src/app/settings/page.tsx` | Settings server route: auth gate, workspace snapshot load, renders `SettingsPageClient` |
 | `src/components/settings-page-client.tsx` | React settings/help page: theme, reset example data, logout, guide/help entry points |
-| `src/lib/export-actions.ts` | Shared pure import/export helpers used by the React data center |
+| `src/lib/export-actions.ts` | Shared pure import/export helpers used by the React data center and homepage export actions |
 | `src/components/player-profile-editor.tsx` | React-based player profile editor for both page (`pageSurface="embedded"`) and drawer flows |
 | `src/components/player-profile-page-client.tsx` | Player profile page client state and AppShell shell integration |
 | `src/lib/auth.ts` | Shared-passcode cookie signing and verification |
 | `src/lib/rate-limiter.ts` | In-memory unlock rate limiter used by `POST /api/unlock` |
-| `src/lib/legacy-template.ts` | Extracts legacy markup and styles from `index.html` for the hybrid UI |
 
 ## Core Rule: The Repository Is the System of Record
 
@@ -87,6 +85,10 @@ Known debt lives in [docs/exec-plans/tech-debt-tracker.md](./docs/exec-plans/tec
   - [docs/references/pi-models-llms.txt](./docs/references/pi-models-llms.txt) — pi built-in models catalog (providers, context windows, thinking, image support)
 
 ## Subagent Defaults
+
+Wisely use more subagents for reviewing and conding. Details in skill: pi-subagent
+
+You only use 'worker' and 'reviewer'. Fowllowing is the brief information
 
 | Agent | 用途 | 上下文 | 主要输出 | 模型 |
 |---|---|---|---|---|

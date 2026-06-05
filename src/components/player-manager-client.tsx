@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { GuideOverlay, type GuideHandle } from "@/components/guide-overlay";
@@ -8,15 +9,32 @@ import { HelpDrawer, type HelpDrawerHandle } from "@/components/help-drawer";
 import { HomeOverview } from "@/components/home-overview";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
-import { createLegacyBridge } from "@/lib/legacy-bridge";
-import { mountPlayerManager } from "@/lib/player-manager-dom";
-import { getActiveScenario, type Workspace } from "@/lib/workspace";
+import {
+  autoAssignActive,
+  clearAllAssignments,
+  copyScenarioAction,
+  createScenarioAction,
+  setActiveScenarioAction,
+} from "@/lib/lineup-actions";
+import {
+  buildScenarioExport,
+  buildWorkspaceExport,
+} from "@/lib/export-actions";
+import {
+  createUniqueScenarioName,
+  getActiveScenario,
+  sanitizeWorkspace,
+  type Workspace,
+} from "@/lib/workspace";
+import {
+  isVersionConflict,
+  loadWorkspaceSnapshot,
+  saveWithRetry,
+} from "@/lib/workspace-client";
 
 type PlayerManagerClientProps = {
   initialWorkspace: Workspace;
   initialVersion: number;
-  markup: string;
-  styles: string;
 };
 
 const NAV_ITEMS = [
@@ -28,24 +46,28 @@ const NAV_ITEMS = [
   { label: "设置", href: "/settings" },
 ] as const;
 
-function prepareLegacyMarkup(markup: string) {
-  return markup
-    .replace(/<div class="drawer-scrim"[\s\S]*?(?=<div class="guide-overlay")/i, "")
-    .replace(/<div class="guide-overlay"[\s\S]*?(?=<dialog id="playerDialog")/i, "")
-    .replace(/id="helpBtn"/g, 'id="legacyHelpBtn"')
-    .replace(/id="theme-toggle-btn"/g, 'id="legacyThemeToggleBtn"');
+function downloadText(fileName: string, content: string, mime: string): void {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJson(fileName: string, payload: unknown): void {
+  downloadText(fileName, JSON.stringify(payload, null, 2), "application/json");
 }
 
 export function PlayerManagerClient(props: PlayerManagerClientProps) {
+  const router = useRouter();
   const appRootRef = useRef<HTMLDivElement>(null);
-  const legacyRootRef = useRef<HTMLDivElement>(null);
-  const legacyFrameAnchorRef = useRef<HTMLDivElement>(null);
-
   const toastRef = useRef<ToastHandle | null>(null);
   const helpRef = useRef<HelpDrawerHandle | null>(null);
   const guideRef = useRef<GuideHandle | null>(null);
 
-  const [workspace, setWorkspace] = useState(props.initialWorkspace);
+  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(props.initialWorkspace));
   const [remoteVersion, setRemoteVersion] = useState(props.initialVersion);
   const [saveStatus, setSaveStatus] = useState("云端工作区已准备");
   const [helpOpen, setHelpOpen] = useState(false);
@@ -61,74 +83,98 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     setGuideOpen(true);
   }, []);
 
-  const preparedMarkup = useMemo(() => prepareLegacyMarkup(props.markup), [props.markup]);
   const activeScenario = useMemo(() => getActiveScenario(workspace), [workspace]);
 
-  const withBridge = useCallback(<T,>(run: (bridge: ReturnType<typeof createLegacyBridge>) => T) => {
-    return run(createLegacyBridge({
-      root: legacyRootRef.current,
-      onUnavailable: (message) => toastRef.current?.showToast(message),
-      onFeedback: (message) => message ? toastRef.current?.showToast(message) : undefined,
-    }));
-  }, []);
+  const applyWorkspaceMutation = useCallback(async (
+    applyMutation: (current: Workspace) => Workspace,
+    messages: { success: string; failure: string },
+  ) => {
+    const optimistic = applyMutation(workspace);
+    setWorkspace(optimistic);
+    setSaveStatus("正在同步到云端...");
 
-  const triggerLegacy = useCallback((selector: string, focusSelector?: string, feedbackMessage?: string) => {
-    return withBridge((bridge) => bridge.trigger(selector, { focusSelector, feedbackMessage }));
-  }, [withBridge]);
+    try {
+      const result = await saveWithRetry(optimistic, remoteVersion, applyMutation);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      setRemoteVersion(result.version);
+      setSaveStatus(messages.success);
+      toastRef.current?.showToast(messages.success);
+    } catch (error) {
+      if (isVersionConflict(error)) {
+        const latest = await loadWorkspaceSnapshot();
+        setWorkspace(sanitizeWorkspace(latest.workspace));
+        setRemoteVersion(latest.version);
+        setSaveStatus("工作区已被其他会话更新，已刷新最新数据");
+        toastRef.current?.showToast("工作区已被其他会话更新，已刷新最新数据");
+      } else {
+        console.error(error);
+        setSaveStatus(messages.failure);
+        toastRef.current?.showToast(messages.failure);
+      }
+    }
+  }, [workspace, remoteVersion]);
 
-  const focusLegacy = useCallback((selector: string, feedbackMessage?: string) => {
-    return withBridge((bridge) => bridge.focus(selector, { feedbackMessage }));
-  }, [withBridge]);
+  const handleAutoAssign = useCallback(() => {
+    void applyWorkspaceMutation(
+      (current) => autoAssignActive(current),
+      { success: "已自动排阵", failure: "自动排阵失败，请稍后重试" },
+    );
+  }, [applyWorkspaceMutation]);
 
-  const changeLegacyScenario = useCallback((scenarioId: string) => {
-    const nextScenario = workspace.scenarios.find((scenario) => scenario.id === scenarioId);
-    if (!nextScenario) {
-      return false;
+  const handleCreateScenario = useCallback(() => {
+    void applyWorkspaceMutation(
+      (current) => {
+        const name = createUniqueScenarioName("新方案", current.scenarios);
+        return createScenarioAction(current, name, "");
+      },
+      { success: "已创建新方案", failure: "新建方案失败，请稍后重试" },
+    );
+  }, [applyWorkspaceMutation]);
+
+  const handleDuplicateScenario = useCallback(() => {
+    void applyWorkspaceMutation(
+      (current) => copyScenarioAction(current, current.activeScenarioId),
+      { success: "已复制当前方案", failure: "复制方案失败，请稍后重试" },
+    );
+  }, [applyWorkspaceMutation]);
+
+  const handleClearAssignments = useCallback(() => {
+    if (!window.confirm("确认清空当前方案的守备和打线分配？")) {
+      return;
     }
 
-    setWorkspace((current) => ({
-      ...current,
-      activeScenarioId: scenarioId,
-    }));
+    void applyWorkspaceMutation(
+      (current) => clearAllAssignments(current),
+      { success: "已清空当前阵容", failure: "清空阵容失败，请稍后重试" },
+    );
+  }, [applyWorkspaceMutation]);
 
-    return withBridge((bridge) => bridge.changeSelect("#scenarioSelect", scenarioId, {
-      focusSelector: "#scenarioPanel",
-      feedbackMessage: `已切换到 ${nextScenario.name}`,
-    }));
-  }, [withBridge, workspace.scenarios]);
+  const handleScenarioChange = useCallback((scenarioId: string) => {
+    void applyWorkspaceMutation(
+      (current) => setActiveScenarioAction(current, scenarioId),
+      { success: "已切换当前方案", failure: "切换方案失败，请稍后重试" },
+    );
+  }, [applyWorkspaceMutation]);
 
-  const scrollToWorkspace = useCallback(() => {
-    legacyFrameAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  const handleExportWorkspace = useCallback(() => {
+    downloadJson(`baseball-workspace-${new Date().toISOString().slice(0, 19).replaceAll(":", "-")}.json`, buildWorkspaceExport(workspace));
+    toastRef.current?.showToast("工作区 JSON 已导出");
+  }, [workspace]);
 
-  useEffect(() => {
-    const root = legacyRootRef.current;
-    if (!root) return;
+  const handleExportScenario = useCallback(() => {
+    downloadJson(`baseball-scenario-${new Date().toISOString().slice(0, 19).replaceAll(":", "-")}.json`, buildScenarioExport(workspace, workspace.activeScenarioId));
+    toastRef.current?.showToast("当前方案 JSON 已导出");
+  }, [workspace]);
 
-    const cleanup = mountPlayerManager(root, {
-      workspace: props.initialWorkspace,
-      version: props.initialVersion,
-      updatedAt: "",
-    }, {
-      toast: toastRef,
-      helpDrawer: helpRef,
-      guide: guideRef,
-      onStateChange: (snapshot) => {
-        setWorkspace(snapshot.workspace);
-        setRemoteVersion(snapshot.version);
-        setSaveStatus(snapshot.saveStatus);
-      },
-    });
+  const navigate = useCallback((href: string) => {
+    router.push(href);
+  }, [router]);
 
-    return cleanup;
-  }, [preparedMarkup, props.initialVersion, props.initialWorkspace]);
-
-  const heroDescription = `${activeScenario.name} · ${saveStatus}。进入首页后先看提醒、快捷动作和当前方案状态，再进入完整工作台深入编辑。`;
+  const heroDescription = `${activeScenario.name} · ${saveStatus}。进入首页后先看提醒、快捷动作和当前方案状态，再进入名册、排阵或场景页完成深度编辑。`;
   const statusMeta = `最近更新 ${formatTimestamp(activeScenario.updatedAt)} · Workspace v${remoteVersion}`;
 
   return (
     <ToastProvider toastRef={toastRef}>
-      <style dangerouslySetInnerHTML={{ __html: props.styles }} />
       <div ref={appRootRef}>
         <AppShell
           eyebrow="Game Day Command Desk"
@@ -156,32 +202,25 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
               workspace={workspace}
               remoteVersion={remoteVersion}
               saveStatus={saveStatus}
-              onAutoAssign={() => void triggerLegacy("#autoAssignBtn", "#fieldPanel")}
-              onAddPlayer={() => void triggerLegacy("#addPlayerBtn", "#rosterPanel")}
-              onImport={() => void triggerLegacy("#importBtn", "#scenarioPanel")}
-              onCreateScenario={() => void triggerLegacy("#newScenarioBtn", "#scenarioPanel")}
-              onExportWorkspace={() => void triggerLegacy("#exportWorkspaceBtn", "#scenarioPanel", "已触发导出工作区")}
-              onExportScenario={() => void triggerLegacy("#exportScenarioBtn", "#scenarioPanel", "已触发导出当前方案")}
-              onRenameScenario={() => void triggerLegacy("#renameScenarioBtn", "#scenarioPanel")}
-              onDuplicateScenario={() => void triggerLegacy("#duplicateScenarioBtn", "#scenarioPanel")}
-              onClearAssignments={() => void triggerLegacy("#clearAssignmentsBtn", "#fieldPanel", "已触发清空当前阵容")}
-              onScenarioChange={changeLegacyScenario}
-              onOpenWorkspace={scrollToWorkspace}
-              onOpenScenarioPanel={() => void focusLegacy("#scenarioPanel")}
-              onOpenRosterPanel={() => void focusLegacy("#rosterPanel")}
-              onOpenFieldPanel={() => void focusLegacy("#fieldPanel")}
-              onOpenLineupPanel={() => void focusLegacy("#lineupPanel")}
-              onOpenWarningsPanel={() => void focusLegacy("#warnings")}
+              onAutoAssign={handleAutoAssign}
+              onAddPlayer={() => navigate("/roster")}
+              onImport={() => navigate("/import-export")}
+              onCreateScenario={handleCreateScenario}
+              onExportWorkspace={handleExportWorkspace}
+              onExportScenario={handleExportScenario}
+              onRenameScenario={() => navigate("/scenarios")}
+              onDuplicateScenario={handleDuplicateScenario}
+              onClearAssignments={handleClearAssignments}
+              onScenarioChange={handleScenarioChange}
+              onOpenWorkspace={() => navigate("/lineup")}
+              onOpenScenarioPanel={() => navigate("/scenarios")}
+              onOpenRosterPanel={() => navigate("/roster")}
+              onOpenFieldPanel={() => navigate("/lineup")}
+              onOpenLineupPanel={() => navigate("/lineup")}
+              onOpenWarningsPanel={() => navigate("/lineup")}
             />
           )}
-          frameEyebrow="Deep Edit Workspace"
-          frameTitle="深入编辑工作台"
-          frameDescription="首页总控区负责判断与入口，完整球员编辑、拖拽排阵和方案细调继续留在下方 legacy 工作台。"
-          frameVariant="legacy"
-        >
-          <div ref={legacyFrameAnchorRef} />
-          <div ref={legacyRootRef} dangerouslySetInnerHTML={{ __html: preparedMarkup }} />
-        </AppShell>
+        />
       </div>
       <HelpDrawer
         isOpen={helpOpen}

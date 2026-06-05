@@ -4,7 +4,7 @@
 为整个球员管理系统制定一套高辨识度、可分阶段落地的前端重构蓝图：既重做信息架构与页面组织，也定义明确的视觉方向、交互优先级与实施顺序，避免“首页还是旧壳、详情页是新壳”的割裂体验。
 
 ## 当前事实（基于仓库）
-- `/` 仍以 `PlayerManagerClient` + `player-manager-dom.ts` 挂载 legacy manager 为主。
+- 制定本蓝图时，`/` 仍以 `PlayerManagerClient` + `player-manager-dom.ts` 挂载 legacy manager 为主；该 legacy runtime 已在后续计划中清退。
 - `/players/[playerId]` 已经是较新的 React 页面，适合作为新设计语言的试验田。
 - 当前 UI 是 React + legacy DOM 混合架构，不能假设一次性全量重写。
 - 项目已有主题系统、帮助抽屉、引导浮层、档案页、解锁页与本地自托管字体能力。
@@ -266,7 +266,7 @@
 - 风险最低：改的是结构和视觉承载层，不会马上碰最复杂的业务交互
 
 ## 下一步建议（可执行）
-前端重构蓝图的 Phase 1–5 已全部完成。若继续推进，建议进入单独的新阶段：**legacy 首页工作台退役 / 拆除 `player-manager-dom.ts` 剩余路径**。
+前端重构蓝图的 Phase 1–5 已全部完成；后续提出的 **legacy 首页工作台退役** 也已在 `docs/exec-plans/completed/20260605-legacy-homepage-retirement.md` 中完成。
 
 ### Slice 1：全局壳层重建（已完成）
 目标：进入系统后，先让 UI 从“旧页面 + 新组件拼接”变成一个统一的产品。

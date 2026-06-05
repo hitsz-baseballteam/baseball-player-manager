@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { PlayerManagerClient } from "@/components/player-manager-client";
 import { UnlockForm } from "@/components/unlock-form";
 import { isUnlockCookieValid, UNLOCK_COOKIE_NAME } from "@/lib/auth";
-import { getLegacyTemplate } from "@/lib/legacy-template";
 import { getOrCreateWorkspaceSnapshot } from "@/lib/workspace-store";
 
 export default async function HomePage() {
@@ -14,17 +13,12 @@ export default async function HomePage() {
     return <UnlockForm />;
   }
 
-  const [snapshot, template] = await Promise.all([
-    getOrCreateWorkspaceSnapshot(),
-    Promise.resolve(getLegacyTemplate()),
-  ]);
+  const snapshot = await getOrCreateWorkspaceSnapshot();
 
   return (
     <PlayerManagerClient
       initialWorkspace={snapshot.workspace}
       initialVersion={snapshot.version}
-      markup={template.markup}
-      styles={template.styles}
     />
   );
 }

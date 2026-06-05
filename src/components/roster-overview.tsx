@@ -5,7 +5,7 @@ import {
   type Scenario,
   type Workspace,
 } from "@/lib/workspace";
-import { filterPlayers, type PlayerFilterState } from "@/lib/dom-scenario-ops";
+import { filterPlayers, type PlayerFilterState } from "@/lib/roster-actions";
 
 import styles from "@/components/roster-overview.module.css";
 
