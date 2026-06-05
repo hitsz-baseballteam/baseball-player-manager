@@ -1,0 +1,91 @@
+.panel {
+  overflow-y: auto;
+  padding: 1rem;
+  background: var(--theme-surface);
+  border-right: 1px solid var(--theme-border);
+}
+
+@media (max-width: 900px) {
+  .panel {
+    border-right: none;
+    border-top: 1px solid var(--theme-border);
+  }
+}
+
+.title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--theme-muted);
+  margin: 0 0 0.75rem;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: var(--theme-bg);
+  border: 1px solid var(--theme-border);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--theme-muted);
+  color: var(--theme-bg);
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.badgeAvailable {
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+.name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--theme-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meta {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}
+.tag {
+  font-size: 0.67rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+  color: var(--theme-accent);
+  font-weight: 600;
+}
+.tagMuted {
+  background: color-mix(in srgb, var(--theme-muted) 14%, transparent);
+  color: var(--theme-muted);
+}
+.tagWarn {
+  background: color-mix(in srgb, var(--theme-warn) 14%, transparent);
+  color: var(--theme-warn);
+}

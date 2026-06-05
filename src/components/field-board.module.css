@@ -1,0 +1,150 @@
+.fieldWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--theme-bg);
+  border-right: 1px solid var(--theme-border);
+  overflow: auto;
+}
+
+.fieldContainer {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 1;
+}
+
+.fieldSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Grass */
+.fieldGrass {
+  fill: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-bg));
+}
+.fieldDirt {
+  fill: color-mix(in srgb, #c2883c 18%, var(--theme-bg));
+}
+.fieldLine {
+  stroke: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  stroke-width: 0.4;
+  fill: none;
+}
+
+/* Position nodes */
+.posNode {
+  cursor: pointer;
+}
+.posCircle {
+  fill: var(--theme-surface);
+  stroke: var(--theme-border);
+  stroke-width: 0.8;
+  transition: fill 0.15s, stroke 0.15s;
+}
+.posNode:hover .posCircle {
+  fill: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
+  stroke: var(--theme-accent);
+}
+.posCircleAssigned {
+  fill: color-mix(in srgb, var(--theme-accent) 22%, var(--theme-surface));
+  stroke: var(--theme-accent);
+}
+.posCircleWarn {
+  stroke: var(--theme-warn);
+  stroke-width: 1.2;
+}
+
+.posLabel {
+  font-size: 3px;
+  font-weight: 700;
+  fill: var(--theme-muted);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  font-family: inherit;
+}
+.posPlayerNumber {
+  font-size: 3.5px;
+  font-weight: 800;
+  fill: var(--theme-accent);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  font-family: inherit;
+}
+.posPlayerName {
+  font-size: 2.4px;
+  fill: var(--theme-fg);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  font-family: inherit;
+}
+
+/* Player picker dropdown */
+.pickerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.picker {
+  position: fixed;
+  z-index: 50;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--theme-shadow-strong) 24%, transparent);
+  min-width: 200px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.4rem 0;
+}
+.pickerHeader {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--theme-muted);
+  padding: 0.4rem 0.85rem 0.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pickerItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  font-size: 0.825rem;
+  color: var(--theme-fg);
+  transition: background 0.12s;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+.pickerItem:hover { background: color-mix(in srgb, var(--theme-accent) 10%, transparent); }
+.pickerItemActive { background: color-mix(in srgb, var(--theme-accent) 16%, transparent); font-weight: 600; }
+.pickerItemClear { color: var(--theme-danger); }
+.pickerItemClear:hover { background: color-mix(in srgb, var(--theme-danger) 10%, transparent); }
+.pickerBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.pickerWarn {
+  font-size: 0.72rem;
+  color: var(--theme-warn);
+  margin-left: auto;
+}

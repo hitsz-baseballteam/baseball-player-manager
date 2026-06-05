@@ -1,0 +1,112 @@
+.page {
+  display: contents;
+}
+
+/* ── Action bar ── */
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--theme-surface);
+  border-bottom: 1px solid var(--theme-border);
+  flex-wrap: wrap;
+}
+
+.scenarioSelect {
+  font-size: 0.875rem;
+  font-family: inherit;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-bg);
+  color: var(--theme-fg);
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.actionSpacer {
+  flex: 1;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btnPrimary:hover { opacity: 0.85; }
+.btnPrimary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  color: var(--theme-fg);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnSecondary:hover { background: var(--theme-surface); }
+.btnSecondary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Warnings bar ── */
+.warningsBar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  background: color-mix(in srgb, var(--theme-warn) 8%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-warn) 20%, transparent);
+  flex-wrap: wrap;
+  min-height: 0;
+}
+.warningChip {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--theme-warn) 15%, transparent);
+  color: var(--theme-warn);
+  font-weight: 500;
+}
+
+/* ── Three-column board ── */
+.board {
+  display: grid;
+  grid-template-columns: 280px 1fr 260px;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .board {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    overflow: auto;
+  }
+}
+
+.saveStatus {
+  font-size: 0.78rem;
+  color: var(--theme-muted);
+}
+.saveError {
+  font-size: 0.78rem;
+  color: var(--theme-danger);
+}
