@@ -35,6 +35,15 @@
   border-radius: 10px;
   background: var(--theme-bg);
   border: 1px solid var(--theme-border);
+  cursor: grab;
+  transition: border-color 0.15s, opacity 0.15s, box-shadow 0.15s;
+}
+.card:hover { cursor: grab; }
+.cardDragging { opacity: 0.3; cursor: grabbing; }
+.cardDropActive {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 25%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-bg));
 }
 
 .badge {

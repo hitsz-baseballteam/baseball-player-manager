@@ -58,6 +58,13 @@
   stroke-width: 1.2;
 }
 
+.posNodeDragging .posCircle { opacity: 0.35; }
+.posNodeDropActive .posCircle {
+  fill: color-mix(in srgb, var(--theme-accent) 30%, var(--theme-surface));
+  stroke: var(--theme-accent);
+  stroke-width: 1.6;
+}
+
 .posLabel {
   font-size: 3px;
   font-weight: 700;
@@ -147,4 +154,22 @@
   font-size: 0.72rem;
   color: var(--theme-warn);
   margin-left: auto;
+}
+
+/* ── Drag-and-drop overlay divs ── */
+.dndOverlay {
+  position: absolute;
+  width: 14%;
+  height: 14%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 5;
+  background: transparent;
+}
+.dndOverlay[data-draggable]:hover { cursor: grab; }
+.dndOverlayDragging { opacity: 0.3; cursor: grabbing; }
+.dndOverlayDropActive {
+  box-shadow: 0 0 0 3px var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
 }

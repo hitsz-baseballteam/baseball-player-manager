@@ -16,7 +16,9 @@ import {
   clearAllAssignments,
   clearDefensePosition,
   clearLineupSlot,
+  moveLineupSlot,
   setActiveScenarioAction,
+  swapDefensePositions,
 } from "@/lib/lineup-actions";
 import {
   analyzeScenarioWarnings,
@@ -104,12 +106,20 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
     handleSave(clearDefensePosition(workspace, position));
   }
 
+  function handleDefenseSwap(fromPos: PositionCode, toPos: PositionCode) {
+    handleSave(swapDefensePositions(workspace, fromPos, toPos));
+  }
+
   function handleLineupAssign(index: number, playerId: string) {
     handleSave(assignLineupSlot(workspace, index, playerId));
   }
 
   function handleLineupClear(index: number) {
     handleSave(clearLineupSlot(workspace, index));
+  }
+
+  function handleLineupMove(fromIndex: number, toIndex: number) {
+    handleSave(moveLineupSlot(workspace, fromIndex, toIndex));
   }
 
   return (
@@ -185,12 +195,14 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
             defense={activeScenario.assignments.defense}
             onAssign={handleDefenseAssign}
             onClear={handleDefenseClear}
+            onSwap={handleDefenseSwap}
           />
           <LineupOrder
             players={workspace.players}
             lineup={activeScenario.assignments.lineup}
             onAssign={handleLineupAssign}
             onClear={handleLineupClear}
+            onMove={handleLineupMove}
           />
         </div>
       </AppShell>

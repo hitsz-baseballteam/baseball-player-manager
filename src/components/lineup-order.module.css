@@ -32,12 +32,19 @@
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, opacity 0.15s;
   min-height: 44px;
 }
 .slot:hover {
   border-color: var(--theme-accent);
   background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
+}
+.slotDragging { opacity: 0.3; cursor: grabbing; }
+.slotDropActive {
+  border-color: var(--theme-accent);
+  border-width: 2px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 25%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
 }
 
 .slotIndex {

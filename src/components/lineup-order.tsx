@@ -16,10 +16,13 @@ type LineupOrderProps = {
   lineup: Array<string | null>;
   onAssign: (index: number, playerId: string) => void;
   onClear: (index: number) => void;
+  onMove: (fromIndex: number, toIndex: number) => void;
 };
 
-export function LineupOrder({ players, lineup, onAssign, onClear }: LineupOrderProps) {
+export function LineupOrder({ players, lineup, onAssign, onClear, onMove }: LineupOrderProps) {
   const [picker, setPicker] = useState<PickerState>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [dragSourceIdx, setDragSourceIdx] = useState<number | null>(null);
 
   function handleSlotClick(index: number, e: React.MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -40,6 +43,11 @@ export function LineupOrder({ players, lineup, onAssign, onClear }: LineupOrderP
     setPicker(null);
   }
 
+  function clearDragState() {
+    setDragOverIdx(null);
+    setDragSourceIdx(null);
+  }
+
   const availablePlayers = players.filter((p) => p.status === "available");
 
   return (
@@ -49,11 +57,56 @@ export function LineupOrder({ players, lineup, onAssign, onClear }: LineupOrderP
         {Array.from({ length: 9 }, (_, i) => {
           const playerId = lineup[i] ?? null;
           const player = playerId ? players.find((p) => p.id === playerId) : null;
+          const isOccupied = !!player;
+          const isDragging = dragSourceIdx === i;
+          const isDropActive = dragOverIdx === i;
+
           return (
             <li key={i}>
               <div
-                className={styles.slot}
+                className={`${styles.slot} ${isDragging ? styles.slotDragging : ""} ${isDropActive ? styles.slotDropActive : ""}`}
                 onClick={(e) => handleSlotClick(i, e)}
+                draggable={isOccupied}
+                onDragStart={(e) => {
+                  if (!isOccupied) {
+                    e.preventDefault();
+                    return;
+                  }
+                  e.dataTransfer.setData("text/plain", `lineup:${i}`);
+                  e.dataTransfer.effectAllowed = "move";
+                  setDragSourceIdx(i);
+                }}
+                onDragEnd={() => {
+                  clearDragState();
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setDragOverIdx(i);
+                }}
+                onDragLeave={() => {
+                  if (dragOverIdx === i) setDragOverIdx(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const token = e.dataTransfer.getData("text/plain");
+                  clearDragState();
+                  if (!token) return;
+                  if (token.startsWith("player:")) {
+                    const playerId = token.slice("player:".length);
+                    onAssign(i, playerId);
+                  } else if (token.startsWith("lineup:")) {
+                    const fromIdx = parseInt(token.slice("lineup:".length), 10);
+                    if (fromIdx !== i) {
+                      onMove(fromIdx, i);
+                    }
+                  } else if (token.startsWith("defense:")) {
+                    // Drag from field — find the player at that position and assign
+                    // We don't have defense data here, but we can pass through
+                    // Actually we don't have defense mapping — let parent handle this
+                    // For now, ignore defense tokens in lineup
+                  }
+                }}
                 role="button"
                 aria-label={`第 ${i + 1} 棒${player ? `：${player.name}` : "：空"}`}
               >

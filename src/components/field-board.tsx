@@ -16,18 +16,19 @@ type FieldBoardProps = {
   defense: Record<PositionCode, string | null>;
   onAssign: (position: PositionCode, playerId: string) => void;
   onClear: (position: PositionCode) => void;
+  onSwap: (fromPos: PositionCode, toPos: PositionCode) => void;
 };
 
-export function FieldBoard({ players, defense, onAssign, onClear }: FieldBoardProps) {
+export function FieldBoard({ players, defense, onAssign, onClear, onSwap }: FieldBoardProps) {
   const [picker, setPicker] = useState<PickerState>(null);
+  const [dragOverPos, setDragOverPos] = useState<PositionCode | null>(null);
+  const [dragSourcePos, setDragSourcePos] = useState<PositionCode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close picker on outside click handled by backdrop div
-
+  // ── Click picker ──
   function handlePositionClick(pos: PositionCode, svgX: number, svgY: number) {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    // Convert SVG percentage coords to viewport px
     const x = rect.left + (svgX / 100) * rect.width;
     const y = rect.top + (svgY / 100) * rect.height;
     setPicker((prev) => (prev?.position === pos ? null : { position: pos, x, y }));
@@ -45,9 +46,6 @@ export function FieldBoard({ players, defense, onAssign, onClear }: FieldBoardPr
     setPicker(null);
   }
 
-  const availablePlayers = players.filter((p) => p.status === "available");
-
-  // Recalculate picker position when window resizes
   useEffect(() => {
     if (!picker) return;
     const onResize = () => setPicker(null);
@@ -55,89 +53,77 @@ export function FieldBoard({ players, defense, onAssign, onClear }: FieldBoardPr
     return () => window.removeEventListener("resize", onResize);
   }, [picker]);
 
+  function clearDragState() {
+    setDragOverPos(null);
+    setDragSourcePos(null);
+  }
+
+  // ── Drop handler shared across all positions ──
+  // ── Drop handler shared across all positions ──
+  function handleDrop(targetPos: PositionCode, e: React.DragEvent) {
+    e.preventDefault();
+    const token = e.dataTransfer.getData("text/plain");
+    clearDragState();
+    if (!token) return;
+    if (token.startsWith("player:")) {
+      const playerId = token.slice("player:".length);
+      onAssign(targetPos, playerId);
+    } else if (token.startsWith("defense:")) {
+      const fromPos = token.slice("defense:".length) as PositionCode;
+      if (fromPos !== targetPos) {
+        onSwap(fromPos, targetPos);
+      }
+    }
+  }
+
+  const availablePlayers = players.filter((p) => p.status === "available");
+
   return (
     <div className={styles.fieldWrapper}>
       <div ref={containerRef} className={styles.fieldContainer}>
+        {/* SVG field diagram */}
         <svg
           className={styles.fieldSvg}
           viewBox="0 0 100 100"
           preserveAspectRatio="xMidYMid meet"
           aria-label="守备位置图"
         >
-          {/* Outfield grass */}
-          <path
-            className={styles.fieldGrass}
-            d="M50,96 L8,96 L8,8 Q50,2 92,8 L92,96 Z"
-          />
-          {/* Infield dirt diamond */}
-          <polygon
-            className={styles.fieldDirt}
-            points="50,58 68,72 50,92 32,72"
-          />
-          {/* Foul lines */}
+          <path className={styles.fieldGrass} d="M50,96 L8,96 L8,8 Q50,2 92,8 L92,96 Z" />
+          <polygon className={styles.fieldDirt} points="50,58 68,72 50,92 32,72" />
           <line className={styles.fieldLine} x1="50" y1="96" x2="10" y2="10" />
           <line className={styles.fieldLine} x1="50" y1="96" x2="90" y2="10" />
-          {/* Infield square */}
-          <polygon
-            className={styles.fieldLine}
-            points="50,58 68,72 50,86 32,72"
-          />
-          {/* Pitcher's mound circle */}
+          <polygon className={styles.fieldLine} points="50,58 68,72 50,86 32,72" />
           <circle className={styles.fieldLine} cx="50" cy="70" r="3.5" />
-          {/* Outfield arc */}
-          <path
-            className={styles.fieldLine}
-            d="M12,88 Q50,10 88,88"
-          />
+          <path className={styles.fieldLine} d="M12,88 Q50,10 88,88" />
 
-          {/* Position nodes */}
           {POSITIONS.map((pos) => {
             const assignedId = defense[pos.code] ?? null;
-            const assignedPlayer = assignedId
-              ? players.find((p) => p.id === assignedId)
-              : null;
+            const assignedPlayer = assignedId ? players.find((p) => p.id === assignedId) : null;
             const isAssigned = !!assignedPlayer;
-            // Warn if player doesn't have this position in their list
-            const isWarn =
-              isAssigned &&
-              assignedPlayer &&
-              !assignedPlayer.positions.includes(pos.code);
-
+            const isWarn = isAssigned && assignedPlayer && !assignedPlayer.positions.includes(pos.code);
+            const isDragging = dragSourcePos === pos.code;
+            const isDropActive = dragOverPos === pos.code;
             const r = 5.5;
 
             return (
-              <g
-                key={pos.code}
-                className={styles.posNode}
-                onClick={() => handlePositionClick(pos.code, pos.x, pos.y)}
-                role="button"
-                aria-label={`${pos.label}${isAssigned ? `：${assignedPlayer?.name}` : "：空"}`}
+              <g key={pos.code}
+                className={`${isDragging ? styles.posNodeDragging : ""} ${isDropActive ? styles.posNodeDropActive : ""}`}
               >
                 <circle
-                  cx={pos.x}
-                  cy={pos.y}
-                  r={r}
+                  cx={pos.x} cy={pos.y} r={r}
                   className={`${styles.posCircle} ${isAssigned ? styles.posCircleAssigned : ""} ${isWarn ? styles.posCircleWarn : ""}`}
                 />
                 {isAssigned && assignedPlayer ? (
                   <>
-                    <text
-                      x={pos.x}
-                      y={pos.y - 1.2}
-                      className={styles.posPlayerNumber}
-                    >
+                    <text x={pos.x} y={pos.y - 1.2} className={styles.posPlayerNumber} style={{ pointerEvents: "none" }}>
                       {assignedPlayer.number}
                     </text>
-                    <text
-                      x={pos.x}
-                      y={pos.y + 2.2}
-                      className={styles.posPlayerName}
-                    >
+                    <text x={pos.x} y={pos.y + 2.2} className={styles.posPlayerName} style={{ pointerEvents: "none" }}>
                       {assignedPlayer.name.slice(0, 4)}
                     </text>
                   </>
                 ) : (
-                  <text x={pos.x} y={pos.y} className={styles.posLabel}>
+                  <text x={pos.x} y={pos.y} className={styles.posLabel} style={{ pointerEvents: "none" }}>
                     {pos.code}
                   </text>
                 )}
@@ -145,15 +131,63 @@ export function FieldBoard({ players, defense, onAssign, onClear }: FieldBoardPr
             );
           })}
         </svg>
+
+        {/* HTML overlay for drag-and-drop — absolutely positioned over each position circle */}
+        {POSITIONS.map((pos) => {
+          const assignedId = defense[pos.code] ?? null;
+          const assignedPlayer = assignedId ? players.find((p) => p.id === assignedId) : null;
+          const isAssigned = !!assignedPlayer;
+          const isDragging = dragSourcePos === pos.code;
+          const isDropActive = dragOverPos === pos.code;
+
+          // Position the overlay at the SVG coordinate percentage
+          return (
+            <div
+              key={`dnd-${pos.code}`}
+              className={`${styles.dndOverlay} ${isDragging ? styles.dndOverlayDragging : ""} ${isDropActive ? styles.dndOverlayDropActive : ""}`}
+              style={{
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
+              }}
+              draggable={isAssigned}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePositionClick(pos.code, pos.x, pos.y);
+              }}
+              onDragStart={(e) => {
+                if (!isAssigned) {
+                  e.preventDefault();
+                  return;
+                }
+                e.dataTransfer.setData("text/plain", `defense:${pos.code}`);
+                e.dataTransfer.effectAllowed = "move";
+                setDragSourcePos(pos.code);
+              }}
+              onDragEnd={() => {
+                clearDragState();
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setDragOverPos(pos.code);
+              }}
+              onDragLeave={() => {
+                if (dragOverPos === pos.code) setDragOverPos(null);
+              }}
+              onDrop={(e) => {
+                handleDrop(pos.code, e);
+              }}
+              role="button"
+              aria-label={`${pos.label}${isAssigned ? `：${assignedPlayer?.name}` : "：空"}`}
+            />
+          );
+        })}
       </div>
 
       {/* Player picker */}
       {picker && (
         <>
-          <div
-            className={styles.pickerBackdrop}
-            onClick={() => setPicker(null)}
-          />
+          <div className={styles.pickerBackdrop} onClick={() => setPicker(null)} />
           <PlayerPicker
             position={picker.position}
             anchorX={picker.x}
@@ -190,7 +224,6 @@ function PlayerPicker({
 }: PlayerPickerProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Flip to keep inside viewport
   useEffect(() => {
     if (!ref.current) return;
     const el = ref.current;
