@@ -439,11 +439,11 @@ src/components/
 
 - [x] 2026-06-05 — 产品决策确认（全拖拽 / 场景对比 / 串行 / 完全新写 React / JSON+CSV / 独立设置页）
 - [x] 2026-06-05 — 完成详细计划草案
-- [ ] Slice 4A：共享排阵逻辑层（`lineup-actions.ts` + 测试）
-- [ ] Slice 4B：`/lineup` 排阵页骨架 + SVG 球场图（点击选人，无拖拽）
-- [ ] Slice 4C：全拖拽交互落地（守备图 + 打线列表）
-- [ ] Slice 4D：`/scenarios` 场景管理 + 对比视图
-- [ ] Slice 4E：导航激活 + legacy 排阵清退注释
+- [x] Slice 4A：共享排阵逻辑层（`lineup-actions.ts` + 测试）
+- [x] Slice 4B：`/lineup` 排阵页骨架 + SVG 球场图（点击选人，无拖拽）
+- [x] Slice 4C：全拖拽交互落地（守备图 + 打线列表）
+- [x] Slice 4D：`/scenarios` 场景管理 + 对比视图
+- [x] Slice 4E：导航激活 + legacy 排阵清退注释
 - [ ] Slice 5A：共享导入导出逻辑层（`export-actions.ts` + CSV + 测试）
 - [ ] Slice 5B：`/import-export` 数据中心页面
 - [ ] Slice 5C：`/settings` 设置页
