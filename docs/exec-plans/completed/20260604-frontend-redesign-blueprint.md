@@ -78,8 +78,8 @@
 
 #### 6. 数据中心 `/import-export`
 低频但重要。
-- 导入 JSON/CSV
-- 导出当前工作区
+- 导入 JSON
+- 导出当前工作区 / 当前方案 / 球员 CSV
 - 备份/恢复
 - 数据结构说明
 
@@ -208,7 +208,11 @@
 - `/scenarios`
 - 可视化守位板、拖拽、场景对比
 
-执行计划：`docs/exec-plans/active/20260605-phase4-5-lineup-scenarios-data-settings.md`
+执行计划：`docs/exec-plans/completed/20260605-phase4-5-lineup-scenarios-data-settings.md`
+
+当前进度：
+- Phase 4 已完成：`/lineup` 与 `/scenarios` 已迁入 React 页面，支持守备图 / 打线拖拽、场景管理和对比视图
+- 导航已激活，相关 legacy 排阵路径已标注 `// MIGRATED`
 
 已确认决策：
 - 排阵页采用 **全拖拽**（SVG 球场图守备 + 打线列表拖拽排序）
@@ -221,7 +225,12 @@
 - `/settings`
 - 帮助与引导整合
 
-执行计划：`docs/exec-plans/active/20260605-phase4-5-lineup-scenarios-data-settings.md`（与 Phase 4 共用）
+执行计划：`docs/exec-plans/completed/20260605-phase4-5-lineup-scenarios-data-settings.md`（与 Phase 4 共用）
+
+当前进度：
+- Phase 5 已完成：`/import-export` 与 `/settings` 已上线并接入主导航
+- 数据中心当前支持 JSON 导入、工作区 / 场景 JSON 导出，以及球员 CSV 导出
+- 设置页已接入主题切换、重置示例数据、退出登录、引导与帮助入口
 
 已确认决策：
 - 数据中心：JSON 导入导出迁移 + 新增 CSV 球员列表导出
@@ -235,13 +244,13 @@
 - 每一阶段都要求：代码可运行、文档同步、测试/构建可验证
 
 ## 验证
-- [ ] 视觉蓝图得到确认
-- [ ] 关键信息架构得到确认
-- [ ] 每阶段实施前都有明确页面边界
-- [ ] `npm test`
-- [ ] `npm run lint`
-- [ ] `npm run build`
-- [ ] 关键页面手动检查：解锁页、首页、球员档案页
+- [x] 视觉蓝图得到确认
+- [x] 关键信息架构得到确认
+- [x] 每阶段实施前都有明确页面边界
+- [x] `npm test`
+- [x] `npm run lint`（0 error，保留既有 legacy warning）
+- [x] `npm run build`
+- [ ] 关键页面手动检查：解锁页、首页、球员档案页（仓库内未保留自动化浏览器脚本记录）
 
 ## 已确认决策
 1. 总视觉方向：采用“**战术板 + 年鉴**”
@@ -257,6 +266,8 @@
 - 风险最低：改的是结构和视觉承载层，不会马上碰最复杂的业务交互
 
 ## 下一步建议（可执行）
+前端重构蓝图的 Phase 1–5 已全部完成。若继续推进，建议进入单独的新阶段：**legacy 首页工作台退役 / 拆除 `player-manager-dom.ts` 剩余路径**。
+
 ### Slice 1：全局壳层重建（已完成）
 目标：进入系统后，先让 UI 从“旧页面 + 新组件拼接”变成一个统一的产品。
 

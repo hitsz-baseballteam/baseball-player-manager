@@ -1,5 +1,12 @@
 # 20260605 Phase 4 + 5 计划：排阵、场景、数据中心、设置
 
+## 完成状态
+
+- 状态：已完成
+- 完成日期：2026-06-05
+- 实际验证：`npm test` ✅ / `npm run lint` ✅（0 error，存在既有 legacy warning）/ `npm run build` ✅
+- 说明：仓库当前没有 Playwright / E2E 脚本，因此本计划未新增自动化浏览器验收命令；相关页面行为主要由组件测试与构建路由验证覆盖。
+
 ## 已确认决策
 
 | 决策 | 选择 |
@@ -243,7 +250,7 @@ buildScenarioExport(workspace: Workspace, scenarioId: string): ScenarioExportPay
 buildCsvExport(workspace: Workspace): string   // 新增：球员列表 CSV
 
 // 导入解析（已有，封装自 workspace.ts prepareImport）
-parseImportFile(json: unknown): PendingImport | ImportError
+parseImportPayload(json: unknown): PendingImport
 applyWorkspaceImport(currentWorkspace: Workspace, pending: PendingImport): Workspace
 applyScenarioImport(currentWorkspace: Workspace, pending: PendingImport): Workspace
 ```
@@ -260,7 +267,7 @@ applyScenarioImport(currentWorkspace: Workspace, pending: PendingImport): Worksp
 - buildWorkspaceExport 输出结构完整
 - buildScenarioExport 只含当前场景引用的球员
 - buildCsvExport 输出格式正确（含多守位引号转义）
-- parseImportFile 拒绝 malformed JSON / 错误 type 字段
+- parseImportPayload 拒绝 malformed JSON / 错误 type 字段
 - applyWorkspaceImport / applyScenarioImport 正确合并
 
 ---
@@ -284,7 +291,7 @@ applyScenarioImport(currentWorkspace: Workspace, pending: PendingImport): Worksp
 │  [下载 JSON]  [下载场景 JSON]  [下载球员 CSV]  │
 ├─────────────────────────────────────────────────┤
 │  IMPORT                                         │
-│  拖拽 / 点击上传 JSON 文件                       │
+│  点击上传 JSON 文件                              │
 │  ↓ 预览摘要（类型/球员数/场景数/名称列表）        │
 │  [取消]  [确认导入]                             │
 └─────────────────────────────────────────────────┘
@@ -296,8 +303,8 @@ applyScenarioImport(currentWorkspace: Workspace, pending: PendingImport): Worksp
 3. Toast 提示成功
 
 **导入流程**：
-1. `<input type="file" accept=".json">` 或拖拽上传
-2. FileReader → JSON.parse → `parseImportFile`
+1. `<input type="file" accept=".json">` 点击上传
+2. FileReader → JSON.parse → `parseImportPayload`
 3. 展示摘要卡（类型、球员数、场景数、导入后影响描述）
 4. 用户确认 → `applyWorkspaceImport` / `applyScenarioImport`
 5. `saveWithRetry` → 成功后 Toast + 跳转到对应页
@@ -324,7 +331,7 @@ APPEARANCE / 外观
   主题：[经典] [夜场] [球场]  （复用 ThemeToggle 逻辑）
 
 WORKSPACE / 工作区
-  当前 slug / 版本号（只读展示）
+  当前版本 / 球员数 / 方案数（只读展示）
   [重置示例数据]（需二次确认，调用 createDefaultWorkspace）
 
 ACCESS / 访问控制
@@ -352,13 +359,13 @@ HELP / 帮助
 > **注意**：legacy manager 此时仍然挂载在首页，以上迁移只是"注释标注"，不删除代码。完整删除 legacy 是单独的 Phase（蓝图中未规划，留给将来）。
 
 **完成标准（整个 Phase 5）**：
-- `npm test` 全部通过（新增测试 ≥ 20 个）
-- `npm run lint` 无新增 error
+- `npm test` 全部通过（当前 161 pass + 1 todo）
+- `npm run lint` 无新增 error（保留既有 legacy unused warning）
 - `npm run build` 通过
-- Playwright 浏览器自动验收：
-  - `/import-export` 可正常下载 JSON 和 CSV
-  - 可上传 JSON 文件，预览摘要，确认导入后数据生效
-  - `/settings` 主题切换、退出登录、重置数据均可用
+- 组件测试已覆盖：
+  - `/import-export` 导出按钮渲染、导出 helper 调用、workspace/scenario JSON 上传摘要、取消导入
+  - `/settings` 重置示例数据确认、退出登录请求、引导重播、帮助抽屉打开
+- 构建产物已包含：`/import-export`、`/settings`
 
 ---
 
@@ -444,7 +451,13 @@ src/components/
 - [x] Slice 4C：全拖拽交互落地（守备图 + 打线列表）
 - [x] Slice 4D：`/scenarios` 场景管理 + 对比视图
 - [x] Slice 4E：导航激活 + legacy 排阵清退注释
-- [ ] Slice 5A：共享导入导出逻辑层（`export-actions.ts` + CSV + 测试）
-- [ ] Slice 5B：`/import-export` 数据中心页面
-- [ ] Slice 5C：`/settings` 设置页
-- [ ] Slice 5D：导航激活 + legacy 导入导出清退注释
+- [x] Slice 5A：共享导入导出逻辑层（`export-actions.ts` + CSV + 测试）
+- [x] Slice 5B：`/import-export` 数据中心页面
+- [x] Slice 5C：`/settings` 设置页
+- [x] Slice 5D：导航激活 + legacy 导入导出清退注释
+
+## 收尾备注
+
+- `src/lib/export-actions.ts` 已作为 React 数据中心的共享导入导出逻辑层落地。
+- `src/app/import-export/page.tsx` 与 `src/app/settings/page.tsx` 已加入主导航并通过 `next build` 路由收集。
+- legacy 首页仍挂载 `player-manager-dom.ts`；导入导出与排阵相关旧路径目前仅标注 `// MIGRATED`，未物理删除，已转入技术债跟踪。

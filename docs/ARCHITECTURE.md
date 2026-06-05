@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-04.
+This document describes the repository as currently observed on 2026-06-05.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -42,9 +42,13 @@ From `package.json`:
 
 | Entry point | Role |
 |---|---|
-| `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot + legacy template and renders the hybrid manager UI inside `AppShell` |
-| `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor inside `AppShell` |
+| `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot + legacy template and renders the hybrid homepage inside `AppShell` |
 | `src/app/roster/page.tsx` | Roster workbench page; checks auth, loads workspace, renders React roster workbench inside `AppShell` |
+| `src/app/lineup/page.tsx` | Lineup workbench page; checks auth, loads workspace, renders React lineup board inside `AppShell` |
+| `src/app/scenarios/page.tsx` | Scenario management page; checks auth, loads workspace, renders React scenario list/compare UI inside `AppShell` |
+| `src/app/import-export/page.tsx` | Data-center page; checks auth, loads workspace, renders JSON import + export actions inside `AppShell` |
+| `src/app/settings/page.tsx` | Settings/help page; checks auth, loads workspace, renders theme/reset/logout/help controls inside `AppShell` |
+| `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor inside `AppShell` |
 | `src/app/api/unlock/route.ts` | Verifies shared passcode, applies rate limiting, sets signed cookie |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads and writes the shared workspace snapshot |
@@ -105,20 +109,20 @@ Observed limits and boundaries:
 
 ### 4. Hybrid UI architecture
 
-The main UI is a hybrid of React and legacy DOM rendering.
+The current UI is hybrid, but the hybrid boundary has moved.
 
 - `src/components/player-manager-client.tsx` renders `AppShell` + `HomeOverview`, prepares the legacy HTML fragment, mounts the legacy manager into the shell's legacy frame, and uses `legacy-bridge` to trigger legacy actions or focus specific panels from React
-- `src/lib/player-manager-dom.ts` still owns most roster, scenario, field, lineup, import/export, and interaction logic
+- `src/lib/player-manager-dom.ts` now primarily survives as the homepage legacy workspace surface; dedicated React routes exist for roster, lineup, scenarios, import/export, settings, and player profile
 - `src/lib/legacy-template.ts` extracts `<style>` and `<body>` fragments from `index.html`
 - `src/lib/legacy-bridge.ts` provides structured React → legacy DOM bridging for button triggers, select changes, panel focus, and temporary highlight feedback
-- React-managed overlays and adjunct UI currently include `AppShell`, `HomeOverview`, `RosterOverview`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
-- homepage overview interactions now split into two layers: React renders summary/actions, while `legacy-bridge` routes those actions into the legacy workspace without duplicating the underlying business logic
-- `src/lib/roster-actions.ts` provides shared create/edit/delete player logic for both the React roster workbench and the legacy DOM manager
+- React-managed page surfaces now include `AppShell`, `HomeOverview`, `RosterPageClient`, `LineupPageClient`, `ScenariosPageClient`, `ImportExportPageClient`, `SettingsPageClient`, `PlayerProfilePageClient`, `Toast`, `HelpDrawer`, `GuideOverlay`, `ThemeToggle`, `UnlockForm`, and `PlayerProfileEditor`
+- shared business logic is increasingly factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
+- homepage overview interactions still split into two layers: React renders summary/actions, while `legacy-bridge` routes those actions into the remaining legacy workspace without duplicating the underlying business logic
 
-This means the repository currently has two UI styles living side by side:
+This means the repository currently has two UI modes living side by side:
 
-1. a DOM-driven manager loaded from legacy markup and still owning most roster / lineup interactions
-2. newer React shell, homepage command desk, and adjunct components integrated around it
+1. a homepage-only legacy workspace mounted from extracted DOM markup
+2. newer React routes and shell-driven workbenches for roster / lineup / scenarios / import-export / settings / player profile
 
 ### 5. Database schema
 
@@ -149,6 +153,7 @@ These notes are based on current code imports and call sites, not aspirational r
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
 - the legacy DOM manager depends on many shared modules and remains the highest-coupling part of the UI
 - homepage React overview state is intentionally synchronized from the legacy manager via `ManagerCallbacks.onStateChange`, rather than reimplementing workspace mutation logic in parallel
+- React route pages persist through `workspace-client.ts` and the shared `/api/workspace` boundary rather than calling database code directly
 
 ## Tooling and Enforcement
 

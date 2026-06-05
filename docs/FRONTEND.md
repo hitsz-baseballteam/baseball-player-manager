@@ -4,19 +4,19 @@
 
 当前 UI 处于 **React + 旧 DOM 混合** 过渡期：
 
-- **新功能**以 React 组件实现（Next.js App Router）
-- **主力交互 UI**（守位球场、棒次、方案管理）仍由旧 DOM 管理器 `player-manager-dom.ts`（当前约 876 行）驱动
-- 球员名册已迁移至 React 工作台（`/roster`），但 legacy 名册区在首页仍可通过 legacy frame 访问
-- **迁移方向**：逐步将 DOM 管理器中的功能拆分为独立 React 组件
+- **新功能与主要工作台** 以 React 组件实现（Next.js App Router）
+- `/roster`、`/lineup`、`/scenarios`、`/import-export`、`/settings` 与 `/players/[playerId]` 已有独立 React 页面
+- 首页仍保留旧 DOM 管理器 `player-manager-dom.ts`（当前约 879 行）作为 legacy workspace frame
+- **迁移方向**：逐步将首页 legacy workspace 中剩余功能拆分为独立 React 组件
 
 ## 组件模式
 
 ### Server Components（默认）
 
-Next.js App Router 中，`page.tsx`、`players/[playerId]/page.tsx` 和 `layout.tsx` 默认是服务端组件，但职责并不相同：
+Next.js App Router 中，`/`、`/roster`、`/lineup`、`/scenarios`、`/import-export`、`/settings`、`/players/[playerId]` 的 `page.tsx` 以及 `layout.tsx` 默认都是服务端组件，但职责并不相同：
 
-- `page.tsx` / `players/[playerId]/page.tsx` 负责认证守卫（读取 cookie、验证 HMAC 签名）
-- 这两个 page server component 直接调用 `getOrCreateWorkspaceSnapshot()` 从数据库加载 workspace
+- 各页面 `page.tsx` 负责认证守卫（读取 cookie、验证 HMAC 签名）
+- 这些 page server component 直接调用 `getOrCreateWorkspaceSnapshot()` 从数据库加载 workspace
 - `layout.tsx` 主要负责全局字体与 metadata，不承担认证或数据加载
 - server component 将 workspace 作为 props 传递给客户端组件
 
@@ -44,6 +44,10 @@ page.tsx (server)
 | `PlayerManagerClient` | 混合 UI 容器：渲染 `AppShell` + `HomeOverview`，预处理 legacy markup（移除旧帮助/引导 DOM，避免重复 overlay），并在 shell 根节点挂载 legacy manager；DOM 管理器通过回调 ref 调用 toast/help，同时用 `onStateChange` 把最新 workspace / version / saveStatus 回推给 React 概览层；桥接动作与面板定位由 `legacy-bridge` 协调 |
 | `RosterPageClient` | 状态管理：名册工作台的 workspace/version、筛选、选择、对话框开关、保存与冲突处理 |
 | `RosterOverview` | React 名册工作台可视层：hero、filters、计数、列表、批量动作条 |
+| `LineupPageClient` | 状态管理：排阵工作台的 scenario 切换、拖拽分配、保存与冲突处理 |
+| `ScenariosPageClient` | 状态管理：场景 CRUD、当前方案切换、对比模式、保存与冲突处理 |
+| `ImportExportPageClient` | 状态管理：工作区/方案导出、球员 CSV 导出、JSON 导入预览与确认导入 |
+| `SettingsPageClient` | 设置页状态：主题、重置示例数据、退出登录、帮助/引导入口 |
 | `PlayerProfilePageClient` | 状态管理：workspace 读写 + 版本冲突处理，外层已纳入 `AppShell` |
 | `PlayerProfileEditor` | 纯客户端：完整档案编辑表单 + SVG 雷达图 |
 | `Toast` | Portal 渲染的 toast 通知 |
@@ -55,7 +59,7 @@ page.tsx (server)
 
 ```
 src/components/
-├── app-shell.tsx                    # 首页全局壳层
+├── app-shell.tsx                    # 全局壳层（首页与各 React 页面共享）
 ├── app-shell.module.css             # 壳层与 legacy frame 样式隔离
 ├── home-overview.tsx                # 首页总控区（提醒 / 动作 / 指标 / 阵容概览 / 精确跳转）
 ├── home-overview.module.css         # 总控区样式
@@ -64,6 +68,10 @@ src/components/
 ├── roster-overview.tsx              # 名册工作台可视层（筛选 / 计数 / 列表 / 动作）
 ├── roster-overview.module.css       # 名册工作台样式
 ├── roster-page-client.tsx           # 名册工作台 client 状态与对话框
+├── lineup-page-client.tsx           # 排阵工作台 client 状态
+├── scenarios-page-client.tsx        # 场景页 client 状态
+├── import-export-page-client.tsx    # 数据中心 client 状态
+├── settings-page-client.tsx         # 设置页 client 状态
 ├── player-profile-page-client.tsx   # 档案页面状态
 ├── player-profile-editor.tsx        # 档案编辑器（page + drawer）
 ├── player-profile-editor.module.css # 档案编辑器样式（CSS Modules）
@@ -74,7 +82,9 @@ src/components/
 
 src/lib/
 ├── legacy-bridge.ts                 # React → legacy DOM 的结构化桥接（trigger / changeSelect / focus）
-└── roster-actions.ts                # 创建/编辑/批量编辑/删除球员的共享业务逻辑
+├── roster-actions.ts                # 创建/编辑/批量编辑/删除球员的共享业务逻辑
+├── lineup-actions.ts                # 排阵与场景的共享纯逻辑
+└── export-actions.ts                # 数据中心导入导出共享逻辑
 ```
 
 ## 状态管理
@@ -82,7 +92,7 @@ src/lib/
 ### 核心状态流
 
 ```
-Server (`page.tsx` / `players/[playerId]/page.tsx`)
+Server（各业务页面 `page.tsx`）
   │  直接调用 `getOrCreateWorkspaceSnapshot()` → workspace snapshot
   │
   ▼
@@ -124,11 +134,12 @@ Client Component / Legacy Manager
 
 ### 当前状态
 
-- ~876 行（相较更早的 1742 行版本已明显收敛）
+- ~879 行（相较更早的 1742 行版本已明显收敛）
 - Toast、帮助抽屉、引导浮层、主题切换、首页壳层与首页总控区已迁移至 React 组件
-- 首页高频动作、指标卡与阵容概览现在还会通过 `legacy-bridge` 精确聚焦到 `scenarioPanel` / `rosterPanel` / `fieldPanel` / `lineupPanel` / `warnings`
-- 其余 UI 区域（球场、棒次、方案管理）仍由 DOM 管理器驱动
-- `src/lib/dom-dialogs.ts` 已接入共享 `roster-actions`，legacy 与 React 名册使用同一套新增/编辑/删除/批量编辑逻辑
+- `/roster`、`/lineup`、`/scenarios`、`/import-export`、`/settings` 与球员档案页已独立为 React 页面
+- 首页高频动作、指标卡与阵容概览仍通过 `legacy-bridge` 精确聚焦到 `scenarioPanel` / `rosterPanel` / `fieldPanel` / `lineupPanel` / `warnings`
+- legacy DOM 管理器当前主要保留为首页深入编辑工作台，以及与旧模板绑定的剩余交互路径
+- `src/lib/dom-dialogs.ts` 已接入共享 `roster-actions`，legacy 与 React 名册使用同一套新增/编辑/删除/批量编辑逻辑；排阵/场景与导入导出则已抽到 `lineup-actions.ts` / `export-actions.ts`
 
 ### 已知问题
 
@@ -148,8 +159,12 @@ Client Component / Legacy Manager
 
 | 路由 | 类型 | 功能 |
 |---|---|---|
-| `/` | Server + Client | 主页：认证门 → 工作区 → 球员管理器 |
+| `/` | Server + Client | 主页：认证门 → 首页总控区 + legacy 深入编辑工作台 |
 | `/roster` | Server + Client | 名册工作台：认证门 → 筛选 → 球员详情/编辑 |
+| `/lineup` | Server + Client | 排阵工作台：守备图 / 打线 / 替补区 / 自动排阵 |
+| `/scenarios` | Server + Client | 场景管理：CRUD + 双方案对比 |
+| `/import-export` | Server + Client | 数据中心：JSON 导入预览、JSON/CSV 导出 |
+| `/settings` | Server + Client | 设置与帮助：主题、重置数据、退出登录、帮助入口 |
 | `/players/[playerId]` | Server + Client | 球员档案独立页，已纳入统一壳层 |
 | `/api/unlock` | API (POST) | 认证：验证 passcode，签发 cookie |
 | `/api/logout` | API (POST) | 登出：清除 cookie |

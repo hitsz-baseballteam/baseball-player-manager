@@ -21,6 +21,8 @@ export function downloadJson(fileName: string, payload: unknown) {
   URL.revokeObjectURL(url);
 }
 
+// MIGRATED: React data-center pages should use src/lib/export-actions.ts for pure export/import logic.
+// These DOM helpers remain only for the legacy manager surface.
 export function exportWorkspace(workspace: Workspace, showToast: (msg: string) => void) {
   downloadJson(`baseball-workspace-${timestampFilePart()}.json`, {
     type: "workspace",
@@ -54,6 +56,7 @@ export function exportScenario(
   showToast("当前方案 JSON 已导出");
 }
 
+// MIGRATED: /lineup now uses src/lib/lineup-actions.ts + React UI. This helper remains for legacy manager only.
 export function autoAssignScenario(
   workspace: Workspace,
   getActiveScenario: () => Scenario,

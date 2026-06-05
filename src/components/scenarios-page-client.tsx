@@ -33,8 +33,8 @@ const NAV_ITEMS = [
   { label: "名册", href: "/roster" },
   { label: "排阵", href: "/lineup" },
   { label: "战术场景", href: "/scenarios", active: true },
-  { label: "数据中心", disabled: true, status: "规划中" },
-  { label: "设置", disabled: true, status: "规划中" },
+  { label: "数据中心", href: "/import-export" },
+  { label: "设置", href: "/settings" },
 ] as const;
 
 type ScenarioDialogState =

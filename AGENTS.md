@@ -28,14 +28,24 @@ Database migrations live in `supabase/migrations/`.
 |---|---|
 | `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export, and other pure workspace rules |
 | `src/lib/workspace-store.ts` | PostgreSQL read/write for the workspace snapshot with version-based optimistic concurrency |
-| `src/lib/player-manager-dom.ts` | Legacy DOM-based manager that still owns most of the main roster/scenario UI |
-| `src/components/app-shell.tsx` | New global shell for the homepage: masthead, nav, summary rail, content slots, and legacy workspace frame |
+| `src/lib/player-manager-dom.ts` | Legacy DOM-based homepage workspace manager; homepage still mounts it inside the legacy frame, but `/roster` `/lineup` `/scenarios` `/import-export` `/settings` are now React routes |
+| `src/components/app-shell.tsx` | Global shell shared by homepage, roster, lineup, scenarios, data center, settings, and player profile pages |
 | `src/components/home-overview.tsx` | Phase 2 homepage command desk: alert deck, command strip, metrics, scenario snapshot, lineup pulse, and bridge-driven entry actions |
 | `src/lib/legacy-bridge.ts` | Structured bridge from React homepage actions into legacy DOM buttons, selects, panel focus, and highlight feedback |
 | `src/app/roster/page.tsx` | Roster server route: auth gate, workspace snapshot load, renders `RosterPageClient` |
 | `src/components/roster-page-client.tsx` | Roster workbench page state hub: workspace/version, filters, selection, dialogs, save and conflict handling |
 | `src/components/roster-overview.tsx` | Roster workbench UI: action bar, filters, counts, player cards, bulk actions |
 | `src/lib/roster-actions.ts` | Shared roster business actions: upsert/bulk-edit/delete — single source of truth used by both React and legacy |
+| `src/app/lineup/page.tsx` | Lineup server route: auth gate, workspace snapshot load, renders `LineupPageClient` |
+| `src/components/lineup-page-client.tsx` | React lineup workbench page state hub: scenario switch, drag/drop assignments, save and conflict handling |
+| `src/app/scenarios/page.tsx` | Scenarios server route: auth gate, workspace snapshot load, renders `ScenariosPageClient` |
+| `src/components/scenarios-page-client.tsx` | React scenarios page: scenario CRUD, active switch, compare mode, save and conflict handling |
+| `src/lib/lineup-actions.ts` | Shared lineup/scenario pure actions used by React lineup/scenarios flows |
+| `src/app/import-export/page.tsx` | Data-center server route: auth gate, workspace snapshot load, renders `ImportExportPageClient` |
+| `src/components/import-export-page-client.tsx` | React data center: JSON import preview, workspace/scenario JSON export, player CSV export |
+| `src/app/settings/page.tsx` | Settings server route: auth gate, workspace snapshot load, renders `SettingsPageClient` |
+| `src/components/settings-page-client.tsx` | React settings/help page: theme, reset example data, logout, guide/help entry points |
+| `src/lib/export-actions.ts` | Shared pure import/export helpers used by the React data center |
 | `src/components/player-profile-editor.tsx` | React-based player profile editor for both page (`pageSurface="embedded"`) and drawer flows |
 | `src/components/player-profile-page-client.tsx` | Player profile page client state and AppShell shell integration |
 | `src/lib/auth.ts` | Shared-passcode cookie signing and verification |
@@ -74,6 +84,16 @@ Known debt lives in [docs/exec-plans/tech-debt-tracker.md](./docs/exec-plans/tec
 - [docs/product-specs/index.md](./docs/product-specs/index.md) — feature specs (currently sparse)
 - [docs/generated/history/](./docs/generated/history/) — prior session summaries
 - [docs/references/](./docs/references/) — external references; files must use the `-llms.txt` suffix
+  - [docs/references/pi-models-llms.txt](./docs/references/pi-models-llms.txt) — pi built-in models catalog (providers, context windows, thinking, image support)
+
+## Subagent Defaults
+
+| Agent | 用途 | 上下文 | 主要输出 | 模型 |
+|---|---|---|---|---|
+| `worker` | 唯一的执行者：实施代码修改 | `fork` | 编辑后的文件 + 验证结果 | `deepseek-4v-pro high` |
+| `reviewer` | 审查代码 / diff / 计划 / PR / 代码健康度 | `fresh` | 审查发现（带 file:line） | `deepseek-4v-pro high` |
+
+Keep writes single-threaded unless isolated worktrees are intentionally used.
 
 ## Working Rules
 

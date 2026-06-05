@@ -526,6 +526,8 @@ export function mountPlayerManager(
     els.autoAssignBtn.addEventListener("click", () => autoAssignScenario(workspace, getCurrentScenario, commitWorkspace));
     els.undoBtn.addEventListener("click", undo);
     els.redoBtn.addEventListener("click", redo);
+    // MIGRATED: dedicated React pages `/import-export` and `/settings` now own the primary data-center UX.
+    // These legacy button bindings remain only for the embedded homepage manager.
     els.exportWorkspaceBtn.addEventListener("click", () => exportWorkspace(workspace, (msg) => callbacks.toast.current?.showToast(msg)));
     els.exportScenarioBtn.addEventListener("click", () => exportScenario(workspace, getCurrentScenario, (msg) => callbacks.toast.current?.showToast(msg)));
     els.importBtn.addEventListener("click", () => {

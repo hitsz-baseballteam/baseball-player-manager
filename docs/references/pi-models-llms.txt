@@ -1,0 +1,90 @@
+# Pi Available Models
+
+This file lists all built-in models available in pi (as of 2025-06-05), grouped by provider.
+Use `pi --list-models` to get the current live list.
+
+Use `/model` (or Ctrl+L) in interactive mode, or `--model <pattern>` on the CLI to select a model.
+
+## Provider: deepseek
+
+DeepSeek's own API. Requires a DeepSeek API key (`DEEPSEEK_API_KEY`).
+
+| Model | Context | Max Output | Thinking | Images |
+|-------|---------|------------|----------|--------|
+| deepseek-v4-flash | 1M | 384K | yes | no |
+| deepseek-v4-pro | 1M | 384K | yes | no |
+
+## Provider: github-copilot
+
+Available via GitHub Copilot subscription. Use `/login` to authenticate via OAuth.
+
+| Model | Context | Max Output | Thinking | Images |
+|-------|---------|------------|----------|--------|
+| claude-haiku-4.5 | 200K | 64K | yes | yes |
+| claude-opus-4.5 | 200K | 32K | yes | yes |
+| claude-opus-4.6 | 1M | 32K | yes | yes |
+| claude-opus-4.7 | 200K | 32K | yes | yes |
+| claude-opus-4.8 | 200K | 64K | yes | yes |
+| claude-sonnet-4.5 | 200K | 32K | yes | yes |
+| claude-sonnet-4.6 | 1M | 32K | yes | yes |
+| gemini-2.5-pro | 128K | 64K | no | yes |
+| gemini-3-flash-preview | 128K | 64K | yes | yes |
+| gemini-3.1-pro-preview | 200K | 64K | yes | yes |
+| gemini-3.5-flash | 200K | 64K | yes | yes |
+| gpt-4.1 | 128K | 16.4K | no | yes |
+| gpt-4o | 128K | 4.1K | no | yes |
+| gpt-5-mini | 264K | 64K | yes | yes |
+| gpt-5.2 | 400K | 128K | yes | yes |
+| gpt-5.2-codex | 400K | 128K | yes | yes |
+| gpt-5.3-codex | 400K | 128K | yes | yes |
+| gpt-5.4 | 400K | 128K | yes | yes |
+| gpt-5.4-mini | 400K | 128K | yes | yes |
+| gpt-5.5 | 400K | 128K | yes | yes |
+| grok-code-fast-1 | 128K | 64K | yes | no |
+
+## Provider: openai-codex
+
+OpenAI Codex subscription (ChatGPT Plus/Pro). Use `/login` to authenticate via OAuth.
+
+| Model | Context | Max Output | Thinking | Images |
+|-------|---------|------------|----------|--------|
+| gpt-5.2 | 272K | 128K | yes | yes |
+| gpt-5.3-codex | 272K | 128K | yes | yes |
+| gpt-5.3-codex-spark | 128K | 128K | yes | no |
+| gpt-5.4 | 272K | 128K | yes | yes |
+| gpt-5.4-mini | 272K | 128K | yes | yes |
+| gpt-5.5 | 272K | 128K | yes | yes |
+
+## Provider: opencode-go
+
+OpenCode Go — unified access to a variety of model providers. Requires an OpenCode Go API key.
+
+| Model | Context | Max Output | Thinking | Images |
+|-------|---------|------------|----------|--------|
+| deepseek-v4-flash | 1M | 384K | yes | no |
+| deepseek-v4-pro | 1M | 384K | yes | no |
+| glm-5 | 202.8K | 32.8K | yes | no |
+| glm-5.1 | 202.8K | 32.8K | yes | no |
+| kimi-k2.5 | 262.1K | 65.5K | yes | yes |
+| kimi-k2.6 | 262.1K | 65.5K | yes | yes |
+| mimo-v2.5 | 1M | 128K | yes | yes |
+| mimo-v2.5-pro | 1M | 128K | yes | no |
+| minimax-m2.5 | 204.8K | 65.5K | yes | no |
+| minimax-m2.7 | 204.8K | 131.1K | yes | no |
+| qwen3.6-plus | 262.1K | 65.5K | yes | yes |
+| qwen3.7-max | 1M | 65.5K | yes | no |
+
+## Model Selection Tips
+
+- **Best coding overall**: claude-sonnet-4.6, claude-opus-4.8, gpt-5.5, gpt-5.4
+- **Fastest**: claude-haiku-4.5, grok-code-fast-1, gemini-3.5-flash
+- **Largest context (1M)**: deepseek-v4-flash/pro, claude-opus-4.6, claude-sonnet-4.6, mimo-v2.5, qwen3.7-max
+- **Image understanding**: All Claude, Gemini, and GPT models; kimi-k2.5/6, mimo-v2.5, qwen3.6-plus
+- **Thinking (extended reasoning)**: All listed models except gemini-2.5-pro, gpt-4.1, gpt-4o
+  - Use `--thinking <level>` (off/minimal/low/medium/high/xhigh) or Shift+Tab in interactive mode
+
+## Adding Custom Models
+
+Add your own models via `~/.pi/agent/models.json`. See pi docs for details:
+- Provider setup: https://docs.pi.dev/providers (or `pi docs/providers.md`)
+- Custom models: `pi docs/models.md`
