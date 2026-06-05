@@ -1,0 +1,123 @@
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 14px;
+  background: var(--theme-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.card:hover {
+  border-color: var(--theme-accent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--theme-accent) 8%, transparent);
+}
+.cardActive {
+  border-color: var(--theme-accent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--theme-accent) 12%, transparent);
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cardName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--theme-fg);
+  margin: 0;
+}
+.activeBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 8px;
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cardNote {
+  font-size: 0.78rem;
+  color: var(--theme-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cardTime {
+  font-size: 0.72rem;
+  color: var(--theme-muted);
+}
+
+.cardStats {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+.statChip {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.statOk {
+  background: color-mix(in srgb, #2e7d32 14%, transparent);
+  color: #2e7d32;
+}
+.statWarn {
+  background: color-mix(in srgb, var(--theme-warn) 14%, transparent);
+  color: var(--theme-warn);
+}
+.statEmpty {
+  background: color-mix(in srgb, var(--theme-muted) 14%, transparent);
+  color: var(--theme-muted);
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.cardBtn {
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-fg);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.cardBtn:hover { background: var(--theme-surface); }
+.cardBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.cardBtnDanger {
+  color: var(--theme-danger);
+  border-color: color-mix(in srgb, var(--theme-danger) 30%, transparent);
+}
+.cardBtnDanger:hover {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+}

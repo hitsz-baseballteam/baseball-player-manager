@@ -742,6 +742,7 @@ export function mountPlayerManager(
     target.classList.add("dragging");
   }
 
+  // MIGRATED: defense/lineup drag-and-drop → src/components/field-board.tsx + lineup-order.tsx (Phase 4C)
   function handleLineupDragStart(event: Event) {
     const target = event.currentTarget as HTMLElement;
     const dataTransfer = (event as DragEvent).dataTransfer;

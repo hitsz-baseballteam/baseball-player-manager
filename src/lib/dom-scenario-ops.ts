@@ -14,6 +14,8 @@ export type CommitFn = (
   options?: { message?: string; recordHistory?: boolean },
 ) => boolean;
 
+// MIGRATED: pure versions of these functions now live in src/lib/lineup-actions.ts (Phase 4A).
+// These CommitFn-based versions remain for legacy DOM manager use only.
 export function assignDefense(
   position: PositionCode,
   playerId: string,

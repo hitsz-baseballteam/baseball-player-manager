@@ -1,0 +1,199 @@
+/* ── Action bar ── */
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--theme-surface);
+  border-bottom: 1px solid var(--theme-border);
+  flex-wrap: wrap;
+}
+
+.actionSpacer {
+  flex: 1;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btnPrimary:hover { opacity: 0.85; }
+.btnPrimary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  color: var(--theme-fg);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnSecondary:hover { background: var(--theme-surface); }
+.btnSecondary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.saveStatus {
+  font-size: 0.78rem;
+  color: var(--theme-muted);
+}
+.saveError {
+  font-size: 0.78rem;
+  color: var(--theme-danger);
+}
+
+/* ── Tab group ── */
+.tabGroup {
+  display: flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tabBtn {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  color: var(--theme-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.tabBtn:hover { background: var(--theme-surface); color: var(--theme-fg); }
+.tabBtnActive {
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+}
+.tabBtnActive:hover {
+  background: var(--theme-accent);
+  color: var(--theme-accent-fg);
+  opacity: 0.9;
+}
+
+/* ── Main view area ── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: var(--theme-bg);
+}
+
+/* ── Dialog ── */
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: color-mix(in srgb, var(--theme-shadow-strong) 30%, transparent);
+  backdrop-filter: blur(6px);
+}
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px color-mix(in srgb, var(--theme-shadow-strong) 16%, transparent);
+  padding: 0;
+  animation: dialogIn 0.2s ease-out;
+}
+@keyframes dialogIn {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0;
+}
+.dialogHeader h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--theme-fg);
+}
+.dialogClose {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: var(--theme-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.dialogClose:hover { color: var(--theme-fg); }
+.dialogForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+.dialogField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--theme-muted);
+}
+.dialogInput {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-bg);
+  color: var(--theme-fg);
+}
+.dialogInput:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 20%, transparent);
+}
+.dialogTextarea {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-bg);
+  color: var(--theme-fg);
+  resize: vertical;
+}
+.dialogTextarea:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 20%, transparent);
+}
+.dialogError {
+  font-size: 0.78rem;
+  color: var(--theme-danger);
+}
+.dialogActions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}

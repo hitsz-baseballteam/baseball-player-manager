@@ -22,8 +22,8 @@ type PlayerManagerClientProps = {
 const NAV_ITEMS = [
   { label: "总览", href: "/", active: true },
   { label: "名册", href: "/roster" },
-  { label: "排阵", disabled: true, status: "规划中" },
-  { label: "战术场景", disabled: true, status: "规划中" },
+  { label: "排阵", href: "/lineup" },
+  { label: "战术场景", href: "/scenarios" },
   { label: "数据中心", disabled: true, status: "规划中" },
   { label: "设置", disabled: true, status: "规划中" },
 ] as const;
