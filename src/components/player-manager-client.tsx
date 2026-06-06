@@ -189,7 +189,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
               <button
                 id="helpBtn"
                 type="button"
-                onClick={() => helpRef.current?.open() ?? handleHelpOpen()}
+                onClick={handleHelpOpen}
               >
                 <span aria-hidden="true">?</span>
                 <span className="btn-label">帮助</span>

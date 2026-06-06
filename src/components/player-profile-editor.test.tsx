@@ -187,7 +187,7 @@ describe("PlayerProfileEditor", () => {
     assert.equal(closeCalled, true);
   });
 
-  it("page variant: renders back link when backHref provided", () => {
+  it("page variant: renders back link and games link when backHref provided", () => {
     const player = createTestPlayer();
     const onSave = async () => {};
     render(
@@ -201,6 +201,8 @@ describe("PlayerProfileEditor", () => {
 
     const backLinks = screen.getAllByText("返回工作区");
     assert.ok(backLinks.length > 0);
+    const gamesLink = screen.getByRole("link", { name: "查看比赛数据" });
+    assert.equal(gamesLink.getAttribute("href"), "/players/test-player-1/games");
   });
 
   it("calls onOpenPage when '打开完整页面' button is clicked", async () => {

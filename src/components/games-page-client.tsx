@@ -65,6 +65,32 @@ function emptyGameRecord(gameType: TabType): GameRecord {
   };
 }
 
+function inningsToOuts(ip: number | null): number {
+  if (ip === null || !Number.isFinite(ip) || ip < 0) return 0;
+
+  const whole = Math.trunc(ip);
+  const tenth = Math.round((ip - whole) * 10);
+
+  if (tenth >= 0 && tenth <= 2) {
+    return whole * 3 + tenth;
+  }
+
+  return Math.round(ip * 3);
+}
+
+function formatOutsAsInnings(outs: number): string {
+  const whole = Math.floor(outs / 3);
+  const remainder = outs % 3;
+  return remainder === 0 ? String(whole) : `${whole}.${remainder}`;
+}
+
+function hasValidInningNotation(ip: number | null): boolean {
+  if (ip === null) return true;
+  const whole = Math.trunc(ip);
+  const tenth = Math.round((ip - whole) * 10);
+  return whole >= 0 && tenth >= 0 && tenth <= 2 && Math.abs(ip - (whole + tenth / 10)) < 1e-9;
+}
+
 export function GamesPageClient({
   initialWorkspace,
   initialVersion,
@@ -143,12 +169,13 @@ export function GamesPageClient({
     const records = tab === "official" ? officialGames : trainingGames;
 
     const pitchingGames = records.filter((g) => g.ip !== null && g.ip > 0);
-    const totalIp = pitchingGames.reduce((sum, g) => sum + (g.ip ?? 0), 0);
+    const totalOuts = pitchingGames.reduce((sum, g) => sum + inningsToOuts(g.ip), 0);
+    const totalIp = totalOuts / 3;
     const totalEr = pitchingGames.reduce((sum, g) => sum + (g.er ?? 0), 0);
-    const era = totalIp > 0 ? ((totalEr * 9) / totalIp).toFixed(2) : null;
+    const era = totalOuts > 0 ? ((totalEr * 27) / totalOuts).toFixed(2) : null;
     const totalHitsPitching = pitchingGames.reduce((sum, g) => sum + (g.hPitching ?? 0), 0);
     const totalBbPitching = pitchingGames.reduce((sum, g) => sum + (g.bbPitching ?? 0), 0);
-    const whip = totalIp > 0 ? (((totalHitsPitching + totalBbPitching) / totalIp)).toFixed(2) : null;
+    const whip = totalOuts > 0 ? (((totalHitsPitching + totalBbPitching) * 3) / totalOuts).toFixed(2) : null;
 
     return {
       count: records.length,
@@ -168,6 +195,7 @@ export function GamesPageClient({
       whip,
       ipGames: pitchingGames.length,
       totalIp,
+      totalIpDisplay: formatOutsAsInnings(totalOuts),
       soPitching: pitchingGames.reduce((sum, g) => sum + (g.soPitching ?? 0), 0),
     };
   }, [player, tab]);
@@ -265,7 +293,7 @@ export function GamesPageClient({
               </div>
               <div className={styles.summaryDetail}>
                 {summary.ipGames > 0
-                  ? `WHIP ${summary.whip} · ${summary.totalIp} 局 · ${summary.soPitching} K`
+                  ? `WHIP ${summary.whip} · ${summary.totalIpDisplay} 局 · ${summary.soPitching} K`
                   : "暂无投球记录"}
               </div>
             </article>
@@ -374,6 +402,10 @@ function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDi
       setError("日期和对手不能为空");
       return;
     }
+    if (!hasValidInningNotation(record.ip)) {
+      setError("投球局数只能以 .0 / .1 / .2 结尾");
+      return;
+    }
     setError("");
     onSubmit(record);
   }
@@ -390,7 +422,14 @@ function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDi
   }
 
   function updateNullable(field: keyof GameRecord, value: string) {
-    update({ [field]: value === "" ? null : Number(value) } as Partial<GameRecord>);
+    if (value === "") {
+      update({ [field]: null } as Partial<GameRecord>);
+      return;
+    }
+
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return;
+    update({ [field]: n } as Partial<GameRecord>);
   }
 
   return (

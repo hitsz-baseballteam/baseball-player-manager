@@ -84,21 +84,70 @@
   font-weight: 500;
 }
 
-/* ── Three-column board ── */
+/* ── Reflowed board ── */
 .board {
   display: grid;
-  grid-template-columns: 280px 1fr 260px;
+  grid-template-columns: minmax(440px, 1fr) clamp(280px, 30vw, 340px);
   gap: 0;
-  flex: 1;
+  min-height: clamp(620px, 70vh, 820px);
+  height: clamp(620px, 70vh, 820px);
+  overflow: hidden;
+  border-top: 1px solid var(--theme-border);
+}
+
+.boardField {
+  min-width: 0;
+  min-height: 0;
+  background: var(--theme-bg);
+}
+
+.sideRail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+}
+
+.sideTop {
+  min-height: 0;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.sideBottom {
   min-height: 0;
   overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .board {
+    grid-template-columns: minmax(360px, 1.1fr) minmax(280px, 0.9fr);
+  }
 }
 
 @media (max-width: 900px) {
   .board {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
-    overflow: auto;
+    min-height: auto;
+    height: auto;
+    overflow: visible;
+    border-top: 1px solid var(--theme-border);
+  }
+
+  .sideRail {
+    display: contents;
+    border-left: none;
+    background: transparent;
+  }
+
+  .sideTop {
+    border-bottom: none;
+  }
+
+  .sideBottom {
+    overflow: visible;
   }
 }
 

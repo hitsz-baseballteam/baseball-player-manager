@@ -80,6 +80,65 @@ describe("workspace sanitizers", () => {
     assert.equal(player.profile.thirtyMeterSec, 7.11);
   });
 
+  it("fills missing games with an empty array for legacy player profiles", () => {
+    const [player] = sanitizePlayers([
+      {
+        id: "1",
+        name: "A",
+        number: "10",
+        bats: "R",
+        throws: "R",
+        positions: ["RF"],
+        profile: {
+          profileType: "fielder",
+          scoutingSummary: "legacy profile without games",
+        },
+      },
+    ]);
+
+    assert.deepEqual(player.profile.games, []);
+  });
+
+  it("drops invalid imported inning notation instead of keeping decimal values", () => {
+    const [player] = sanitizePlayers([
+      {
+        id: "1",
+        name: "A",
+        number: "10",
+        bats: "R",
+        throws: "R",
+        positions: ["P"],
+        profile: {
+          profileType: "pitcher",
+          games: [
+            {
+              id: "g-1",
+              date: "2026-06-01",
+              opponent: "Test High",
+              gameType: "official",
+              pa: 0,
+              ab: 0,
+              h: 0,
+              hr: 0,
+              rbi: 0,
+              r: 0,
+              sb: 0,
+              bb: 0,
+              so: 0,
+              ip: 1.3,
+              er: 1,
+              soPitching: 2,
+              bbPitching: 1,
+              hPitching: 3,
+            },
+          ],
+        },
+      },
+    ]);
+
+    assert.equal(player.profile.games[0]?.ip, null);
+  });
+
   it("builds a fallback workspace when input is malformed", () => {
     const workspace = sanitizeWorkspace({ players: "bad-data" });
     assert.equal(workspace.version, 2);

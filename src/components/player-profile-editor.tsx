@@ -325,6 +325,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
   const shellClass = props.variant === "page"
     ? pageShellClassName
     : styles.drawerShell;
+  const gamesHref = `/players/${encodeURIComponent(current.id)}/games`;
 
   const frameContent = (
     <section className={styles.frame}>
@@ -340,6 +341,11 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
           </div>
         </div>
         <div className={styles.topbarRight}>
+          {props.variant === "page" ? (
+            <Link href={gamesHref} className={styles.secondaryButton}>
+              查看比赛数据
+            </Link>
+          ) : null}
           {props.onOpenPage ? (
             <button
               type="button"

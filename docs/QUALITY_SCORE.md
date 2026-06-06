@@ -20,11 +20,11 @@
 | **数据访问** (`db.ts` + `workspace-store.ts`) | B+ | 乐观并发控制正确；连接层与 `DATABASE_URL` / `pg` 约定保持一致，并补充了 Supabase/Vercel SSL 兼容处理，但缺少连接池失败重试逻辑 |
 | **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；仍是共享口令模型 |
 | **API 路由** (`api/*`) | B | 结构化错误返回，但缺少请求体校验中间件 |
-| **React 组件** (`components/`) | A | `AppShell` 已统一承载首页、名册、排阵、场景、数据中心、设置、档案页与比赛数据页；新增 `GamesPageClient` 提供官方/训练双 tab 逐场记录管理，主要高频页面均已有组件或页面级测试覆盖 |
+| **React 组件** (`components/`) | A | `AppShell` 已统一承载首页、名册、排阵、场景、数据中心、设置、档案页与比赛数据页；球员档案页现已直接链接比赛数据页，`GamesPageClient` 对棒球局数记法、增删改保存与摘要计算都有页面级测试覆盖 |
 | **旧 DOM 运行时** | A | 首页 legacy runtime 已清退，不再构成当前实现复杂度 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
 | **导入导出** | B+ | 已迁入 `export-actions.ts` + `/import-export` 数据中心页面；仍缺少 CSV 导入 |
-| 测试 | A- | 当前 160 个测试结果项（159 通过 + 1 todo），覆盖业务逻辑、页面级工作台（首页 / 名册 / 排阵 / 场景 / 档案 / 数据中心 / 设置 / 比赛数据）、共享逻辑层、认证/限流与 API 路由 |
+| 测试 | A- | 当前 166 个测试结果项（165 通过 + 1 todo），覆盖业务逻辑、页面级工作台（首页 / 名册 / 排阵 / 场景 / 档案 / 数据中心 / 设置 / 比赛数据）、共享逻辑层、认证/限流与 API 路由；比赛数据页已补上增删改保存、局数记法与摘要计算验证，并覆盖导入路径上的局数清洗 |
 
 ## 按架构层级评分
 
@@ -78,3 +78,6 @@
 | 2026-06-05 | Phase 4 + 5 收尾 | React 组件 A-→A、导入导出 B→B+；新增 `lineup-actions` / `export-actions`、`/lineup` / `/scenarios` / `/import-export` / `/settings` 页面与对应测试；通过 `npm test`、`npm run lint`、`npm run build` 核验 |
 | 2026-06-05 | 首页 legacy runtime 退役 | UI (React) A-→A、UI (Legacy DOM) B→A；首页改为纯 React command desk，删除 `index.html` / `legacy-template.ts` / `legacy-bridge.ts` / `player-manager-dom.ts` / `dom-*` 运行时链，并通过 `npm test`、`npm run lint`、`npm run build` 核验 |
 | 2026-06-05 | UI polish + 比赛数据页 + 档案字段修正 | 数据模型新增 `GameRecord` 类型与 `/players/[playerId]/games` 比赛数据独立页；档案字段 `armStrengthKmh`/`sixtyMeterSec` 改名 `armStrengthM`/`thirtyMeterSec`；标题字号缩小与英文 kicker 中文化；通过 `npm test`、`npm run lint`、`npm run build` 核验 |
+| 2026-06-05 | UI plan 收尾与一致性补齐 | 分数不变；球员档案页补上“查看比赛数据”入口，`AppShell` 品牌 badge 中文化，比赛数据页补上棒球局数记法校验与摘要计算测试 |
+| 2026-06-05 | 排阵页布局重排 | 分数不变；`/lineup` 改为“左球场、右侧打线+球员堆叠”布局，球员区独立滚动，浏览器验收确认中等宽度下守位图不再被侧栏挤压 |
+| 2026-06-05 | HelpDrawer 打开/关闭链路收口 | 分数不变；帮助抽屉改为仅在打开时 portal 渲染，补齐固定定位/层级样式，并统一首页/设置页的打开入口与关闭测试 |

@@ -100,10 +100,6 @@ export function SettingsPageClient({
   }, []);
 
   const openHelp = useCallback(() => {
-    if (helpRef.current) {
-      helpRef.current.open();
-      return;
-    }
     handleHelpOpen();
   }, [handleHelpOpen]);
 

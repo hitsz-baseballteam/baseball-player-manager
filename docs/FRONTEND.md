@@ -46,9 +46,9 @@ page.tsx (server)
 | `ScenariosPageClient` | 场景页状态：CRUD、当前方案切换、对比模式、保存与冲突处理 |
 | `ImportExportPageClient` | 数据中心状态：导出、JSON 导入预览与确认导入 |
 | `SettingsPageClient` | 设置页状态：主题、重置数据、退出登录、帮助/引导入口 |
-| `GamesPageClient` | 比赛数据页状态：正式/训练 tab、逐场增删改、合计摘要、保存与冲突处理 |
-| `PlayerProfilePageClient` | 球员档案页状态：workspace 读写 + 版本冲突处理 |
-| `PlayerProfileEditor` | 纯客户端：档案表单 + SVG 雷达图 |
+| `GamesPageClient` | 比赛数据页状态：正式/训练 tab、逐场增删改、合计摘要、保存与冲突处理；IP 使用棒球记法（`.1`=1 出局、`.2`=2 出局） |
+| `PlayerProfilePageClient` | 球员档案页状态：workspace 读写 + 版本冲突处理，并提供跳转到比赛数据页的入口 |
+| `PlayerProfileEditor` | 纯客户端：档案表单 + SVG 雷达图；page 形态在顶部提供“查看比赛数据”链接 |
 | `Toast` | Portal 渲染的 toast 通知 |
 | `HelpDrawer` | 帮助抽屉 |
 | `GuideOverlay` | 新手引导浮层 |
@@ -135,8 +135,8 @@ API route + optimistic concurrency
 | `/scenarios` | Server + Client | 场景管理：CRUD + 双方案对比 |
 | `/import-export` | Server + Client | 数据中心：JSON 导入预览、JSON/CSV 导出 |
 | `/settings` | Server + Client | 设置与帮助：主题、重置数据、退出登录、帮助入口 |
-| `/players/[playerId]/games` | Server + Client | 比赛数据：正式 / 训练双 tab、逐场增删编辑、合计摘要卡 |
-| `/players/[playerId]` | Server + Client | 球员档案独立页 |
+| `/players/[playerId]/games` | Server + Client | 比赛数据：正式 / 训练双 tab、逐场增删编辑、合计摘要卡，ERA/WHIP 按棒球局数记法计算 |
+| `/players/[playerId]` | Server + Client | 球员档案独立页，页内提供进入比赛数据页的链接 |
 | `/api/unlock` | API (POST) | 验证 passcode，签发 cookie |
 | `/api/logout` | API (POST) | 清除 cookie |
 | `/api/workspace` | API (GET/PUT) | 工作区读写 |

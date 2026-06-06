@@ -82,7 +82,7 @@ export function PlayerProfilePageClient(
 
   return (
     <AppShell
-      eyebrow="Player Profile"
+      eyebrow="球员档案"
       title={player ? player.name : "球员档案"}
       description={
         player

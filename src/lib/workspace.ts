@@ -645,7 +645,7 @@ function sanitizeGameRecords(value: unknown): GameRecord[] {
       sb: sanitizeGameInt((item as Record<string, unknown>).sb),
       bb: sanitizeGameInt((item as Record<string, unknown>).bb),
       so: sanitizeGameInt((item as Record<string, unknown>).so),
-      ip: sanitizeNullableNumber((item as Record<string, unknown>).ip, 0, 30),
+      ip: sanitizeGameInnings((item as Record<string, unknown>).ip),
       er: sanitizeNullableNumber((item as Record<string, unknown>).er, 0, 99),
       soPitching: sanitizeNullableNumber((item as Record<string, unknown>).soPitching, 0, 99, true),
       bbPitching: sanitizeNullableNumber((item as Record<string, unknown>).bbPitching, 0, 99, true),
@@ -658,6 +658,18 @@ function sanitizeGameInt(value: unknown): number {
   if (value === null || value === undefined) return 0;
   const n = Number(value);
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+}
+
+function sanitizeGameInnings(value: unknown): number | null {
+  const sanitized = sanitizeNullableNumber(value, 0, 30);
+  if (sanitized === null) return null;
+
+  const whole = Math.trunc(sanitized);
+  const tenth = Math.round((sanitized - whole) * 10);
+  if (tenth < 0 || tenth > 2) return null;
+
+  const normalized = whole + tenth / 10;
+  return Math.abs(sanitized - normalized) < 1e-9 ? normalized : null;
 }
 
 export function sanitizeScenario(

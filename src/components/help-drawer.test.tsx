@@ -110,7 +110,7 @@ describe("HelpDrawer", () => {
     assert.equal(onCloseCalls, 1);
   });
 
-  it("calls onClose when scrim is clicked", () => {
+  it("calls onClose when scrim is pressed", () => {
     setup();
     render(
       <TestHarness
@@ -122,7 +122,7 @@ describe("HelpDrawer", () => {
       />,
     );
     const scrim = document.querySelector(".drawer-scrim")!;
-    fireEvent.click(scrim);
+    fireEvent.mouseDown(scrim);
     assert.equal(onCloseCalls, 1);
   });
 

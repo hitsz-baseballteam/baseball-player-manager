@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { createDefaultWorkspace } from "@/lib/workspace";
+import { createDefaultWorkspace, type Workspace } from "@/lib/workspace";
 
 let GamesPageClient: typeof import("./games-page-client").GamesPageClient;
 const baseWorkspace = createDefaultWorkspace(true);
@@ -24,7 +24,7 @@ function workspaceWithPlayer(playerId: string) {
       opponent: "南山高中",
       gameType: "official" as const,
       pa: 4, ab: 4, h: 2, hr: 1, rbi: 2, r: 2, sb: 0, bb: 0, so: 1,
-      ip: 2, er: 0, soPitching: 3, bbPitching: 1, hPitching: 1,
+      ip: 2.1, er: 0, soPitching: 3, bbPitching: 1, hPitching: 1,
     },
     {
       id: "g-2",
@@ -32,7 +32,7 @@ function workspaceWithPlayer(playerId: string) {
       opponent: "北一中学",
       gameType: "official" as const,
       pa: 3, ab: 2, h: 0, hr: 0, rbi: 0, r: 0, sb: 0, bb: 1, so: 1,
-      ip: null, er: null, soPitching: null, bbPitching: null, hPitching: null,
+      ip: 1.2, er: 1, soPitching: 2, bbPitching: 0, hPitching: 2,
     },
     {
       id: "g-3",
@@ -48,18 +48,48 @@ function workspaceWithPlayer(playerId: string) {
 
 describe("GamesPageClient", () => {
   const playerId = "test-p-001";
+  const savedWorkspaces: Workspace[] = [];
+  const originalConfirm = window.confirm;
 
   beforeEach(async () => {
+    savedWorkspaces.length = 0;
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
+    window.confirm = (() => true) as typeof window.confirm;
+
+    mock.module("@/lib/workspace-client", {
+      namedExports: {
+        async saveWorkspaceSnapshot(workspace: Workspace, version: number) {
+          savedWorkspaces.push(cloneWorkspace(workspace));
+          return {
+            workspace: cloneWorkspace(workspace),
+            version: version + 1,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        async loadWorkspaceSnapshot() {
+          return {
+            workspace: cloneWorkspace(baseWorkspace),
+            version: 99,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        isVersionConflict() {
+          return false;
+        },
+      },
+    });
+
     ({ GamesPageClient } = await import("./games-page-client"));
   });
 
   afterEach(() => {
     cleanup();
+    mock.reset();
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
     document.body.innerHTML = "";
+    window.confirm = originalConfirm;
   });
 
   it("renders the games page with tab switch, summary, and game list", async () => {
@@ -76,32 +106,100 @@ describe("GamesPageClient", () => {
 
     await screen.findByRole("heading", { name: /陈浩宇/ });
 
-    // Tab buttons visible
     assert.ok(screen.getByRole("button", { name: "正式比赛" }));
     assert.ok(screen.getByRole("button", { name: "训练比赛" }));
-
-    // Summary cards present - use the summary card specific value text
-    const countElements = screen.getAllByText("2");
-    assert.ok(countElements.length >= 1);
     assert.ok(screen.getByText("2 / 1"));
-    assert.ok(screen.getByText(/ERA/));
-
-    // Game rows in table
+    assert.ok(screen.getByText("ERA 2.25"));
+    assert.ok(screen.getByText("WHIP 1.00 · 4 局 · 5 K"));
     assert.ok(screen.getByText("南山高中"));
     assert.ok(screen.getByText("北一中学"));
-    assert.equal(screen.queryByText("队内红白"), null); // filtered out (official tab)
+    assert.equal(screen.queryByText("队内红白"), null);
 
-    // Switch to training tab
     await user.click(screen.getByRole("button", { name: "训练比赛" }));
     assert.ok(screen.getByText("队内红白"));
 
-    // Open add dialog - the dialog h3 has "新增比赛 —" prefix
     await user.click(screen.getByRole("button", { name: "+ 新增比赛" }));
     assert.ok(screen.getByRole("dialog", { name: /新增比赛/ }));
 
-    // Close dialog
     await user.click(screen.getByRole("button", { name: "取消" }));
     assert.equal(screen.queryByRole("dialog", { name: /新增比赛/ }), null);
+  });
+
+  it("adds and deletes records while persisting the updated workspace", async () => {
+    const user = userEvent.setup();
+    const workspace = workspaceWithPlayer(playerId);
+
+    render(
+      <GamesPageClient
+        initialWorkspace={workspace}
+        initialVersion={5}
+        playerId={playerId}
+      />,
+    );
+
+    await screen.findByRole("heading", { name: /陈浩宇/ });
+
+    await user.click(screen.getByRole("button", { name: "+ 新增比赛" }));
+    await user.type(screen.getByLabelText("日期"), "2026-05-30");
+    await user.type(screen.getByLabelText("对手"), "新桥高中");
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    await screen.findByText("新桥高中");
+    assert.equal(savedWorkspaces.length, 1);
+    assert.equal(savedWorkspaces[0]?.players[0]?.profile.games.length, 4);
+
+    await user.click(screen.getAllByRole("button", { name: "删除" })[0]);
+    await screen.findAllByText("比赛数据已更新");
+    assert.equal(savedWorkspaces.length, 2);
+    assert.equal(savedWorkspaces[1]?.players[0]?.profile.games.length, 3);
+    assert.equal(screen.queryByText("新桥高中"), null);
+  });
+
+  it("rejects invalid baseball inning notation before saving", async () => {
+    const user = userEvent.setup();
+    const workspace = workspaceWithPlayer(playerId);
+
+    render(
+      <GamesPageClient
+        initialWorkspace={workspace}
+        initialVersion={5}
+        playerId={playerId}
+      />,
+    );
+
+    await screen.findByRole("heading", { name: /陈浩宇/ });
+    await user.click(screen.getByRole("button", { name: "+ 新增比赛" }));
+    await user.type(screen.getByLabelText("日期"), "2026-06-01");
+    await user.type(screen.getByLabelText("对手"), "测试队");
+    await user.type(screen.getByLabelText("IP"), "1.3");
+    await user.click(screen.getByRole("button", { name: "添加" }));
+
+    assert.ok(screen.getByText("投球局数只能以 .0 / .1 / .2 结尾"));
+    assert.equal(savedWorkspaces.length, 0);
+  });
+
+  it("edits an existing record and persists the saved changes", async () => {
+    const user = userEvent.setup();
+    const workspace = workspaceWithPlayer(playerId);
+
+    render(
+      <GamesPageClient
+        initialWorkspace={workspace}
+        initialVersion={5}
+        playerId={playerId}
+      />,
+    );
+
+    await screen.findByRole("heading", { name: /陈浩宇/ });
+    await user.click(screen.getAllByRole("button", { name: "编辑" })[0]);
+    const opponentInput = screen.getByLabelText("对手");
+    await user.clear(opponentInput);
+    await user.type(opponentInput, "修正版对手");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await screen.findByText("修正版对手");
+    assert.equal(savedWorkspaces.length, 1);
+    assert.equal(savedWorkspaces[0]?.players[0]?.profile.games[0]?.opponent, "修正版对手");
   });
 
   it("renders empty state when player is not found", async () => {

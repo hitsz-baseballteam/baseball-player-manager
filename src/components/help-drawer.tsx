@@ -90,7 +90,7 @@ export function HelpDrawer({
   const scrim = (
     <div
       className={`drawer-scrim${isOpen ? " open" : ""}`}
-      onClick={onClose}
+      onMouseDown={onClose}
       aria-hidden="true"
     />
   );
@@ -142,7 +142,7 @@ export function HelpDrawer({
     </aside>
   );
 
-  if (typeof document === "undefined") return null;
+  if (typeof document === "undefined" || !isOpen) return null;
 
   return (
     <>

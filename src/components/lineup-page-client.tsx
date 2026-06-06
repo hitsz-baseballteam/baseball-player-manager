@@ -183,27 +183,36 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
           </div>
         )}
 
-        {/* Three-column board */}
+        {/* Reflowed board: field first, right rail stacks lineup + bench */}
         <div className={styles.board}>
-          <BenchPanel
-            players={workspace.players}
-            defense={activeScenario.assignments.defense}
-            lineup={activeScenario.assignments.lineup}
-          />
-          <FieldBoard
-            players={workspace.players}
-            defense={activeScenario.assignments.defense}
-            onAssign={handleDefenseAssign}
-            onClear={handleDefenseClear}
-            onSwap={handleDefenseSwap}
-          />
-          <LineupOrder
-            players={workspace.players}
-            lineup={activeScenario.assignments.lineup}
-            onAssign={handleLineupAssign}
-            onClear={handleLineupClear}
-            onMove={handleLineupMove}
-          />
+          <div className={styles.boardField}>
+            <FieldBoard
+              players={workspace.players}
+              defense={activeScenario.assignments.defense}
+              onAssign={handleDefenseAssign}
+              onClear={handleDefenseClear}
+              onSwap={handleDefenseSwap}
+            />
+          </div>
+
+          <div className={styles.sideRail}>
+            <div className={styles.sideTop}>
+              <LineupOrder
+                players={workspace.players}
+                lineup={activeScenario.assignments.lineup}
+                onAssign={handleLineupAssign}
+                onClear={handleLineupClear}
+                onMove={handleLineupMove}
+              />
+            </div>
+            <div className={styles.sideBottom}>
+              <BenchPanel
+                players={workspace.players}
+                defense={activeScenario.assignments.defense}
+                lineup={activeScenario.assignments.lineup}
+              />
+            </div>
+          </div>
         </div>
       </AppShell>
     </ToastProvider>

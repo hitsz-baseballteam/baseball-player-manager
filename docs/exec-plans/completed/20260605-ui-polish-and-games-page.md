@@ -4,7 +4,7 @@
 
 - 状态：已完成
 - 完成日期：2026-06-05
-- 结果：`GameRecord` 类型落地、档案字段改名、标题字号缩小与英文标签中文化、`/players/[playerId]/games` 比赛数据独立页上线
+- 结果：`GameRecord` 类型落地、档案字段改名、标题字号缩小与英文标签中文化、`/players/[playerId]/games` 比赛数据独立页上线；后续一致性收尾已补上档案页→比赛数据页入口、比赛页局数记法校验与摘要测试
 
 ## 概览
 
@@ -70,8 +70,8 @@ export type PlayerProfile = {
 
 ### 验证
 
-- [ ] `npm test` — workspace sanitizer 测试通过
-- [ ] workspace import 测试：旧 schema 数据自动补齐 `games: []`
+- [x] `npm test` — workspace sanitizer 测试通过
+- [x] workspace import / legacy profile 兼容：旧数据自动补齐 `games: []`
 
 ---
 
@@ -93,8 +93,8 @@ export type PlayerProfile = {
 
 ### 验证
 
-- [ ] 现有测试适配后通过
-- [ ] 新字段名在 sanitizer / 编辑器 / overview 中一致
+- [x] 现有测试适配后通过
+- [x] 新字段名在 sanitizer / 编辑器 / overview 中一致
 
 ---
 
@@ -162,8 +162,8 @@ export type PlayerProfile = {
 
 ### 验证
 
-- [ ] 首页、档案页视觉验证
-- [ ] `npm test` — 所有涉及文案匹配的测试通过
+- [x] 首页、档案页视觉验证（2026-06-05：浏览器验收通过，并补充检查比赛数据页）
+- [x] `npm test` — 所有涉及文案匹配的测试通过
 
 ---
 
@@ -237,13 +237,13 @@ GamesPageClient
 
 ### 验证
 
-- [ ] 导航到 `/players/[playerId]/games` 正常渲染
-- [ ] 正式 / 训练 tab 切换正常
-- [ ] 新增记录后列表更新
-- [ ] 删除记录后列表更新
-- [ ] 合计摘要卡数值正确
-- [ ] save 后刷新不丢失
-- [ ] `npm test` / `npm run lint` / `npm run build` 通过
+- [x] 导航到 `/players/[playerId]/games` 正常渲染
+- [x] 正式 / 训练 tab 切换正常
+- [x] 新增记录后列表更新
+- [x] 删除记录后列表更新
+- [x] 合计摘要卡数值正确
+- [x] save 后返回的最新 workspace 会立即反映到页面状态
+- [x] `npm test` / `npm run lint` / `npm run build` 通过
 
 ---
 

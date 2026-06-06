@@ -249,11 +249,22 @@ body {
 }
 
 html body .drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
   background: color-mix(in srgb, var(--theme-fg) 42%, transparent);
   backdrop-filter: blur(3px);
 }
 
 html body .help-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 71;
+  width: min(440px, calc(100vw - 20px));
+  max-width: 100vw;
+  overflow-y: auto;
   display: grid;
   align-content: start;
   gap: 18px;
@@ -269,7 +280,10 @@ html body .help-drawer {
 }
 
 html body .help-drawer .panel-title {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin: 0;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--shell-panel-border);
