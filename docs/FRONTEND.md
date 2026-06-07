@@ -59,10 +59,16 @@ page.tsx (server)
 ```text
 src/components/
 ├── app-shell.tsx
+├── bench-panel.tsx
+├── field-board.tsx
+├── games-page-client.tsx
 ├── home-overview.tsx
+├── lineup-order.tsx
 ├── player-manager-client.tsx
 ├── roster-page-client.tsx
 ├── roster-overview.tsx
+├── scenario-compare.tsx
+├── scenario-list.tsx
 ├── lineup-page-client.tsx
 ├── scenarios-page-client.tsx
 ├── import-export-page-client.tsx
@@ -76,11 +82,16 @@ src/components/
 └── theme-toggle.tsx
 
 src/lib/
+├── auth.ts
+├── db.ts
+├── dev-server-output.ts
+├── export-actions.ts
+├── lineup-actions.ts
+├── rate-limiter.ts
+├── roster-actions.ts
 ├── workspace.ts
 ├── workspace-client.ts
-├── roster-actions.ts
-├── lineup-actions.ts
-└── export-actions.ts
+└── workspace-store.ts
 ```
 
 ## 状态管理

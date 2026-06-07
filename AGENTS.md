@@ -29,7 +29,7 @@ Database migrations live in `supabase/migrations/`.
 | `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export, and other pure workspace rules |
 | `src/lib/workspace-store.ts` | PostgreSQL read/write for the workspace snapshot with version-based optimistic concurrency |
 | `src/components/player-manager-client.tsx` | Homepage command-desk client: pure React overview, direct high-frequency actions, and page navigation — no legacy DOM runtime |
-| `src/components/app-shell.tsx` | Global shell shared by homepage, roster, lineup, scenarios, data center, settings, and player profile pages |
+| `src/components/app-shell.tsx` | Global shell shared by homepage, roster, lineup, scenarios, data center, settings, player profile, and games pages |
 | `src/components/home-overview.tsx` | Homepage command desk: alert deck, command strip, metrics, scenario snapshot, and lineup pulse |
 | `src/app/roster/page.tsx` | Roster server route: auth gate, workspace snapshot load, renders `RosterPageClient` |
 | `src/components/roster-page-client.tsx` | Roster workbench page state hub: workspace/version, filters, selection, dialogs, save and conflict handling |
@@ -51,6 +51,7 @@ Database migrations live in `supabase/migrations/`.
 | `src/components/player-profile-page-client.tsx` | Player profile page client state and AppShell shell integration |
 | `src/lib/auth.ts` | Shared-passcode cookie signing and verification |
 | `src/lib/rate-limiter.ts` | In-memory unlock rate limiter used by `POST /api/unlock` |
+| `src/lib/dev-server-output.ts` | Resilient dev-log mirroring used by `scripts/next-dev.ts` so broken stdout/stderr pipes do not kill `next dev` |
 
 ## Core Rule: The Repository Is the System of Record
 

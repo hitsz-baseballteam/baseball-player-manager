@@ -16,6 +16,6 @@ This directory holds the deeper project records.
 | [SECURITY.md](./SECURITY.md) | Security constraints |
 | [RELIABILITY.md](./RELIABILITY.md) | Reliability expectations |
 | [QUALITY_SCORE.md](./QUALITY_SCORE.md) | Quality tracking |
-| [exec-plans/](./PLANS.md) | Active/completed plans and tech debt |
+| [exec-plans/](./exec-plans/) | Active/completed plans and tech debt |
 | [references/](./references/) | External reference docs for agents (`-llms.txt`) |
 | [generated/](./generated/) | Generated artifacts and session history |

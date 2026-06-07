@@ -102,4 +102,4 @@
 
 - 不要引入 CSS 框架（Bootstrap、Tailwind 等）——当前样式体系以 CSS 自定义属性 + 全局类名为主，局部复杂组件按需使用 CSS Modules
 - 当前 React 组件样式分三层：全局 token 在 `globals.css`，首页壳层在 `app-shell.module.css`，首页总控区在 `home-overview.module.css`；解锁页仍保留少量硬编码颜色作为独立入口视觉
-- 新旧 UI 共存期间，确保旧 DOM 元素的 className 不与新 React 组件样式冲突；首页壳层需要优先通过 CSS Modules + `:global(...)` 限定 legacy 覆盖范围
+- 仓库里仍保留少量 legacy 兼容样式钩子；在继续清理残留时，确保这些选择器不会误伤当前 React 组件样式

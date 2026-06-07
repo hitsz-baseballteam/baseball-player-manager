@@ -10,8 +10,9 @@ export type ManagerUiSnapshot = {
 };
 
 /**
- * Callbacks that the legacy DOM manager uses to trigger React-managed UI.
- * Each ref is populated by the corresponding React component on mount.
+ * Shared callback/ref shape for React-managed adjunct UI such as toast,
+ * help drawer, and guide overlay. Kept as a small bridge type while the
+ * remaining legacy-era cleanup is finished.
  */
 export type ManagerCallbacks = {
   toast: React.MutableRefObject<ToastHandle | null>;

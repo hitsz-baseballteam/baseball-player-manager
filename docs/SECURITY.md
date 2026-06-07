@@ -64,7 +64,7 @@ baseball_manager_unlock = "v1:unlocked.<hex-signature>"
 
 ## 数据库安全
 
-- **连接池**：`pg.Pool`，最大 5 连接，30s 空闲超时
+- **连接池**：`pg.Pool`；Supabase 主机使用 `max = 1`，其他主机使用 `max = 5`；`idleTimeoutMillis = 30000`，`connectionTimeoutMillis = 10000`
 - **Row-Level Security**：迁移中已对 `public.app_workspace` 启用 RLS，但当前应用的访问控制主要依赖服务端 API 与签名 cookie，而不是基于用户身份的 RLS 策略
 - **无 Supabase Auth / Realtime**：仅使用 PostgreSQL 数据库，不使用 Supabase 其他功能
 - **表结构**：单表 `app_workspace`，列 `slug`（TEXT）、`version`（INT）、`data`（JSONB）

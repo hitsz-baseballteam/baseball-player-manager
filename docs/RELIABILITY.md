@@ -30,9 +30,9 @@ RETURNING version
 
 | 参数 | 值 | 原因 |
 |---|---|---|
-| `max` | 5 | 限制 Supabase 连接数，避免超出免费层配额 |
+| `max` | Supabase 主机为 1，其他主机为 5 | Supabase 连接更保守，降低连接池占用；本地或其他 PostgreSQL 主机保持 5 |
 | `idleTimeoutMillis` | 30000 | 30 秒空闲即释放，避免占用连接 |
-| `connectionTimeoutMillis` | 默认（无超时） | 依赖 pg 默认行为 |
+| `connectionTimeoutMillis` | 10000 | 10 秒连接超时，避免连接建立阶段长时间卡住 |
 
 ## 错误处理模式
 
@@ -85,7 +85,7 @@ HTTP 状态码（当前代码显式返回的部分）：
 
 | 风险 | 影响 | 缓解措施 |
 |---|---|---|
-| 连接池耗尽（> 5 并发写） | 请求排队 / 超时 | 单人使用场景下概率极低 |
+| 连接池耗尽（非 Supabase 主机 > 5 并发写；Supabase 主机 > 1 并发连接） | 请求排队 / 超时 | 单人使用场景下概率极低；Supabase 连接数限制更保守 |
 | 乐观冲突循环 | 用户操作被反复拒绝 | 主工作区路径先自动重试 3 次；仍失败时刷新最新数据并提示用户 |
 | jsonb 字段损坏 | workspace 数据丢失 | `sanitizeWorkspace()` 回退到默认 workspace（含 12 示例球员） |
 | passcode 泄露 | 数据可被任意访问 | passcode 只在环境变量中，不写死代码 |
