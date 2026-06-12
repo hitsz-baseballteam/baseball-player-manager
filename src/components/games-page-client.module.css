@@ -14,7 +14,7 @@
   display: flex;
   gap: 0;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 14px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -22,7 +22,7 @@
   min-height: 40px;
   padding: 0 20px;
   border: none;
-  background: color-mix(in srgb, var(--theme-surface) 88%, transparent);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font-size: 14px;
   font-weight: 700;
@@ -49,7 +49,7 @@
   min-height: 40px;
   padding: 0 18px;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--theme-accent);
   color: #fff;
   font-size: 14px;
@@ -73,8 +73,8 @@
   min-height: 40px;
   padding: 0 18px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  border-radius: 8px;
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font-size: 14px;
   font-weight: 700;
@@ -92,25 +92,25 @@
   gap: 8px;
   padding: 18px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 8px);
-  background: color-mix(in srgb, var(--theme-surface) 94%, transparent);
+  border-radius: var(--shell-panel-radius);
+  background: var(--theme-surface);
 }
 
 .summaryCardAccent {
-  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  border-color: var(--theme-accent);
 }
 
 .summaryLabel {
   color: var(--shell-muted);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .summaryValue {
   color: var(--shell-hero-ink);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.05;
 }
@@ -123,8 +123,8 @@
 
 .listSection {
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 6px);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border-radius: var(--shell-panel-radius);
+  background: var(--theme-surface);
   overflow: hidden;
 }
 
@@ -144,22 +144,22 @@
   font-weight: 800;
   color: var(--shell-muted);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border-bottom: 1px solid var(--shell-panel-border);
-  background: color-mix(in srgb, var(--theme-surface-alt) 84%, transparent);
+  background: var(--theme-surface-alt);
   white-space: nowrap;
 }
 
 .table td {
   padding: 12px 14px;
   color: var(--shell-hero-ink);
-  border-bottom: 1px solid color-mix(in srgb, var(--shell-panel-border) 60%, transparent);
+  border-bottom: 1px solid var(--shell-panel-border);
   white-space: nowrap;
 }
 
 .table tbody tr:hover {
-  background: color-mix(in srgb, var(--theme-accent) 6%, var(--theme-surface));
+  background: var(--theme-surface-alt);
 }
 
 .rowActions {
@@ -170,8 +170,8 @@
 .inlineBtn {
   padding: 4px 10px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  border-radius: 6px;
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font-size: 12px;
   font-weight: 700;
@@ -184,7 +184,7 @@
 
 .inlineBtnDanger {
   color: var(--theme-danger);
-  border-color: color-mix(in srgb, var(--theme-danger) 24%, transparent);
+  border-color: var(--theme-danger);
 }
 
 .emptyState {
@@ -214,9 +214,9 @@
   overflow-y: auto;
   padding: 28px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--theme-surface) 98%, white);
-  box-shadow: 0 26px 62px var(--theme-shadow-strong);
+  border-radius: 12px;
+  background: var(--theme-surface);
+  box-shadow: 0 4px 16px var(--theme-shadow-strong);
 }
 
 .dialogHeader {
@@ -239,8 +239,8 @@
   width: 36px;
   height: 36px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  border-radius: 8px;
+  background: var(--theme-surface);
   font-size: 18px;
   color: var(--shell-hero-ink);
   cursor: pointer;
@@ -267,7 +267,7 @@
   color: var(--shell-muted);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -277,7 +277,7 @@
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   color: var(--shell-hero-ink);
   background: var(--theme-surface);
@@ -293,37 +293,7 @@
   font-size: 13px;
   font-weight: 800;
   color: var(--shell-muted);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border-bottom: 1px solid var(--shell-panel-border);
-}
-
-.dialogError {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--theme-danger) 12%, var(--theme-surface));
-  color: var(--theme-danger);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.dialogActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 8px;
-}
-
-@media (max-width: 720px) {
-  .dialog {
-    padding: 20px;
-  }
-
-  .dialogRow {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .summaryGrid {
-    grid-template-columns: 1fr;
-  }
 }

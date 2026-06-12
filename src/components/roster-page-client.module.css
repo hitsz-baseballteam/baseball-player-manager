@@ -5,10 +5,8 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 32%),
-    linear-gradient(180deg, color-mix(in srgb, var(--theme-shadow-strong) 22%, transparent), color-mix(in srgb, var(--theme-fg) 56%, transparent));
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--theme-shadow-strong) 30%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .dialog {
@@ -16,10 +14,9 @@
   max-height: min(88vh, 920px);
   overflow: auto;
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 4px);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--theme-surface) 96%, transparent), color-mix(in srgb, var(--theme-surface-alt) 84%, transparent));
-  box-shadow: 0 30px 80px color-mix(in srgb, var(--theme-shadow-strong) 38%, transparent);
+  border-radius: var(--shell-panel-radius);
+  background: var(--theme-surface);
+  box-shadow: 0 4px 16px var(--theme-shadow-strong);
 }
 
 .dialogHeader {
@@ -34,9 +31,9 @@
   margin: 0;
   color: var(--shell-hero-ink);
   font-family: var(--font-display), var(--font-ui), sans-serif;
-  font-size: 28px;
-  line-height: 1.02;
-  letter-spacing: -0.03em;
+  font-size: 22px;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
 }
 
 .dialogClose,
@@ -52,9 +49,9 @@
   justify-content: center;
   width: 38px;
   height: 38px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  border: 1px solid var(--shell-grid-line);
+  border-radius: 8px;
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   cursor: pointer;
 }
@@ -92,9 +89,9 @@
   min-height: 44px;
   box-sizing: border-box;
   padding: 0 14px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--theme-surface) 98%, transparent);
+  border: 1px solid var(--shell-grid-line);
+  border-radius: 8px;
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font: inherit;
 }
@@ -105,8 +102,8 @@
   min-width: 0;
   margin: 0;
   padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 80%, transparent);
-  border-radius: 18px;
+  border: 1px solid var(--shell-grid-line);
+  border-radius: 10px;
 }
 
 .dialogForm fieldset:disabled {
@@ -131,9 +128,9 @@
   gap: 10px;
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 80%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border: 1px solid var(--shell-grid-line);
+  border-radius: 8px;
+  background: var(--theme-surface);
 }
 
 .dialogCheckLabel input {
@@ -165,38 +162,36 @@
   justify-content: center;
   min-height: 40px;
   padding: 0 16px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
-  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease;
 }
 
 .btnPrimary {
-  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface)), color-mix(in srgb, var(--theme-gold) 8%, var(--theme-surface)));
-  border-color: color-mix(in srgb, var(--theme-accent) 28%, var(--shell-panel-border));
-  color: var(--shell-hero-ink);
+  background: var(--theme-accent);
+  border: 1px solid var(--theme-accent);
+  color: #fff;
 }
 
 .btnSecondary {
-  background: color-mix(in srgb, var(--theme-surface) 94%, transparent);
+  background: var(--theme-surface);
+  border: 1px solid var(--shell-grid-line);
   color: var(--shell-hero-ink);
 }
 
 .btnDanger {
-  background: color-mix(in srgb, var(--theme-warm) 10%, var(--theme-surface));
-  border-color: color-mix(in srgb, var(--theme-warm) 24%, var(--shell-panel-border));
-  color: var(--shell-hero-ink);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-warm);
+  color: var(--theme-warm);
 }
 
 .btnPrimary:hover,
 .btnSecondary:hover,
 .btnDanger:hover,
 .dialogClose:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-shadow-strong) 22%, transparent);
+  border-color: var(--theme-accent);
 }
 
 @media (max-width: 720px) {

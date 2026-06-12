@@ -11,11 +11,10 @@
 .metricsPanel,
 .scenarioPanel,
 .pulsePanel {
-  position: relative;
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 6px);
-  background: color-mix(in srgb, var(--theme-surface) 95%, transparent);
-  box-shadow: 0 20px 48px color-mix(in srgb, var(--theme-shadow) 68%, transparent);
+  border-radius: var(--shell-panel-radius);
+  background: var(--theme-surface);
+  box-shadow: 0 1px 4px var(--theme-shadow);
 }
 
 .alertHeroCritical,
@@ -35,41 +34,21 @@
   padding: 24px;
 }
 
-.alertHeroCritical::before,
-.alertHeroHealthy::before,
-.alertNotes::before,
-.commandStrip::before,
-.metricsPanel::before,
-.scenarioPanel::before,
-.pulsePanel::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-gold) 55%, transparent), transparent 70%);
-  pointer-events: none;
-}
-
 .alertHeroCritical {
-  background:
-    linear-gradient(140deg, color-mix(in srgb, var(--theme-surface) 92%, transparent), color-mix(in srgb, var(--theme-warm) 7%, var(--theme-surface-alt))),
-    linear-gradient(0deg, color-mix(in srgb, var(--theme-warm) 8%, transparent), transparent 58%);
-  border-color: color-mix(in srgb, var(--theme-warm) 24%, var(--shell-panel-border));
+  border-color: var(--theme-warm);
+  background: var(--theme-surface-alt);
 }
 
 .alertHeroHealthy {
-  background:
-    linear-gradient(140deg, color-mix(in srgb, var(--theme-surface) 92%, transparent), color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-alt))),
-    linear-gradient(0deg, color-mix(in srgb, var(--theme-accent) 6%, transparent), transparent 58%);
-  border-color: color-mix(in srgb, var(--theme-accent) 22%, var(--shell-panel-border));
+  border-color: var(--theme-accent);
+  background: var(--theme-surface-alt);
 }
 
 .kicker {
   color: var(--theme-accent);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -89,20 +68,20 @@
   margin: 0;
   color: var(--shell-hero-ink);
   font-family: var(--font-display), var(--font-ui), sans-serif;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
 
 .alertTitle {
   max-width: 16ch;
-  font-size: clamp(22px, 3.5vw, 32px);
-  line-height: 0.96;
+  font-size: clamp(18px, 2.5vw, 24px);
+  line-height: 1.08;
 }
 
 .notesTitle,
 .panelTitle,
 .commandTitle {
-  font-size: 26px;
-  line-height: 1.04;
+  font-size: 20px;
+  line-height: 1.12;
 }
 
 .alertBadge,
@@ -111,9 +90,9 @@
   align-items: center;
   min-height: 34px;
   padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 85%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 88%, transparent);
+  border-radius: 8px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font-size: 12px;
   font-weight: 700;
@@ -125,7 +104,7 @@
 .scenarioNote {
   margin: 0;
   color: var(--shell-muted);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -147,30 +126,18 @@
   justify-content: space-between;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border-radius: 10px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface-alt);
 }
 
 .alertItemText {
   flex: 1;
   min-width: 220px;
-  position: relative;
-  padding-left: 18px;
+  padding-left: 4px;
   color: var(--shell-hero-ink);
   font-size: 14px;
   line-height: 1.6;
-}
-
-.alertItemText::before {
-  content: "";
-  position: absolute;
-  top: 0.62em;
-  left: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-warm) 72%, var(--theme-gold));
 }
 
 .alertAction,
@@ -196,9 +163,9 @@
   width: fit-content;
   min-height: 38px;
   padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 92%, transparent);
+  border-radius: 8px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font-weight: 700;
   cursor: pointer;
@@ -208,7 +175,7 @@
 .noteAction {
   min-height: 34px;
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -237,9 +204,7 @@
 .commandStrip {
   display: grid;
   gap: 16px;
-  background:
-    linear-gradient(140deg, color-mix(in srgb, var(--theme-surface) 94%, transparent), color-mix(in srgb, var(--theme-surface-alt) 88%, transparent)),
-    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 6%, transparent), transparent 48%);
+  background: var(--theme-surface-alt);
 }
 
 .commandIntro {
@@ -259,21 +224,21 @@
   gap: 8px;
   min-height: 120px;
   padding: 18px;
-  border-radius: 22px;
+  border-radius: 10px;
   text-align: left;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border: 1px solid var(--shell-grid-line);
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
 .commandButton {
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
 }
 
 .commandPrimary {
-  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface)), color-mix(in srgb, var(--theme-gold) 8%, var(--theme-surface)));
-  border-color: color-mix(in srgb, var(--theme-accent) 28%, var(--shell-panel-border));
+  background: var(--shell-accent-soft);
+  border-color: var(--theme-accent);
   color: var(--shell-hero-ink);
 }
 
@@ -288,10 +253,10 @@
   gap: 6px;
   min-height: 92px;
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: 10px;
   text-align: left;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   cursor: pointer;
 }
@@ -307,9 +272,8 @@
 .defenseCardFilled:hover,
 .defenseCardEmpty:hover,
 .lineupItem:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
-  box-shadow: 0 16px 34px color-mix(in srgb, var(--theme-shadow-strong) 24%, transparent);
+  border-color: var(--theme-accent);
+  box-shadow: 0 1px 4px var(--theme-shadow);
 }
 
 .commandLabel,
@@ -333,7 +297,6 @@
 .overviewGrid,
 .lineupPulse {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.9fr);
   gap: 16px;
 }
 
@@ -350,22 +313,22 @@
   min-height: 154px;
   padding: 18px;
   text-align: left;
-  border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border-radius: 10px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface-alt);
   cursor: pointer;
 }
 
 .metricCardAccent {
-  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  border-color: var(--theme-accent);
 }
 
 .metricCardWarm {
-  border-color: color-mix(in srgb, var(--theme-warm) 24%, transparent);
+  border-color: var(--theme-warm);
 }
 
 .metricCardCool {
-  border-color: color-mix(in srgb, var(--theme-cool) 24%, transparent);
+  border-color: var(--theme-cool);
 }
 
 .metricLabel,
@@ -374,16 +337,15 @@
   color: var(--shell-muted);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .metricValue {
   color: var(--shell-hero-ink);
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: -0.04em;
 }
 
 .metricDetail,
@@ -397,43 +359,38 @@
 
 .selectLabel {
   display: block;
-  margin-top: 18px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .select {
   width: 100%;
   min-height: 46px;
   padding: 0 14px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 98%, transparent);
+  border-radius: 10px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
 }
 
 .scenarioName {
   margin-top: 16px;
   color: var(--shell-hero-ink);
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.04;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
 
 .statusGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin: 18px 0 0;
+  gap: 12px;
 }
 
 .statusGrid div {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .statusGrid dt,
@@ -455,19 +412,18 @@
   min-height: 120px;
   padding: 16px;
   text-align: left;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border-radius: 10px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface-alt);
   cursor: pointer;
 }
 
 .defenseCardFilled {
-  border-color: color-mix(in srgb, var(--theme-accent) 26%, transparent);
+  border-color: var(--theme-accent);
 }
 
 .defenseCardEmpty {
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--theme-warm) 18%, transparent);
+  background: var(--theme-surface);
 }
 
 .defenseCode {
@@ -491,9 +447,9 @@
   gap: 12px;
   padding: 14px 16px;
   text-align: left;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
+  border-radius: 10px;
+  border: 1px solid var(--shell-grid-line);
+  background: var(--theme-surface-alt);
   cursor: pointer;
 }
 
@@ -503,55 +459,48 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
-  color: var(--shell-hero-ink);
+  border-radius: 8px;
+  background: var(--theme-accent);
+  color: #fff;
   font-size: 13px;
   font-weight: 800;
 }
 
 @media (max-width: 1240px) {
-  .commandSubgrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .commandGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 1080px) {
-  .alertDeck,
-  .overviewGrid,
-  .lineupPulse {
+  .alertDeck {
     grid-template-columns: 1fr;
-  }
-
-  .commandGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .commandGrid,
-  .commandSubgrid,
-  .metricGrid,
-  .statusGrid,
-  .defenseGrid {
+  .commandGrid {
     grid-template-columns: 1fr;
   }
 
-  .alertHeroCritical,
-  .alertHeroHealthy,
-  .alertNotes,
-  .commandStrip,
-  .metricsPanel,
-  .scenarioPanel,
-  .pulsePanel {
-    padding: 18px;
+  .commandSubgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .defenseGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .alertItem,
+  .noteItem {
+    flex-direction: column;
   }
 
   .lineupItem {
-    grid-template-columns: 32px minmax(0, 1fr);
-  }
-
-  .lineupMeta {
-    grid-column: 2;
+    grid-template-columns: 36px 1fr;
   }
 }

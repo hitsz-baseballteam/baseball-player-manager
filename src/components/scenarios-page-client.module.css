@@ -22,7 +22,7 @@
   font-weight: 600;
   font-family: inherit;
   background: var(--theme-accent);
-  color: var(--theme-accent-fg);
+  color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -79,11 +79,11 @@
 .tabBtn:hover { background: var(--theme-surface); color: var(--theme-fg); }
 .tabBtnActive {
   background: var(--theme-accent);
-  color: var(--theme-accent-fg);
+  color: #fff;
 }
 .tabBtnActive:hover {
   background: var(--theme-accent);
-  color: var(--theme-accent-fg);
+  color: #fff;
   opacity: 0.9;
 }
 
@@ -113,8 +113,8 @@
   max-width: calc(100vw - 32px);
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
-  border-radius: 24px;
-  box-shadow: 0 30px 80px color-mix(in srgb, var(--theme-shadow-strong) 16%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px var(--theme-shadow-strong);
   padding: 0;
   animation: dialogIn 0.2s ease-out;
 }
@@ -163,7 +163,7 @@
   font-size: 0.9rem;
   font-family: inherit;
   border: 1px solid var(--theme-border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--theme-bg);
   color: var(--theme-fg);
 }
@@ -177,7 +177,7 @@
   font-size: 0.85rem;
   font-family: inherit;
   border: 1px solid var(--theme-border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--theme-bg);
   color: var(--theme-fg);
   resize: vertical;

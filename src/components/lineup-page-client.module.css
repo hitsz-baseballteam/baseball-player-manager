@@ -78,7 +78,7 @@
 .warningChip {
   font-size: 0.75rem;
   padding: 0.2rem 0.6rem;
-  border-radius: 20px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--theme-warn) 15%, transparent);
   color: var(--theme-warn);
   font-weight: 500;

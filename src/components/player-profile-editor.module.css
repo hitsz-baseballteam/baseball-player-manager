@@ -4,10 +4,8 @@
   z-index: 60;
   display: flex;
   justify-content: flex-end;
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 28%),
-    linear-gradient(180deg, rgba(10, 14, 13, 0.42), rgba(10, 14, 13, 0.72));
-  backdrop-filter: blur(14px);
+  background: rgba(10, 14, 13, 0.55);
+  backdrop-filter: blur(8px);
 }
 
 .shell {
@@ -20,10 +18,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   padding: clamp(16px, 3vw, 34px);
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 26%),
-    radial-gradient(circle at bottom right, color-mix(in srgb, var(--theme-gold) 9%, transparent), transparent 24%),
-    linear-gradient(180deg, color-mix(in srgb, var(--profile-bg) 94%, white), var(--profile-bg));
+  background: var(--profile-bg);
 }
 
 .pageEmbeddedShell {
@@ -37,8 +32,8 @@
   height: 100vh;
   height: 100dvh;
   overflow: auto;
-  background: color-mix(in srgb, var(--profile-panel) 94%, white);
-  box-shadow: 0 20px 64px var(--theme-shadow-strong);
+  background: var(--profile-panel);
+  box-shadow: 0 4px 20px var(--theme-shadow-strong);
 }
 
 .frame {
@@ -46,22 +41,10 @@
   max-width: 1180px;
   margin: 0 auto;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--profile-border) 82%, transparent);
-  border-radius: clamp(22px, 2.6vw, 34px);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--profile-panel) 92%, white), var(--profile-panel));
-  box-shadow: 0 18px 52px color-mix(in srgb, var(--theme-shadow-strong) 36%, transparent);
-}
-
-.frame::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 4%, transparent), transparent 18%),
-    linear-gradient(90deg, transparent, color-mix(in srgb, var(--theme-fg) 3%, transparent), transparent);
-  opacity: 0.85;
+  border: 1px solid var(--profile-border);
+  border-radius: 12px;
+  background: var(--profile-panel);
+  box-shadow: 0 2px 12px var(--theme-shadow);
 }
 
 .topbar {
@@ -72,7 +55,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: clamp(18px, 2.4vw, 26px) clamp(18px, 3vw, 34px);
-  border-bottom: 1px solid color-mix(in srgb, var(--profile-border) 78%, transparent);
+  border-bottom: 1px solid var(--profile-border);
 }
 
 .topbarLeft,
@@ -111,7 +94,7 @@
 .kickerMuted {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -150,7 +133,7 @@
 .deck {
   max-width: 62ch;
   margin: 0;
-  color: color-mix(in srgb, var(--profile-text-muted) 90%, var(--profile-text));
+  color: var(--profile-text-muted);
   font-size: clamp(14px, 1.75vw, 16px);
   line-height: 1.8;
 }
@@ -167,7 +150,7 @@
 .numberPlateLabel {
   color: var(--profile-text-muted);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -191,15 +174,15 @@
   display: inline-flex;
   align-items: center;
   padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--profile-border) 88%, transparent);
+  border-radius: 8px;
+  border: 1px solid var(--profile-border);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
 
 .tag {
-  background: color-mix(in srgb, var(--profile-panel-alt) 78%, white);
+  background: var(--profile-panel-alt);
   color: var(--profile-text);
 }
 
@@ -221,15 +204,15 @@
   align-content: space-between;
   gap: 10px;
   padding: 16px 16px 14px;
-  border-top: 1px solid color-mix(in srgb, var(--profile-border) 92%, transparent);
-  background: color-mix(in srgb, var(--profile-panel-alt) 42%, white);
+  border-top: 1px solid var(--profile-border);
+  background: var(--profile-panel-alt);
 }
 
 .metricCard span {
   color: var(--profile-text-muted);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -245,8 +228,8 @@
   gap: 16px;
   align-content: start;
   padding: clamp(18px, 2.2vw, 24px);
-  border-left: 1px solid color-mix(in srgb, var(--profile-border) 78%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--profile-panel-alt) 40%, white), transparent);
+  border-left: 1px solid var(--profile-border);
+  background: var(--profile-panel);
 }
 
 .identityList {
@@ -259,7 +242,7 @@
   display: grid;
   gap: 6px;
   padding-bottom: 14px;
-  border-bottom: 1px solid color-mix(in srgb, var(--profile-border) 78%, transparent);
+  border-bottom: 1px solid var(--profile-border);
 }
 
 .identityList dt {
@@ -267,7 +250,7 @@
   color: var(--profile-text-muted);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -300,9 +283,9 @@
   display: grid;
   gap: 18px;
   padding: clamp(18px, 2.2vw, 24px);
-  border: 1px solid color-mix(in srgb, var(--profile-border) 84%, transparent);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--profile-panel) 86%, white);
+  border: 1px solid var(--profile-border);
+  border-radius: 12px;
+  background: var(--profile-panel);
 }
 
 .sectionHeader {
@@ -311,7 +294,7 @@
   justify-content: space-between;
   gap: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid color-mix(in srgb, var(--profile-border) 78%, transparent);
+  border-bottom: 1px solid var(--profile-border);
 }
 
 .sectionHeader h2 {
@@ -343,7 +326,7 @@
   color: var(--profile-text-muted);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -372,17 +355,17 @@
   min-height: 48px;
   width: 100%;
   padding: 0 14px;
-  border: 1px solid color-mix(in srgb, var(--profile-border) 92%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--profile-bg) 82%, white);
+  border: 1px solid var(--profile-border);
+  border-radius: 8px;
+  background: var(--profile-bg);
   color: var(--profile-ink);
   font: inherit;
-  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .field input::placeholder,
 .field textarea::placeholder {
-  color: color-mix(in srgb, var(--profile-text-muted) 78%, white);
+  color: var(--profile-text-muted);
 }
 
 .field textarea {
@@ -396,9 +379,9 @@
 .field select:focus,
 .field textarea:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--profile-border));
+  border-color: var(--profile-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 14%, transparent);
-  background: color-mix(in srgb, var(--profile-bg) 92%, white);
+  background: var(--profile-bg);
 }
 
 .positionGrid {
@@ -413,9 +396,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--profile-border) 92%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--profile-panel-alt) 34%, white);
+  border: 1px solid var(--profile-border);
+  border-radius: 8px;
+  background: var(--profile-panel-alt);
   color: var(--profile-text);
   font-size: 13px;
   font-weight: 700;
@@ -431,13 +414,13 @@
 }
 
 .positionTag:has(input:checked) {
-  border-color: color-mix(in srgb, var(--theme-accent) 50%, transparent);
+  border-color: var(--profile-accent);
   background: color-mix(in srgb, var(--theme-accent) 11%, transparent);
   color: var(--profile-accent);
 }
 
 .positionTag:has(input:focus-visible) {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  outline: 2px solid var(--profile-accent);
   outline-offset: 2px;
 }
 
@@ -467,7 +450,7 @@
   grid-template-columns: 1fr auto;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--profile-border) 76%, transparent);
+  border-bottom: 1px solid var(--profile-border);
 }
 
 .legendRow span {
@@ -499,34 +482,27 @@
 .primaryButton,
 .secondaryButton {
   min-height: 46px;
-  border-radius: 999px;
+  border-radius: 8px;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
-}
-
-.primaryButton:hover,
-.secondaryButton:hover {
-  transform: translateY(-1px);
+  transition: background 180ms ease, border-color 180ms ease;
 }
 
 .primaryButton:disabled,
 .secondaryButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .primaryButton {
-  border: 1px solid color-mix(in srgb, var(--theme-gold) 26%, transparent);
+  border: 1px solid var(--theme-gold);
   padding: 0 20px;
-  background: linear-gradient(135deg, var(--profile-warm), var(--profile-accent-strong));
-  color: var(--profile-bg);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-shadow-strong) 18%, transparent);
+  background: var(--theme-warm);
+  color: #fff;
 }
 
 .secondaryButton {
@@ -534,8 +510,8 @@
   align-items: center;
   justify-content: center;
   padding: 0 16px;
-  border: 1px solid color-mix(in srgb, var(--profile-border) 92%, transparent);
-  background: color-mix(in srgb, var(--profile-panel-alt) 58%, white);
+  border: 1px solid var(--profile-border);
+  background: var(--profile-panel-alt);
   color: var(--profile-text);
 }
 
@@ -549,9 +525,9 @@
   display: grid;
   gap: 14px;
   padding: clamp(28px, 5vw, 42px);
-  border: 1px solid color-mix(in srgb, var(--profile-border) 84%, transparent);
-  border-radius: 28px;
-  background: color-mix(in srgb, var(--profile-panel) 88%, white);
+  border: 1px solid var(--profile-border);
+  border-radius: 12px;
+  background: var(--profile-panel);
   text-align: center;
 }
 
@@ -575,7 +551,7 @@
 
   .identityCard {
     border-left: 0;
-    border-top: 1px solid color-mix(in srgb, var(--profile-border) 78%, transparent);
+    border-top: 1px solid var(--profile-border);
     padding-top: 20px;
   }
 
@@ -635,11 +611,11 @@
 
   .sectionCard {
     padding: 14px;
-    border-radius: 18px;
+    border-radius: 10px;
   }
 
   .frame {
-    border-radius: 22px;
+    border-radius: 10px;
   }
 
   .title {

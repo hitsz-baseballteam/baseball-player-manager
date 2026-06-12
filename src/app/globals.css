@@ -52,21 +52,19 @@
 }
 
 :root {
-  --background: #f2efe6;
-  --foreground: #172019;
   --font-display: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --shell-max-width: 1480px;
   --shell-page-gutter: clamp(20px, 3vw, 40px);
   --shell-header-height: 72px;
-  --shell-panel-radius: 28px;
-  --shell-panel-border: color-mix(in srgb, var(--theme-border) 88%, transparent);
-  --shell-panel-shadow: 0 26px 72px color-mix(in srgb, var(--theme-shadow-strong) 48%, transparent);
-  --shell-hero-ink: color-mix(in srgb, var(--theme-fg) 94%, transparent);
-  --shell-muted: color-mix(in srgb, var(--theme-muted) 96%, transparent);
-  --shell-accent-soft: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
-  --shell-panel-soft: color-mix(in srgb, var(--theme-surface-alt) 84%, var(--theme-surface));
-  --shell-grid-line: color-mix(in srgb, var(--theme-border) 84%, transparent);
+  --shell-panel-radius: 12px;
+  --shell-panel-border: var(--theme-border);
+  --shell-panel-shadow: 0 2px 8px var(--theme-shadow);
+  --shell-hero-ink: var(--theme-fg);
+  --shell-muted: var(--theme-muted);
+  --shell-accent-soft: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface));
+  --shell-panel-soft: var(--theme-surface-alt);
+  --shell-grid-line: var(--theme-border);
 }
 
 /* Profile-local variable mappings (used by player-profile-editor *.module.css) */
