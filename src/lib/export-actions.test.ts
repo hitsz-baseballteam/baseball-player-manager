@@ -20,6 +20,7 @@ import {
   createEmptyAssignments,
   createScenario,
   getActiveScenario,
+  type Workspace,
 } from "@/lib/workspace";
 
 describe("export-actions", () => {
@@ -118,8 +119,9 @@ describe("export-actions", () => {
       const current = fresh();
       const imported = createScenarioAction(fresh(), "导入方案", "");
       const pending = parseImportPayload(buildWorkspaceExport(imported));
+      assert.equal(pending.type, "workspace");
       const result = applyWorkspaceImport(current, pending);
-      assert.equal(result, pending.workspace);
+      assert.equal(result, (pending as { type: "workspace"; workspace: Workspace }).workspace);
     });
   });
 

@@ -1,7 +1,7 @@
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
-import { PlayerProfileEditor } from "./player-profile-editor";
+import { PlayerProfileEditor, polarToCartesian, formatMetric } from "./player-profile-editor";
 import type { Player } from "@/lib/workspace";
 
 function createTestPlayer(overrides: Partial<Player> = {}): Player {
@@ -123,8 +123,8 @@ describe("PlayerProfileEditor", () => {
     if (!result) {
       throw new Error("onSave should have been called");
     }
-    assert.equal(result.name, "更新的球员");
-    assert.equal(result.id, "test-player-1");
+    assert.equal((result as Player).name, "更新的球员");
+    assert.equal((result as Player).id, "test-player-1");
   });
 
   it("shows validation error when name is empty", async () => {
@@ -244,5 +244,52 @@ describe("PlayerProfileEditor", () => {
     });
 
     assert.equal(profileTypeSelect.value, "fielder");
+  });
+
+  describe("polarToCartesian", () => {
+    it("returns top-center for index 0 (12 o'clock)", () => {
+      const result = polarToCartesian(150, 150, 100, 0, 6);
+      assert.ok(Math.abs(result.x - 150) < 0.01, `x=${result.x} should be ~150`);
+      assert.ok(result.y < 150, `y=${result.y} should be above center`);
+      assert.ok(Math.abs(result.y - 50) < 0.01, `y=${result.y} should be ~50`);
+    });
+
+    it("returns rightmost for index at 1/4 total", () => {
+      const result = polarToCartesian(150, 150, 100, 1, 4);
+      assert.ok(result.x > 150, `x=${result.x} should be right of center`);
+      assert.ok(Math.abs(result.y - 150) < 0.01, `y=${result.y} should be ~150`);
+    });
+
+    it("returns bottom-center for halfway point", () => {
+      const result = polarToCartesian(150, 150, 100, 3, 6);
+      assert.ok(Math.abs(result.x - 150) < 0.01, `x=${result.x} should be ~150`);
+      assert.ok(result.y > 150, `y=${result.y} should be below center`);
+    });
+
+    it("scales radius correctly", () => {
+      const r50 = polarToCartesian(0, 0, 50, 0, 6);
+      const r100 = polarToCartesian(0, 0, 100, 0, 6);
+      assert.ok(Math.abs(r100.y * 2 - r50.y * 4) < 0.01, "doubling radius doubles distance");
+    });
+  });
+
+  describe("formatMetric", () => {
+    it("returns dash-dash for null value", () => {
+      assert.equal(formatMetric(null, "cm"), "--");
+    });
+
+    it("formats value with suffix", () => {
+      assert.equal(formatMetric(185, "cm"), "185 cm");
+    });
+  });
+
+  describe("RadarChart", () => {
+    it("renders an SVG with 6-axis radar for a pitcher profile", () => {
+      const player = createTestPlayer();
+      render(<PlayerProfileEditor player={player} variant="page" onSave={async () => {}} />);
+
+      const svg = screen.getByRole("img", { name: "球员六维能力图" });
+      assert.equal(svg.tagName.toLowerCase(), "svg");
+    });
   });
 });

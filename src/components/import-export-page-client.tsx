@@ -87,7 +87,7 @@ export function ImportExportPageClient({
     try {
       const rawText = await file.text();
       const parsed = JSON.parse(rawText);
-      const pending = parseImportPayload(parsed);
+      const pending = parseImportPayload(parsed, file.name);
       setPendingImport(pending);
     } catch (error) {
       const message = error instanceof Error ? error.message : "导入解析失败，请检查 JSON 文件";

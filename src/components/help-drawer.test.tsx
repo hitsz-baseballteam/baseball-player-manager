@@ -61,7 +61,7 @@ describe("HelpDrawer", () => {
 
   afterEach(() => {
     cleanup();
-    document.querySelectorAll(".drawer-scrim, .help-drawer").forEach((el) => el.remove());
+    document.querySelectorAll(".omp-drawer-scrim, .help-drawer").forEach((el) => el.remove());
   });
 
   it("renders nothing when closed", () => {
@@ -76,7 +76,7 @@ describe("HelpDrawer", () => {
       />,
     );
     assert.equal(document.querySelector(".help-drawer.open"), null);
-    assert.equal(document.querySelector(".drawer-scrim.open"), null);
+    assert.equal(document.querySelector(".omp-drawer-scrim.open"), null);
   });
 
   it("renders drawer and scrim when open", () => {
@@ -91,7 +91,7 @@ describe("HelpDrawer", () => {
       />,
     );
     assert.ok(document.querySelector(".help-drawer.open"));
-    assert.ok(document.querySelector(".drawer-scrim.open"));
+    assert.ok(document.querySelector(".omp-drawer-scrim.open"));
     assert.ok(screen.getByText("使用指引 / 帮助"));
   });
 
@@ -121,7 +121,7 @@ describe("HelpDrawer", () => {
         helpRef={helpRef}
       />,
     );
-    const scrim = document.querySelector(".drawer-scrim")!;
+    const scrim = document.querySelector(".omp-drawer-scrim")!;
     fireEvent.mouseDown(scrim);
     assert.equal(onCloseCalls, 1);
   });

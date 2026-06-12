@@ -29,8 +29,7 @@ RETURNING version
 `src/lib/db.ts`：
 
 | 参数 | 值 | 原因 |
-|---|---|---|
-| `max` | Supabase 主机为 1，其他主机为 5 | Supabase 连接更保守，降低连接池占用；本地或其他 PostgreSQL 主机保持 5 |
+| `max` | Supabase 主机为 1，其他主机为 5 | Supabase PgBouncer（事务模式）下 prepared statement 会冲突，单连接序列化可避免；本地或其他 PostgreSQL 主机保持 5 |
 | `idleTimeoutMillis` | 30000 | 30 秒空闲即释放，避免占用连接 |
 | `connectionTimeoutMillis` | 10000 | 10 秒连接超时，避免连接建立阶段长时间卡住 |
 

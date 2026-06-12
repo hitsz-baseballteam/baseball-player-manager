@@ -10,7 +10,7 @@ import {
   sanitizePlayers,
   sanitizeScenario,
   sanitizeWorkspace,
-} from "./workspace.ts";
+} from "./workspace";
 
 describe("workspace sanitizers", () => {
   it("sanitizes invalid players and keeps valid ones", () => {

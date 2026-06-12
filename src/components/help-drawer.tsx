@@ -89,7 +89,7 @@ export function HelpDrawer({
 
   const scrim = (
     <div
-      className={`drawer-scrim${isOpen ? " open" : ""}`}
+      className={`omp-drawer-scrim${isOpen ? " open" : ""}`}
       onMouseDown={onClose}
       aria-hidden="true"
     />

@@ -6,6 +6,7 @@ import {
   UNLOCK_COOKIE_NAME,
 } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limiter";
+import { unlockPostSchema } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   const ip =
@@ -17,11 +18,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
-  const body = (await request.json().catch(() => null)) as
-    | { passcode?: string }
-    | null;
+  const raw = await request.json().catch(() => null);
+  const parsed = unlockPostSchema.safeParse(raw);
 
-  if (!body?.passcode || !verifyPasscode(body.passcode)) {
+  if (!parsed.success || !verifyPasscode(parsed.data?.passcode ?? "")) {
     return NextResponse.json({ error: "invalid_passcode" }, { status: 401 });
   }
 

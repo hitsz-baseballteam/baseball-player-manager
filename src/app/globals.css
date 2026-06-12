@@ -248,7 +248,7 @@ body {
   font-size: 13px;
 }
 
-html body .drawer-scrim {
+html body .omp-drawer-scrim {
   position: fixed;
   inset: 0;
   z-index: 70;
@@ -365,7 +365,7 @@ html body .guide-card p {
   color: var(--shell-muted);
 }
 
-html body .toast {
+html body .omp-toast {
   color: var(--shell-hero-ink);
   font-family: var(--font-ui), var(--font-body-sc), sans-serif;
   border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, var(--shell-panel-border));

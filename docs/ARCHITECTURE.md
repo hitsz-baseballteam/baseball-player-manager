@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-05.
+This document describes the repository as currently observed on 2026-06-12.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -22,7 +22,7 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 | `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and cross-page client helpers |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
-| `docs/` | Architecture, planning, design docs, quality notes, references, and session history |
+| `docs/` | Architecture, design docs, quality notes, and references |
 | `.github/workflows/` | CI workflow for lint, test, and build |
 
 ## Entry Points
@@ -59,18 +59,13 @@ From `package.json`:
 
 ### 1. Domain model and business rules
 
-`src/lib/workspace.ts` is the central domain module. It defines the workspace, player, scenario, and profile types, along with pure helpers for:
+`src/lib/workspace/` is the central domain module, split into:
 
-- workspace sanitization
-- player/profile sanitization
-- scenario sanitization
-- auto-assignment
-- warning analysis
-- import/export preparation
-- legacy-state migration
-- workspace cloning and default-state creation
-
-This file is also where shared constants such as positions, labels, and guide steps live.
+- `types.ts` — workspace, player, scenario, and profile types plus shared constants (positions, labels, guide steps)
+- `base.ts` — pure factory functions (createId, createDefaultPlayerProfile, createScenario, createDefaultWorkspace, cloneWorkspace)
+- `sanitizers.ts` — input sanitization at every boundary (sanitizeWorkspace, sanitizePlayers, sanitizePlayerProfile, sanitizeScenario, sanitizeAssignments, migrateLegacyState)
+- `helpers.ts` — domain helpers (getActiveScenario, buildAutoScenario, analyzeScenarioWarnings, prepareImport, formatting)
+- `index.ts` — barrel re-export for backward-compatible `@/lib/workspace` imports
 
 ### 2. Persistence and concurrency
 
@@ -162,5 +157,4 @@ Evidence-backed enforcement currently present in the repo:
 
 ## Open Questions
 
-- `docs/product-specs/` exists, but implemented features are not yet backed by formal per-feature specs.
 - No repository-local deployment configuration beyond the generic Next.js app structure is present; operational hosting details are therefore out of scope for this document.

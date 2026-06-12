@@ -1003,7 +1003,7 @@ function RadarChart({
   );
 }
 
-function polarToCartesian(
+export function polarToCartesian(
   centerX: number,
   centerY: number,
   radius: number,
@@ -1017,7 +1017,7 @@ function polarToCartesian(
   };
 }
 
-function formatMetric(value: number | null, suffix: string) {
+export function formatMetric(value: number | null, suffix: string) {
   return value === null ? "--" : `${value} ${suffix}`;
 }
 

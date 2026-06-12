@@ -94,8 +94,9 @@ describe("ImportExportPageClient", () => {
           buildCsvExportCalls += 1;
           return "背号,姓名\n18,陈浩宇";
         },
-        parseImportPayload(value: { kind?: string }) {
-          return value.kind === "scenario" ? scenarioPending : workspacePending;
+        parseImportPayload(value: unknown) {
+          const v = value as { kind?: string };
+          return v.kind === "scenario" ? scenarioPending : workspacePending;
         },
         applyWorkspaceImport() {
           return clone(baseWorkspace);

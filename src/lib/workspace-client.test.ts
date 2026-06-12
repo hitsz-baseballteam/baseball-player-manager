@@ -16,8 +16,8 @@ describe("workspace client", () => {
     const initialWorkspace = createDefaultWorkspace(false);
     let requestBody: { workspace: unknown; version: number } | null = null;
 
-    mock.method(globalThis, "fetch", async (_input, init) => {
-      requestBody = JSON.parse(String(init?.body)) as {
+    mock.method(globalThis, "fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+      requestBody = JSON.parse(String(init?.body ?? "")) as {
         workspace: unknown;
         version: number;
       };
@@ -33,9 +33,10 @@ describe("workspace client", () => {
 
     const result = await saveWithRetry(initialWorkspace, 1, (latest) => latest);
 
-    assert.ok(requestBody);
-    assert.equal(requestBody.version, 1);
-    assert.deepEqual(requestBody.workspace, initialWorkspace);
+    assert.ok(requestBody, "requestBody should be set by mock fetch");
+    const body = requestBody as { workspace: unknown; version: number };
+    assert.equal(body.version, 1);
+    assert.deepEqual(body.workspace, initialWorkspace);
     assert.equal(result.version, 2);
   });
 
@@ -47,12 +48,12 @@ describe("workspace client", () => {
     const putBodies: Array<{ workspace: unknown; version: number }> = [];
     let callCount = 0;
 
-    mock.method(globalThis, "fetch", async (input, init) => {
+    mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
       callCount += 1;
       const url = String(input);
 
       if (callCount === 1) {
-        putBodies.push(JSON.parse(String(init?.body)) as { workspace: unknown; version: number });
+        putBodies.push(JSON.parse(String(init?.body ?? "")) as { workspace: unknown; version: number });
         return new Response(JSON.stringify({ error: "version_conflict" }), { status: 409 });
       }
 
@@ -68,7 +69,7 @@ describe("workspace client", () => {
         );
       }
 
-      putBodies.push(JSON.parse(String(init?.body)) as { workspace: unknown; version: number });
+      putBodies.push(JSON.parse(String(init?.body ?? "")) as { workspace: unknown; version: number });
       return new Response(
         JSON.stringify({
           workspace: latestWorkspace,

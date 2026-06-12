@@ -79,8 +79,8 @@ export function buildCsvExport(workspace: Workspace): string {
   return `\uFEFF${[header, ...rows].join("\n")}`;
 }
 
-export function parseImportPayload(value: unknown): PendingImport {
-  return prepareImport(createDefaultWorkspace(false), value, "import.json");
+export function parseImportPayload(value: unknown, fileName = "import.json"): PendingImport {
+  return prepareImport(createDefaultWorkspace(false), value, fileName);
 }
 
 export function applyWorkspaceImport(_current: Workspace, pending: PendingImport): Workspace {
