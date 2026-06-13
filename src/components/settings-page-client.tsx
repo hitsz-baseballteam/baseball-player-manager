@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type ChangeEvent } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { GuideOverlay, type GuideHandle } from "@/components/guide-overlay";
@@ -8,18 +8,34 @@ import { HelpDrawer, type HelpDrawerHandle } from "@/components/help-drawer";
 import styles from "@/components/settings-page-client.module.css";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
-import { createDefaultWorkspace, sanitizeWorkspace, type Workspace } from "@/lib/workspace";
+import {
+  cloneWorkspace,
+  createDefaultWorkspace,
+  sanitizeWorkspace,
+  timestampFilePart,
+  type PendingImport,
+  type Workspace,
+} from "@/lib/workspace";
 import {
   isVersionConflict,
   loadWorkspaceSnapshot,
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
 
+import {
+  applyScenarioImport,
+  applyWorkspaceImport,
+  buildCsvExport,
+  buildScenarioExport,
+  buildWorkspaceExport,
+  parseImportPayload,
+} from "@/lib/export-actions";
+
 const NAV_ITEMS = [
   { label: "总览", href: "/" },
   { label: "名册", href: "/roster" },
   { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/import-export" },
+  { label: "数据中心", href: "/stats" },
   { label: "设置", href: "/settings", active: true },
 ] as const;
 
@@ -52,6 +68,88 @@ export function SettingsPageClient({
     setGuideOpen(true);
     queueMicrotask(() => guideRef.current?.open());
   }, []);
+
+  // ── Import/Export ──
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importPayload, setImportPayload] = useState<PendingImport | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  function downloadText(fileName: string, content: string, mime: string): void {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadJson(fileName: string, payload: unknown): void {
+    downloadText(fileName, JSON.stringify(payload, null, 2), "application/json");
+  }
+
+  const handleExportJson = useCallback(() => {
+    const ts = timestampFilePart();
+    downloadJson(`workspace-${ts}.json`, buildWorkspaceExport(workspace));
+  }, [workspace]);
+
+  const handleExportCsv = useCallback(() => {
+    const ts = timestampFilePart();
+    downloadText(`roster-${ts}.csv`, buildCsvExport(workspace), "text/csv");
+  }, [workspace]);
+
+  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setImportError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      const payload = parseImportPayload(text);
+      if ("error" in payload) {
+        setImportError(String(payload.error));
+        return;
+      }
+      setImportPayload(payload);
+    };
+    reader.onerror = () => setImportError("文件读取失败");
+    reader.readAsText(file);
+    // reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
+  const handleApplyImport = useCallback(async () => {
+    if (!importPayload) return;
+    const current = cloneWorkspace(workspace);
+    let next: Workspace;
+    try {
+      if (importPayload.type === "workspace") {
+        next = applyWorkspaceImport(current, importPayload);
+      } else {
+        next = applyScenarioImport(current, importPayload);
+      }
+    } catch (err) {
+      setImportError(String(err instanceof Error ? err.message : err));
+      return;
+    }
+    setImportPayload(null);
+    setImportError(null);
+    try {
+      const result = await saveWorkspaceSnapshot(next, version);
+      if ("version" in result) {
+        setVersion(result.version);
+        setWorkspace(sanitizeWorkspace(next));
+        toastRef.current?.showToast("导入成功");
+      } else if (isVersionConflict(result)) {
+        const snapshot = await loadWorkspaceSnapshot();
+        setVersion(snapshot.version);
+        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        toastRef.current?.showToast("工作区已被他人更新，已自动刷新。");
+      }
+    } catch {
+      setImportError("保存失败，请重试。");
+    }
+  }, [importPayload, workspace, version]);
 
   const handleResetExampleData = useCallback(async () => {
     if (!window.confirm("确认重置为示例数据？当前共享工作区会被默认球员与默认方案覆盖。")) {
@@ -180,6 +278,52 @@ export function SettingsPageClient({
                   打开帮助
                 </button>
               </div>
+            </section>
+
+            <section className={styles.card} aria-label="数据导入导出区">
+              <p className={styles.eyebrow}>Data</p>
+              <h2 className={styles.title}>数据导入与导出</h2>
+              <p className={styles.description}>导出工作区备份、球员名单 CSV，或导入 JSON 格式的工作区与方案数据。</p>
+              <div className={styles.actionRow}>
+                <button className={styles.btnPrimary} type="button" onClick={handleExportJson}>
+                  导出工作区 (JSON)
+                </button>
+                <button className={styles.btnSecondary} type="button" onClick={handleExportCsv}>
+                  导出名册 (CSV)
+                </button>
+              </div>
+              <div className={styles.actionRow}>
+                <button
+                  className={styles.btnSecondary}
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  导入数据 (JSON)
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileChange}
+                  hidden
+                />
+              </div>
+              {importError && <p className={styles.errorText}>{importError}</p>}
+              {importPayload && (
+                <div className={styles.actionRow}>
+                  <button className={styles.btnPrimary} type="button" onClick={handleApplyImport}>
+                    确认导入{importPayload.type === "workspace" ? "工作区" : "方案"}
+                  </button>
+                  <button
+                    className={styles.btnSecondary}
+                    type="button"
+                    onClick={() => setImportPayload(null)}
+                  >
+                    取消
+                  </button>
+                </div>
+              )}
+              {isSaving && <p className={styles.statusText}>正在保存…</p>}
             </section>
           </div>
         </AppShell>

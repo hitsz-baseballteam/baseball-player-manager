@@ -1,11 +1,11 @@
 import { cookies } from "next/headers";
 
-import { ImportExportPageClient } from "@/components/import-export-page-client";
+import { StatsPageClient } from "@/components/stats-page-client";
 import { UnlockForm } from "@/components/unlock-form";
 import { isUnlockCookieValid, UNLOCK_COOKIE_NAME } from "@/lib/auth";
 import { getOrCreateWorkspaceSnapshot } from "@/lib/workspace-store";
 
-export default async function ImportExportPage() {
+export default async function StatsPage() {
   const cookieStore = await cookies();
   const unlockCookie = cookieStore.get(UNLOCK_COOKIE_NAME)?.value;
 
@@ -16,7 +16,7 @@ export default async function ImportExportPage() {
   const snapshot = await getOrCreateWorkspaceSnapshot();
 
   return (
-    <ImportExportPageClient
+    <StatsPageClient
       initialWorkspace={snapshot.workspace}
       initialVersion={snapshot.version}
     />

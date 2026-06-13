@@ -39,7 +39,7 @@ const NAV_ITEMS = [
   { label: "总览", href: "/" },
   { label: "名册", href: "/roster", active: true },
   { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/import-export" },
+  { label: "数据中心", href: "/stats" },
   { label: "设置", href: "/settings" },
 ] as const;
 

@@ -1,0 +1,556 @@
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 20px 0;
+}
+
+.tab {
+  padding: 8px 20px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px 8px 0 0;
+  background: var(--theme-surface-alt);
+  color: var(--theme-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: none;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.tab:hover {
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+}
+
+.tabActive {
+  composes: tab;
+  background: var(--theme-surface);
+  color: var(--theme-accent);
+  border-color: var(--theme-border);
+}
+
+/* ── Table ── */
+
+.tableWrap {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 0 8px 8px 8px;
+  overflow: hidden;
+  margin: 0 20px 16px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+  padding-left: 16px;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 16px;
+}
+
+.table thead th {
+  color: var(--theme-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--theme-border);
+  user-select: none;
+}
+
+.table thead th:first-child {
+  border-top-left-radius: 0;
+}
+
+.sortable {
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.sortable:hover {
+  color: var(--theme-accent);
+}
+
+.sortDir {
+  display: inline-block;
+  margin-left: 3px;
+  font-size: 10px;
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  cursor: pointer;
+  transition: background 120ms ease;
+  border-bottom: 1px solid var(--theme-surface-alt);
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--theme-surface-alt);
+}
+
+.table tbody tr.expanded {
+  background: var(--theme-surface-alt);
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.table tbody td {
+  color: var(--theme-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.playerName {
+  color: var(--theme-fg);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.playerMeta {
+  color: var(--theme-muted);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+/* ── Expanded Panel ── */
+
+.expandedRow {
+  background: var(--theme-bg);
+}
+
+.expandedCell {
+  padding: 16px 20px !important;
+}
+
+.expandedPanel {
+  display: grid;
+  gap: 16px;
+}
+
+.expandedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.expandedTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--theme-fg);
+}
+
+.expandedStatPills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.statPill {
+  padding: 4px 12px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.statPillLabel {
+  color: var(--theme-muted);
+  margin-right: 4px;
+  font-weight: 500;
+}
+
+.statPillValue {
+  color: var(--theme-fg);
+  font-weight: 700;
+}
+
+.statPillValueAccent {
+  composes: statPillValue;
+  color: var(--theme-accent);
+}
+
+.expandedActions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnSmall {
+  padding: 6px 14px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.btnSmall:hover {
+  border-color: var(--theme-accent);
+  color: var(--theme-accent);
+}
+
+.btnSmallDanger {
+  composes: btnSmall;
+  color: var(--theme-danger);
+  border-color: var(--theme-danger);
+}
+
+.btnSmallDanger:hover {
+  background: var(--theme-danger);
+  color: #fff;
+  border-color: var(--theme-danger);
+}
+
+/* ── Game log table inside expanded panel ── */
+
+.gameLog {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.gameLog th {
+  text-align: left;
+  padding: 8px 10px;
+  color: var(--theme-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--theme-border);
+  user-select: none;
+}
+
+.gameLog td {
+  padding: 8px 10px;
+  color: var(--theme-fg);
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--theme-surface-alt);
+}
+
+.gameLog tr:last-child td {
+  border-bottom: none;
+}
+
+.gameLog tr:hover td {
+  background: var(--theme-surface);
+}
+
+.gameLogActions {
+  display: flex;
+  gap: 6px;
+}
+
+.gameTypeTag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.gameTypeOfficial {
+  composes: gameTypeTag;
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  color: var(--theme-accent);
+}
+
+.gameTypeTraining {
+  composes: gameTypeTag;
+  background: color-mix(in srgb, var(--theme-muted) 10%, transparent);
+  color: var(--theme-muted);
+}
+
+/* ── Game Dialog ── */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  width: min(92vw, 520px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px var(--theme-shadow-strong);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.dialogHeader h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--theme-fg);
+}
+
+.dialogClose {
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  color: var(--theme-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.dialogClose:hover {
+  color: var(--theme-fg);
+}
+
+.dialogForm {
+  padding: 16px 20px 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.dialogRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.dialogRowSmall {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.dialogField {
+  display: grid;
+  gap: 4px;
+}
+
+.dialogField span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dialogField input,
+.dialogField select {
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-alt);
+  color: var(--theme-fg);
+  font: inherit;
+  font-size: 13px;
+}
+
+.dialogField input:focus,
+.dialogField select:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 14%, transparent);
+}
+
+.dialogSectionHeader {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--theme-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-top: 6px;
+}
+
+.dialogError {
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--theme-danger) 8%, transparent);
+  border: 1px solid var(--theme-danger);
+  border-radius: 6px;
+  color: var(--theme-danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.btnPrimary {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--theme-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.btnPrimary:hover {
+  background: var(--theme-accent-hover);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  padding: 8px 20px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+
+.btnSecondary:hover {
+  border-color: var(--theme-accent);
+}
+
+/* ── Empty State ── */
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.emptyIcon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.emptyText {
+  color: var(--theme-muted);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.emptySub {
+  color: var(--theme-muted);
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ── Skeleton ── */
+
+.skeletonRow {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(10, 1fr);
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--theme-surface-alt);
+  align-items: center;
+}
+
+.skeletonCell {
+  height: 14px;
+  border-radius: 4px;
+  background: var(--theme-surface-alt);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeletonCell:nth-child(odd) {
+  width: 80%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Save Status ── */
+
+.saveBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 20px 12px;
+}
+
+.saveStatus {
+  font-size: 12px;
+  color: var(--theme-muted);
+}
+
+.saveError {
+  font-size: 12px;
+  color: var(--theme-danger);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .tableWrap {
+    margin: 0 8px 12px;
+    border-radius: 6px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .tabs {
+    padding: 12px 8px 0;
+  }
+
+  .dialog {
+    width: 100vw;
+    max-height: 100dvh;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+  }
+
+  .dialogRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dialogRowSmall {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
