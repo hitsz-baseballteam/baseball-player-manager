@@ -1,26 +1,24 @@
 .list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  gap: 12px;
 }
 
 .card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 14px 16px;
   border: 1px solid var(--theme-border);
-  border-radius: 14px;
+  border-radius: 8px;
   background: var(--theme-surface);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
 }
 .card:hover {
   border-color: var(--theme-accent);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--theme-accent) 8%, transparent);
 }
 .cardActive {
   border-color: var(--theme-accent);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--theme-accent) 12%, transparent);
 }
 
 .cardMain {
@@ -46,7 +44,7 @@
   padding: 0.12rem 0.45rem;
   border-radius: 8px;
   background: var(--theme-accent);
-  color: var(--theme-accent-fg);
+  color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

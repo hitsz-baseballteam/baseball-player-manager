@@ -2,8 +2,8 @@
 .actionBar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
+  gap: 8px;
+  padding: 10px 16px;
   background: var(--theme-surface);
   border-bottom: 1px solid var(--theme-border);
   flex-wrap: wrap;
@@ -16,15 +16,15 @@
 .btnPrimary {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 700;
   font-family: inherit;
   background: var(--theme-accent);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: opacity 0.15s;
 }
@@ -34,15 +34,15 @@
 .btnSecondary {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.8rem;
-  font-weight: 500;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
   font-family: inherit;
   background: transparent;
   color: var(--theme-fg);
   border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -62,13 +62,14 @@
 .tabGroup {
   display: flex;
   border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .tabBtn {
-  padding: 0.35rem 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 0 12px;
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 600;
   font-family: inherit;
   border: none;
   background: transparent;

@@ -35,23 +35,27 @@ describe("HomeOverview", () => {
     cleanup();
   });
 
-  it("renders active scenario name in the panel and select", () => {
+  it("renders active scenario in the select", () => {
     const ws = createDefaultWorkspace(true);
     render(<HomeOverview {...makeProps(ws)} />);
 
     const scenario = getActiveScenario(ws);
-    // Scenario name appears in both select option and panel header
-    const matches = screen.getAllByText(scenario.name);
-    assert.ok(matches.length >= 2);
+    // Scenario name should appear in the select
+    const select = screen.getByRole("combobox", { name: "切换方案" });
+    assert.ok(select.textContent?.includes(scenario.name));
   });
 
-  it("shows player count metric", () => {
+  it("shows player count metrics inline", () => {
     const ws = createDefaultWorkspace(true);
     render(<HomeOverview {...makeProps(ws)} />);
 
-    // Metrics show "共 N 人" pattern
-    const totalPlayers = ws.players.length;
-    assert.ok(screen.getByText(new RegExp(`共\\s*${totalPlayers}\\s*人`)));
+    // Metric pills should be present with labels
+    const pills = screen.getAllByRole("button").filter((b) =>
+      b.className.includes("mock-metricPill")
+    );
+    // Should find the metric pills with numeric values
+    assert.ok(pills.length >= 3);
+    assert.ok(screen.getByText("可上场"));
   });
 
   it("shows quick action buttons", () => {
@@ -60,23 +64,26 @@ describe("HomeOverview", () => {
 
     assert.ok(screen.getByText("自动排阵"));
     assert.ok(screen.getByText("新增球员"));
-    assert.ok(screen.getByText("导入数据"));
+    assert.ok(screen.getByText("导入"));
     assert.ok(screen.getByText("新建方案"));
   });
 
-  it("renders alert deck with critical warnings for empty lineup", () => {
+  it("renders warning chip with critical warnings for empty lineup", () => {
     const ws = createDefaultWorkspace(true);
     render(<HomeOverview {...makeProps(ws)} />);
 
-    // With empty lineup, "守位未满" appears in both alert summary and list item
-    assert.ok(screen.getAllByText(/守位未满/).length >= 1);
-    assert.ok(screen.getByText(/棒次未满/));
+    // With empty lineup, "守位未满" should appear in the warning chip
+    assert.ok(screen.getByText(/守位未满/));
+    assert.ok(screen.getByText("!"));
   });
 
-  it("shows scenario snapshot panel", () => {
+  it("shows scenario switch control", () => {
     const ws = createDefaultWorkspace(true);
     render(<HomeOverview {...makeProps(ws)} />);
 
-    assert.ok(screen.getByText("切换当前方案"));
+    // The scenario switch is a compact select + manage button
+    const select = screen.getByRole("combobox", { name: "切换方案" });
+    assert.ok(select);
+    assert.ok(screen.getByText("管理方案"));
   });
 });

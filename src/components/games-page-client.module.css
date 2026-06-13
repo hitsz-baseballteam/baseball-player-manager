@@ -1,30 +1,30 @@
 .layout {
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .actionBar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .tabGroup {
   display: flex;
   gap: 0;
   border: 1px solid var(--shell-panel-border);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .tabBtn {
-  min-height: 40px;
-  padding: 0 20px;
+  min-height: 34px;
+  padding: 0 16px;
   border: none;
   background: var(--theme-surface);
   color: var(--shell-hero-ink);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease;
@@ -46,16 +46,16 @@
 .btnPrimary {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
-  padding: 0 18px;
+  min-height: 34px;
+  padding: 0 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--theme-accent);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.18s ease;
+  transition: opacity 0.15s;
 }
 
 .btnPrimary:hover {

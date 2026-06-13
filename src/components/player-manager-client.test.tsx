@@ -90,12 +90,12 @@ describe("PlayerManagerClient", () => {
     assert.equal(screen.queryByText("深入编辑工作台"), null);
     assert.ok(screen.getByRole("button", { name: /^自动排阵/ }));
     assert.ok(screen.getByRole("button", { name: /^新增球员/ }));
-    assert.ok(screen.getByRole("button", { name: /^导入数据/ }));
+    assert.ok(screen.getByRole("button", { name: /^导入/ }));
     assert.ok(screen.getByRole("button", { name: /^新建方案/ }));
 
     await user.click(screen.getByRole("button", { name: /^新增球员/ }));
-    await user.click(screen.getByRole("button", { name: /^导入数据/ }));
-    await user.click(screen.getByRole("button", { name: "去场景页完整管理" }));
+    await user.click(screen.getByRole("button", { name: /^导入/ }));
+    await user.click(screen.getByRole("button", { name: "管理方案" }));
 
     assert.deepEqual(pushes, ["/roster", "/import-export", "/scenarios"]);
 
@@ -110,7 +110,7 @@ describe("PlayerManagerClient", () => {
     assert.equal(savedWorkspaces.length, 3);
     assert.ok((savedWorkspaces[2]?.scenarios.length ?? 0) > (savedWorkspaces[1]?.scenarios.length ?? 0));
 
-    await user.click(screen.getByRole("button", { name: /^清空当前阵容/ }));
+    await user.click(screen.getByRole("button", { name: /^清空/ }));
     assert.equal(savedWorkspaces.length, 4);
 
     const lastScenario = savedWorkspaces[3]?.scenarios.find(

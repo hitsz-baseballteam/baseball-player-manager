@@ -63,10 +63,10 @@ export function AppShell({
     <div className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.brandBlock}>
-          <div className={styles.brandBadge}>球队作战指挥台</div>
+          <div className={styles.brandBadge}>指挥台</div>
           <div className={styles.brandText}>
             <div className={styles.brandTitle}>Baseball Player Manager</div>
-            <div className={styles.brandSubtitle}>共享名册、排阵与比赛日工作区</div>
+            <div className={styles.brandSubtitle}>共享名册与排阵工作区</div>
           </div>
         </div>
 

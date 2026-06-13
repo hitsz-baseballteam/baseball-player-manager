@@ -170,14 +170,14 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     router.push(href);
   }, [router]);
 
-  const heroDescription = `${activeScenario.name} · ${saveStatus}。进入首页后先看提醒、快捷动作和当前方案状态，再进入名册、排阵或场景页完成深度编辑。`;
-  const statusMeta = `最近更新 ${formatTimestamp(activeScenario.updatedAt)} · Workspace v${remoteVersion}`;
+  const heroDescription = `${saveStatus} · Workspace v${remoteVersion}`;
+  const statusMeta = `最近更新 ${formatTimestamp(activeScenario.updatedAt)}`;
 
   return (
     <ToastProvider toastRef={toastRef}>
       <div ref={appRootRef}>
         <AppShell
-          eyebrow="球队作战指挥台"
+          eyebrow="总控台"
           title="比赛日总控台"
           description={heroDescription}
           statusLabel="当前方案"

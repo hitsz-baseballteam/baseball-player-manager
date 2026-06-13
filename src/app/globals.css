@@ -54,18 +54,15 @@
 :root {
   --font-display: var(--font-ui);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --theme-accent-fg: #fff;
+  --theme-warn: var(--theme-warm);
   --shell-max-width: 1480px;
   --shell-page-gutter: clamp(20px, 3vw, 40px);
-  --shell-header-height: 72px;
-  --shell-panel-radius: 12px;
+  --shell-panel-radius: 8px;
   --shell-panel-border: var(--theme-border);
   --shell-panel-shadow: 0 2px 8px var(--theme-shadow);
   --shell-hero-ink: var(--theme-fg);
   --shell-muted: var(--theme-muted);
-  --shell-accent-soft: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface));
-  --shell-panel-soft: var(--theme-surface-alt);
-  --shell-grid-line: var(--theme-border);
-}
 
 /* Profile-local variable mappings (used by player-profile-editor *.module.css) */
 :root {

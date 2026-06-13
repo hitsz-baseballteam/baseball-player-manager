@@ -1,6 +1,6 @@
 .overview {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* ── Action Bar ── */
@@ -8,12 +8,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
+  gap: 8px;
+  padding: 12px 16px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 6px);
-  background: color-mix(in srgb, var(--theme-surface) 95%, transparent);
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--theme-shadow) 48%, transparent);
+  border-radius: 6px;
+  background: var(--theme-surface);
 }
 
 .actionSpacer {
@@ -27,14 +26,14 @@
   font: inherit;
   display: inline-flex;
   align-items: center;
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 8px;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
   cursor: pointer;
   font-weight: 700;
-  font-size: 13px;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: 12px;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .btnPrimary {
@@ -71,22 +70,19 @@
 .btnPrimary:hover,
 .btnSecondary:hover:not(:disabled),
 .btnDanger:hover:not(:disabled) {
-  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-shadow-strong) 20%, transparent);
+  background: var(--theme-surface-alt);
 }
-
 /* ── Count Bar ── */
 .countBar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 20px;
+  gap: 14px;
+  padding: 10px 16px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 6px);
-  background: color-mix(in srgb, var(--theme-surface) 95%, transparent);
+  border-radius: 6px;
+  background: var(--theme-surface);
 }
-
 .countItem {
   display: flex;
   flex-direction: column;
@@ -103,7 +99,7 @@
 }
 
 .countValue {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--shell-hero-ink);
   line-height: 1;
@@ -117,23 +113,23 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 14px 20px;
+  gap: 8px;
+  padding: 10px 16px;
   border: 1px solid var(--shell-panel-border);
-  border-radius: calc(var(--shell-panel-radius) - 6px);
-  background: color-mix(in srgb, var(--theme-surface) 95%, transparent);
+  border-radius: 6px;
+  background: var(--theme-surface);
 }
 
 .filters select,
 .search {
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 12px;
-  border-radius: 16px;
+  border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 98%, transparent);
+  background: var(--theme-surface);
   color: var(--shell-hero-ink);
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .search {
@@ -163,12 +159,12 @@
   display: grid;
   grid-template-columns: 38px 54px 1fr auto;
   align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 10px;
+  padding: 12px 16px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--theme-surface) 96%, transparent);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 8px;
+  background: var(--theme-surface);
+  transition: border-color 0.15s ease;
 }
 
 .cardSelected {

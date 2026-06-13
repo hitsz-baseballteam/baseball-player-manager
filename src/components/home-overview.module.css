@@ -1,506 +1,368 @@
-.alertDeck {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.95fr);
-  gap: 16px;
-}
-
-.alertHeroCritical,
-.alertHeroHealthy,
-.alertNotes,
-.commandStrip,
-.metricsPanel,
-.scenarioPanel,
-.pulsePanel {
-  border: 1px solid var(--shell-panel-border);
-  border-radius: var(--shell-panel-radius);
-  background: var(--theme-surface);
-  box-shadow: 0 1px 4px var(--theme-shadow);
-}
-
-.alertHeroCritical,
-.alertHeroHealthy,
-.alertNotes,
-.commandStrip,
-.metricsPanel,
-.scenarioPanel,
-.pulsePanel {
-  overflow: clip;
-}
-
-.alertHeroCritical,
-.alertHeroHealthy {
-  display: grid;
-  gap: 14px;
-  padding: 24px;
-}
-
-.alertHeroCritical {
-  border-color: var(--theme-warm);
-  background: var(--theme-surface-alt);
-}
-
-.alertHeroHealthy {
-  border-color: var(--theme-accent);
-  background: var(--theme-surface-alt);
-}
-
-.kicker {
-  color: var(--theme-accent);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.alertHeroHeader,
-.panelHeader {
+/* === Status Bar === */
+.statusBar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
-.alertTitle,
-.panelTitle,
-.commandTitle,
-.notesTitle {
-  margin: 0;
-  color: var(--shell-hero-ink);
-  font-family: var(--font-display), var(--font-ui), sans-serif;
-  letter-spacing: -0.01em;
+.warningStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
-.alertTitle {
-  max-width: 16ch;
-  font-size: clamp(18px, 2.5vw, 24px);
-  line-height: 1.08;
-}
-
-.notesTitle,
-.panelTitle,
-.commandTitle {
-  font-size: 20px;
-  line-height: 1.12;
-}
-
-.alertBadge,
-.panelMeta {
+.warningChip {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
+  gap: 5px;
+  min-height: 32px;
   padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface);
-  color: var(--shell-hero-ink);
-  font-size: 12px;
+  border: 1px solid var(--theme-danger);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-danger) 8%, var(--theme-surface));
+  color: var(--theme-danger);
+  font: inherit;
+  font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
   white-space: nowrap;
 }
 
-.alertSummary,
-.commandDescription,
-.scenarioNote {
-  margin: 0;
-  color: var(--shell-muted);
-  font-size: 14px;
-  line-height: 1.7;
+.warningChip:hover {
+  background: color-mix(in srgb, var(--theme-danger) 14%, var(--theme-surface));
 }
 
-.alertList,
-.notesList,
-.lineupList {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.alertItem,
-.noteItem {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface-alt);
-}
-
-.alertItemText {
-  flex: 1;
-  min-width: 220px;
-  padding-left: 4px;
-  color: var(--shell-hero-ink);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.alertAction,
-.noteAction,
-.jumpButton,
-.inlineLink,
-.commandSubButton,
-.metricButton,
-.select,
-.defenseCardFilled,
-.defenseCardEmpty,
-.lineupItem {
-  font: inherit;
-}
-
-.alertAction,
-.noteAction,
-.jumpButton,
-.inlineLink {
+.warningChipIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: fit-content;
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: 8px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--theme-danger);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.warningChipSoft {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--theme-warm);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-warm) 8%, var(--theme-surface));
   color: var(--shell-hero-ink);
+  font: inherit;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.alertAction,
-.noteAction {
-  min-height: 34px;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.warningChipSoft:hover {
+  background: color-mix(in srgb, var(--theme-warm) 14%, var(--theme-surface));
 }
 
-.alertFooter,
-.noteFooter,
-.scenarioActions {
+.warningChipOk {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--theme-accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
+  color: var(--theme-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metricPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--shell-panel-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  color: var(--shell-hero-ink);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease;
+}
+
+.metricPill:hover {
+  border-color: var(--theme-accent);
+}
+
+.metricPill span {
+  color: var(--shell-muted);
+  font-weight: 500;
+}
+
+.metricPill strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Scenario switch on the right */
+.scenarioSwitch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inlineSelect {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--shell-panel-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  color: var(--shell-hero-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  max-width: 180px;
+}
+
+.inlineSelect:focus {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+}
+
+.inlineBtn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--shell-panel-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  color: var(--shell-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.inlineBtn:hover {
+  color: var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+
+/* === Toolbar === */
+.toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-}
-
-.alertNotes,
-.commandStrip,
-.metricsPanel,
-.scenarioPanel,
-.pulsePanel {
-  padding: 22px;
-}
-
-.alertNotes {
-  display: grid;
-  align-content: start;
-  gap: 14px;
-}
-
-.commandStrip {
-  display: grid;
-  gap: 16px;
-  background: var(--theme-surface-alt);
-}
-
-.commandIntro {
-  display: grid;
-  gap: 10px;
-}
-
-.commandGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.commandButton,
-.commandPrimary {
-  display: grid;
+  align-items: center;
   gap: 8px;
-  min-height: 120px;
-  padding: 18px;
-  border-radius: 10px;
-  text-align: left;
-  border: 1px solid var(--shell-grid-line);
-  cursor: pointer;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  padding: 0;
 }
 
-.commandButton {
-  background: var(--theme-surface);
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, var(--shell-panel-border));
+  border-radius: 6px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface)),
+    color-mix(in srgb, var(--theme-gold) 6%, var(--theme-surface))
+  );
   color: var(--shell-hero-ink);
-}
-
-.commandPrimary {
-  background: var(--shell-accent-soft);
-  border-color: var(--theme-accent);
-  color: var(--shell-hero-ink);
-}
-
-.commandSubgrid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.commandSubButton {
-  display: grid;
-  gap: 6px;
-  min-height: 92px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  text-align: left;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface);
-  color: var(--shell-hero-ink);
-  cursor: pointer;
-}
-
-.commandButton:hover,
-.commandPrimary:hover,
-.commandSubButton:hover,
-.alertAction:hover,
-.noteAction:hover,
-.jumpButton:hover,
-.inlineLink:hover,
-.metricButton:hover,
-.defenseCardFilled:hover,
-.defenseCardEmpty:hover,
-.lineupItem:hover {
-  border-color: var(--theme-accent);
-  box-shadow: 0 1px 4px var(--theme-shadow);
-}
-
-.commandLabel,
-.commandSubLabel {
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.08;
-}
-
-.commandSubLabel {
-  font-size: 15px;
-}
-
-.commandDetail,
-.commandSubDetail {
-  color: var(--shell-muted);
+  font: inherit;
   font-size: 13px;
-  line-height: 1.55;
-}
-
-.overviewGrid,
-.lineupPulse {
-  display: grid;
-  gap: 16px;
-}
-
-.metricGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.metricButton {
-  display: grid;
-  gap: 8px;
-  min-height: 154px;
-  padding: 18px;
-  text-align: left;
-  border-radius: 10px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface-alt);
+  font-weight: 800;
   cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
 }
 
-.metricCardAccent {
+.btnPrimary:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, transparent);
+}
+
+.btnToolbar {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--shell-panel-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  color: var(--shell-hero-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.btnToolbar:hover {
   border-color: var(--theme-accent);
+  background: var(--theme-surface-alt);
 }
 
-.metricCardWarm {
-  border-color: var(--theme-warm);
+.toolbarSpacer {
+  flex: 1;
 }
 
-.metricCardCool {
-  border-color: var(--theme-cool);
+/* === Roster Grid === */
+.rosterGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px minmax(0, 1fr);
+  gap: 1px;
+  border: 1px solid var(--shell-panel-border);
+  border-radius: 6px;
+  background: var(--shell-panel-border);
+  overflow: clip;
 }
 
-.metricLabel,
-.selectLabel,
-.statusGrid dt {
+.rosterGridHeader {
+  display: contents;
+}
+
+.rosterGridHeader > span {
+  padding: 8px 12px;
+  background: var(--theme-surface-alt);
   color: var(--shell-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.metricValue {
-  color: var(--shell-hero-ink);
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1;
+.rosterRow {
+  display: contents;
 }
 
-.metricDetail,
-.statusGrid dd,
-.defenseLabel,
-.lineupMeta {
-  color: var(--shell-muted);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.selectLabel {
-  display: block;
-  margin-bottom: 6px;
-}
-
-.select {
-  width: 100%;
-  min-height: 46px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface);
-  color: var(--shell-hero-ink);
-}
-
-.scenarioName {
-  margin-top: 16px;
-  color: var(--shell-hero-ink);
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.04;
-  letter-spacing: -0.01em;
-}
-
-.statusGrid {
-  display: grid;
-  gap: 12px;
-}
-
-.statusGrid div {
+.rosterRow > * {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.statusGrid dt,
-.statusGrid dd {
-  margin: 0;
-}
-
-.defenseGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.defenseCardFilled,
-.defenseCardEmpty {
-  display: grid;
-  gap: 6px;
-  min-height: 120px;
-  padding: 16px;
-  text-align: left;
-  border-radius: 10px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface-alt);
-  cursor: pointer;
-}
-
-.defenseCardFilled {
-  border-color: var(--theme-accent);
-}
-
-.defenseCardEmpty {
-  background: var(--theme-surface);
-}
-
-.defenseCode {
-  color: var(--shell-hero-ink);
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.defensePlayer,
-.lineupName {
-  color: var(--shell-hero-ink);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.lineupItem {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 36px minmax(0, 1fr) minmax(96px, 150px);
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  text-align: left;
-  border-radius: 10px;
-  border: 1px solid var(--shell-grid-line);
-  background: var(--theme-surface-alt);
+  padding: 8px 12px;
+  background: var(--theme-surface);
+  min-height: 36px;
   cursor: pointer;
 }
 
-.lineupSlot {
+.rosterRow:hover > * {
+  background: color-mix(in srgb, var(--theme-accent) 4%, var(--theme-surface));
+}
+
+.positionCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.positionCode {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--theme-accent);
-  color: #fff;
-  font-size: 13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--theme-surface-alt);
+  color: var(--shell-hero-ink);
+  font-size: 12px;
   font-weight: 800;
+  font-family: var(--font-mono);
 }
 
-@media (max-width: 1240px) {
-  .commandGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.positionLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--shell-hero-ink);
 }
 
-@media (max-width: 1080px) {
-  .alertDeck {
-    grid-template-columns: 1fr;
-  }
+.playerCell {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--shell-hero-ink);
 }
 
+.emptyCell {
+  color: var(--shell-muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.slotCell {
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--theme-accent);
+  font-family: var(--font-mono);
+}
+
+/* === Responsive === */
 @media (max-width: 720px) {
-  .commandGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .commandSubgrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .metricGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .defenseGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .alertItem,
-  .noteItem {
+  .statusBar {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .lineupItem {
-    grid-template-columns: 36px 1fr;
+  .scenarioSwitch {
+    justify-content: flex-end;
+  }
+
+  .rosterGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .rosterGridHeader {
+    display: none;
+  }
+
+  .rosterRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 0;
+    padding: 10px;
+    border: 1px solid var(--shell-panel-border);
+    border-radius: 6px;
+    background: var(--theme-surface);
+    margin-bottom: 6px;
+  }
+
+  .rosterRow > * {
+    padding: 4px 6px;
+    cursor: pointer;
+    background: transparent;
+    min-height: auto;
+  }
+
+  .rosterRow:hover > * {
+    background: transparent;
+  }
+
+  .slotCell {
+    justify-content: flex-start;
+  }
+
+  .toolbar {
+    gap: 6px;
+  }
+
+  .btnPrimary,
+  .btnToolbar {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 }
