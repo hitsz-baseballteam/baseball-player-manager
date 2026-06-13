@@ -744,14 +744,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                 <RadarChart values={radarEntries} />
               </div>
 
-              <div className={styles.legendList}>
-                {radarEntries.map((item) => (
-                  <div key={item.label} className={styles.legendRow}>
-                    <span>{item.label}</span>
-                    <strong>{item.value ?? "--"}</strong>
-                  </div>
-                ))}
-              </div>
+
 
               <div className={styles.gradeGrid}>
                 {(profile.profileType === "pitcher" ? pitcherRadarKeys : fielderRadarKeys).map(

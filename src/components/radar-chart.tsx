@@ -22,21 +22,21 @@ export function RadarChart({
   values: Array<{ label: string; value: number | null }>;
 }) {
   const center = 150;
-  const radius = 106;
+  const gridRadius = 102;
+  const dataRadius = 96;
   const levels = [20, 35, 50, 65, 80];
-  const axisPoints = values.map((_, index) =>
-    polarToCartesian(center, center, radius, index, values.length),
+  const n = values.length;
+
+  const axisPoints = values.map((_, i) =>
+    polarToCartesian(center, center, gridRadius, i, n),
   );
-  const polygonPoints = values.map((item, index) => {
-    const normalized = item.value === null ? 0.18 : (item.value - 20) / 60;
-    return polarToCartesian(
-      center,
-      center,
-      radius * Math.max(normalized, 0.18),
-      index,
-      values.length,
-    );
+
+  const polygonPoints = values.map((item, i) => {
+    const norm = item.value === null ? 0.1 : (item.value - 20) / 60;
+    return polarToCartesian(center, center, dataRadius * Math.max(norm, 0.1), i, n);
   });
+
+  const hasData = values.some((v) => v.value !== null);
 
   return (
     <svg
@@ -45,77 +45,124 @@ export function RadarChart({
       aria-label="球员六维能力图"
       className={styles.chartSvg}
     >
-      {levels.map((level) => {
-        const points = values
-          .map((_, index) =>
-            polarToCartesian(
-              center,
-              center,
-              radius * ((level - 20) / 60),
-              index,
-              values.length,
-            ),
-          )
-          .map((point) => `${point.x},${point.y}`)
-          .join(" ");
+      <defs>
+        <radialGradient id="radar-bg" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--profile-bg)" stopOpacity="1" />
+          <stop offset="100%" stopColor="var(--profile-bg)" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="data-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--profile-accent)" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="var(--profile-accent-strong)" stopOpacity="0.10" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
 
+      {/* Background circle */}
+      <circle
+        cx={center}
+        cy={center}
+        r={gridRadius + 4}
+        fill="var(--profile-bg)"
+        stroke="none"
+      />
+
+      {/* Grid rings */}
+      {levels.map((level) => {
+        const r = gridRadius * ((level - 20) / 60);
+        const pts = values
+          .map((_, i) => polarToCartesian(center, center, r, i, n))
+          .map((p) => `${p.x},${p.y}`)
+          .join(" ");
         return (
           <polygon
             key={level}
-            points={points}
+            points={pts}
             fill="none"
             stroke="var(--profile-grid-line)"
-            strokeWidth="1"
-            strokeDasharray={level === 80 ? undefined : "3 5"}
+            strokeWidth={level === 80 ? "0.8" : "0.5"}
+            opacity={level === 80 ? "0.6" : "0.35"}
           />
         );
       })}
 
-      {axisPoints.map((point, index) => (
-        <g key={values[index].label}>
-          <line
-            x1={center}
-            y1={center}
-            x2={point.x}
-            y2={point.y}
-            stroke="var(--profile-axis-line)"
-            strokeWidth="1"
-          />
-          <text
-            x={point.x}
-            y={point.y}
-            fill="var(--profile-text-muted)"
-            fontSize="11"
-            textAnchor={point.x >= center ? "start" : "end"}
-            dominantBaseline={point.y >= center ? "hanging" : "auto"}
-          >
-            {values[index].label}
-          </text>
-        </g>
+      {/* Axis spokes */}
+      {axisPoints.map((pt, i) => (
+        <line
+          key={`axis-${i}`}
+          x1={center}
+          y1={center}
+          x2={pt.x}
+          y2={pt.y}
+          stroke="var(--profile-grid-line)"
+          strokeWidth="0.5"
+          opacity="0.5"
+        />
       ))}
 
+      {/* Axis labels */}
+      {axisPoints.map((pt, i) => {
+        const labelR = gridRadius + 16;
+        const lp = polarToCartesian(center, center, labelR, i, n);
+        return (
+          <text
+            key={`label-${i}`}
+            x={lp.x}
+            y={lp.y}
+            fill="var(--profile-text-muted)"
+            fontSize="10.5"
+            fontWeight="600"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            letterSpacing="0.02em"
+          >
+            {values[i].label}
+          </text>
+        );
+      })}
+
+      {/* Data polygon + dots */}
+      {hasData && (
+        <>
+          <polygon
+            points={polygonPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+            fill="url(#data-fill)"
+            stroke="var(--profile-accent)"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            filter="url(#glow)"
+          />
+          {polygonPoints.map((p, i) => (
+            <circle
+              key={`dot-${i}`}
+              cx={p.x}
+              cy={p.y}
+              r="4"
+              fill="var(--theme-surface)"
+              stroke="var(--profile-accent)"
+              strokeWidth="1.5"
+            />
+          ))}
+        </>
+      )}
+
+      {/* Center accent */}
       <circle
         cx={center}
         cy={center}
-        r="2.5"
-        fill="var(--profile-accent)"
-        opacity="0.8"
+        r="3"
+        fill="var(--profile-accent-strong)"
+        opacity="0.6"
       />
-      <polygon
-        points={polygonPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-        fill="var(--profile-polygon-fill)"
-        stroke="var(--profile-accent)"
-        strokeWidth="2"
+      <circle
+        cx={center}
+        cy={center}
+        r="1.5"
+        fill="var(--profile-accent-strong)"
       />
-      {polygonPoints.map((point, index) => (
-        <circle
-          key={`${values[index].label}-dot`}
-          cx={point.x}
-          cy={point.y}
-          r="3.5"
-          fill="var(--profile-accent-strong)"
-        />
-      ))}
     </svg>
   );
 }

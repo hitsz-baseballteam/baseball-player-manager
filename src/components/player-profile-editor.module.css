@@ -354,12 +354,12 @@
   min-height: 48px;
   width: 100%;
   padding: 0 14px;
-  border: 1px solid var(--profile-border);
+  border: 1.5px solid color-mix(in srgb, var(--profile-border) 80%, transparent);
   border-radius: 8px;
-  background: var(--profile-bg);
+  background: var(--theme-surface-alt);
   color: var(--profile-ink);
   font: inherit;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
 .field input::placeholder,
@@ -380,7 +380,7 @@
   outline: none;
   border-color: var(--profile-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 14%, transparent);
-  background: var(--profile-bg);
+  background: var(--theme-surface-alt);
 }
 
 .positionGrid {
@@ -435,7 +435,7 @@
 }
 
 .chartSvg {
-  width: min(100%, 320px);
+  width: min(100%, 340px);
   height: auto;
 }
 
