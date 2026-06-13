@@ -44,26 +44,7 @@ export type FielderRadar = {
   instinct: number | null;
 };
 
-export type GameRecord = {
-  id: string;
-  date: string;
-  opponent: string;
-  gameType: "official" | "training";
-  pa: number;
-  ab: number;
-  h: number;
-  hr: number;
-  rbi: number;
-  r: number;
-  sb: number;
-  bb: number;
-  so: number;
-  ip: number | null;
-  er: number | null;
-  soPitching: number | null;
-  bbPitching: number | null;
-  hPitching: number | null;
-};
+
 
 export type InningRecord = {
   inning: number;
@@ -119,7 +100,6 @@ export type PlayerProfile = {
     pitcher: PitcherRadar;
     fielder: FielderRadar;
   };
-  games: GameRecord[];
 };
 
 export type ScenarioAssignments = {

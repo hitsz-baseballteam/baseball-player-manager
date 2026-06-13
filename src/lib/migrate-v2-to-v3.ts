@@ -7,7 +7,28 @@
  * stats are defaulted (no per-inning data in old format).
  */
 
-import type { Game, GameRecord, Player, PlayerGameStatLine, Workspace } from "./workspace/types";
+import type { Game, Player, PlayerGameStatLine, Workspace } from "./workspace/types";
+
+type GameRecord = {
+  id: string;
+  date: string;
+  opponent: string;
+  gameType: string;
+  pa: number;
+  ab: number;
+  h: number;
+  hr: number;
+  rbi: number;
+  r: number;
+  sb: number;
+  bb: number;
+  so: number;
+  ip: number;
+  er: number;
+  soPitching: number;
+  bbPitching: number;
+  hPitching: number;
+};
 
 function gameRecordToStatLine(playerId: string, gr: GameRecord): PlayerGameStatLine {
   return {
@@ -37,7 +58,7 @@ function gameRecordToGame(playerId: string, gr: GameRecord): Game {
     id: gr.id,
     date: gr.date,
     opponent: gr.opponent,
-    gameType: gr.gameType,
+    gameType: gr.gameType as Game["gameType"],
     totalInnings: 9,
     innings: [],
     statLines: [gameRecordToStatLine(playerId, gr)],

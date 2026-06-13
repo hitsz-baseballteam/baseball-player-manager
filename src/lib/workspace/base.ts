@@ -63,7 +63,7 @@ export function createDefaultPlayerProfile(
     fastballAvgKmh: null,
     armStrengthM: null,
     thirtyMeterSec: null,
-    games: [],
+
     pitchTypes: [],
     scoutingSummary: "",
     radar: {

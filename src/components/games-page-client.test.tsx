@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { createDefaultWorkspace, type Workspace } from "@/lib/workspace";
+import { createDefaultWorkspace, type Game, type Workspace } from "@/lib/workspace";
 
 let GamesPageClient: typeof import("./games-page-client").GamesPageClient;
 const baseWorkspace = createDefaultWorkspace(true);
@@ -17,32 +17,100 @@ function workspaceWithPlayer(playerId: string) {
   const player = ws.players[0];
   if (!player) throw new Error("no default player");
   player.id = playerId;
-  player.profile.games = [
+
+  ws.games = [
     {
       id: "g-1",
       date: "2026-05-20",
       opponent: "南山高中",
       gameType: "official" as const,
-      pa: 4, ab: 4, h: 2, hr: 1, rbi: 2, r: 2, sb: 0, bb: 0, so: 1,
-      ip: 2.1, er: 0, soPitching: 3, bbPitching: 1, hPitching: 1,
+      totalInnings: 9,
+      innings: [],
+      statLines: [
+        {
+          playerId,
+          pa: 4,
+          ab: 4,
+          h: 2,
+          hr: 1,
+          rbi: 2,
+          r: 2,
+          sb: 0,
+          bb: 0,
+          so: 1,
+          ip: 2.1,
+          er: 0,
+          soPitching: 3,
+          bbPitching: 1,
+          hPitching: 1,
+          po: 0,
+          a: 0,
+          e: 0,
+        },
+      ],
     },
     {
       id: "g-2",
       date: "2026-05-15",
       opponent: "北一中学",
       gameType: "official" as const,
-      pa: 3, ab: 2, h: 0, hr: 0, rbi: 0, r: 0, sb: 0, bb: 1, so: 1,
-      ip: 1.2, er: 1, soPitching: 2, bbPitching: 0, hPitching: 2,
+      totalInnings: 9,
+      innings: [],
+      statLines: [
+        {
+          playerId,
+          pa: 3,
+          ab: 2,
+          h: 0,
+          hr: 0,
+          rbi: 0,
+          r: 0,
+          sb: 0,
+          bb: 1,
+          so: 1,
+          ip: 1.2,
+          er: 1,
+          soPitching: 2,
+          bbPitching: 0,
+          hPitching: 2,
+          po: 0,
+          a: 0,
+          e: 0,
+        },
+      ],
     },
     {
       id: "g-3",
       date: "2026-05-10",
       opponent: "队内红白",
       gameType: "training" as const,
-      pa: 4, ab: 3, h: 1, hr: 0, rbi: 1, r: 1, sb: 1, bb: 1, so: 0,
-      ip: null, er: null, soPitching: null, bbPitching: null, hPitching: null,
+      totalInnings: 7,
+      innings: [],
+      statLines: [
+        {
+          playerId,
+          pa: 4,
+          ab: 3,
+          h: 1,
+          hr: 0,
+          rbi: 1,
+          r: 1,
+          sb: 1,
+          bb: 1,
+          so: 0,
+          ip: null,
+          er: null,
+          soPitching: null,
+          bbPitching: null,
+          hPitching: null,
+          po: 0,
+          a: 0,
+          e: 0,
+        },
+      ],
     },
-  ];
+  ] satisfies Game[];
+
   return ws;
 }
 
@@ -146,12 +214,12 @@ describe("GamesPageClient", () => {
 
     await screen.findByText("新桥高中");
     assert.equal(savedWorkspaces.length, 1);
-    assert.equal(savedWorkspaces[0]?.players[0]?.profile.games.length, 4);
+    assert.equal(savedWorkspaces[0]?.games.length, 4);
 
     await user.click(screen.getAllByRole("button", { name: "删除" })[0]);
     await screen.findAllByText("比赛数据已更新");
     assert.equal(savedWorkspaces.length, 2);
-    assert.equal(savedWorkspaces[1]?.players[0]?.profile.games.length, 3);
+    assert.equal(savedWorkspaces[1]?.games.length, 3);
     assert.equal(screen.queryByText("新桥高中"), null);
   });
 
@@ -199,7 +267,7 @@ describe("GamesPageClient", () => {
 
     await screen.findByText("修正版对手");
     assert.equal(savedWorkspaces.length, 1);
-    assert.equal(savedWorkspaces[0]?.players[0]?.profile.games[0]?.opponent, "修正版对手");
+    assert.equal(savedWorkspaces[0]?.games[0]?.opponent, "修正版对手");
   });
 
   it("renders empty state when player is not found", async () => {

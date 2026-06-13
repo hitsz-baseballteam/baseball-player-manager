@@ -16,7 +16,7 @@ import {
   type Scenario,
   type ScenarioAssignments,
   type Workspace,
-  type GameRecord,
+
   type Game,
   type InningRecord,
   type PlayerGameStatLine,
@@ -126,32 +126,6 @@ export function sanitizePositions(value: unknown): PositionCode[] {
   });
 }
 
-function sanitizeGameRecords(value: unknown): GameRecord[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
-    .map((item) => ({
-      id: String((item as Record<string, unknown>).id ?? ""),
-      date: String((item as Record<string, unknown>).date ?? ""),
-      opponent: String((item as Record<string, unknown>).opponent ?? "").trim().slice(0, 40),
-      gameType: (item as Record<string, unknown>).gameType === "training" ? "training" : "official",
-      pa: sanitizeGameInt((item as Record<string, unknown>).pa),
-      ab: sanitizeGameInt((item as Record<string, unknown>).ab),
-      h: sanitizeGameInt((item as Record<string, unknown>).h),
-      hr: sanitizeGameInt((item as Record<string, unknown>).hr),
-      rbi: sanitizeGameInt((item as Record<string, unknown>).rbi),
-      r: sanitizeGameInt((item as Record<string, unknown>).r),
-      sb: sanitizeGameInt((item as Record<string, unknown>).sb),
-      bb: sanitizeGameInt((item as Record<string, unknown>).bb),
-      so: sanitizeGameInt((item as Record<string, unknown>).so),
-      ip: sanitizeGameInnings((item as Record<string, unknown>).ip),
-      er: sanitizeNullableNumber((item as Record<string, unknown>).er, 0, 99),
-      soPitching: sanitizeNullableNumber((item as Record<string, unknown>).soPitching, 0, 99, true),
-      bbPitching: sanitizeNullableNumber((item as Record<string, unknown>).bbPitching, 0, 99, true),
-      hPitching: sanitizeNullableNumber((item as Record<string, unknown>).hPitching, 0, 99, true),
-    } as GameRecord))
-    .filter((item) => item.id && item.date && item.opponent);
-}
 
 // ── Player sanitizers ──
 
@@ -207,9 +181,8 @@ export function sanitizePlayerProfile(
       3,
       8,
     ),
-
-  games: sanitizeGameRecords((source as Record<string, unknown>)?.games),
     pitchTypes: sanitizeStringList(source?.pitchTypes, 6, 10),
+
     scoutingSummary: String(source?.scoutingSummary ?? "").trim().slice(0, 180),
     radar: {
       pitcher: sanitizeRadar(

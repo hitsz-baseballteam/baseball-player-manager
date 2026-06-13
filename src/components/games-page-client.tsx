@@ -10,8 +10,9 @@ import {
   cloneWorkspace,
   createId,
   sanitizeWorkspace,
-  type GameRecord,
+  type Game,
   type Player,
+  type PlayerGameStatLine,
   type Workspace,
 } from "@/lib/workspace";
 import {
@@ -39,30 +40,9 @@ type GamesPageClientProps = {
 type GameDialogState =
   | { type: "closed" }
   | { type: "add" }
-  | { type: "edit"; record: GameRecord };
+  | { type: "edit"; gameId: string };
 
-function emptyGameRecord(gameType: TabType): GameRecord {
-  return {
-    id: createId(),
-    date: "",
-    opponent: "",
-    gameType,
-    pa: 0,
-    ab: 0,
-    h: 0,
-    hr: 0,
-    rbi: 0,
-    r: 0,
-    sb: 0,
-    bb: 0,
-    so: 0,
-    ip: null,
-    er: null,
-    soPitching: null,
-    bbPitching: null,
-    hPitching: null,
-  };
-}
+// ── Helpers ──
 
 function inningsToOuts(ip: number | null): number {
   if (ip === null || !Number.isFinite(ip) || ip < 0) return 0;
@@ -90,6 +70,43 @@ function hasValidInningNotation(ip: number | null): boolean {
   return whole >= 0 && tenth >= 0 && tenth <= 2 && Math.abs(ip - (whole + tenth / 10)) < 1e-9;
 }
 
+function emptyStatLine(playerId: string): PlayerGameStatLine {
+  return {
+    playerId,
+    pa: 0,
+    ab: 0,
+    h: 0,
+    hr: 0,
+    rbi: 0,
+    r: 0,
+    sb: 0,
+    bb: 0,
+    so: 0,
+    ip: null,
+    er: null,
+    soPitching: null,
+    bbPitching: null,
+    hPitching: null,
+    po: 0,
+    a: 0,
+    e: 0,
+  };
+}
+
+function emptyGame(gameType: TabType, playerId: string): Game {
+  return {
+    id: createId(),
+    date: "",
+    opponent: "",
+    gameType,
+    totalInnings: 0,
+    innings: [],
+    statLines: [emptyStatLine(playerId)],
+  };
+}
+
+// ── Main component ──
+
 export function GamesPageClient({
   initialWorkspace,
   initialVersion,
@@ -104,21 +121,27 @@ export function GamesPageClient({
   const toastRef = useRef<ToastHandle | null>(null);
 
   const player = workspace.players.find((p) => p.id === playerId) ?? null;
-  const games = useMemo(() => (player?.profile.games ?? []).filter((g) => g.gameType === tab), [player, tab]);
-  const sortedGames = useMemo(() => [...games].sort((a, b) => b.date.localeCompare(a.date)), [games]);
 
-  async function commitPlayerGames(
-    updater: (games: GameRecord[]) => GameRecord[],
+  const playerGames = useMemo(() => {
+    return (workspace.games ?? []).filter((g) => {
+      if (g.gameType !== tab) return false;
+      if (g.statLines.some((sl) => sl.playerId === playerId)) return true;
+      if (g.innings.some((inn) => inn.batters.includes(playerId))) return true;
+      return false;
+    });
+  }, [workspace.games, playerId, tab]);
+
+  const sortedGames = useMemo(
+    () => [...playerGames].sort((a, b) => b.date.localeCompare(a.date)),
+    [playerGames],
+  );
+
+  async function commitGames(
+    updater: (games: Game[]) => Game[],
     successMessage: string,
   ): Promise<boolean> {
     const draft = cloneWorkspace(workspace);
-    const target = draft.players.find((p) => p.id === playerId);
-    if (!target) {
-      setDialog({ type: "closed" });
-      toastRef.current?.showToast("找不到当前球员，请刷新后重试");
-      return false;
-    }
-    target.profile.games = updater(target.profile.games);
+    draft.games = updater(draft.games);
 
     setSaving(true);
     setStatusMessage("正在同步到云端...");
@@ -147,57 +170,70 @@ export function GamesPageClient({
     }
   }
 
-  async function handleAdd(record: GameRecord) {
-    const ok = await commitPlayerGames((games) => [...games, record], "比赛数据已更新");
+  async function handleAdd(game: Game) {
+    const ok = await commitGames(
+      (games) => [...games, game],
+      "比赛数据已更新",
+    );
     if (ok) setDialog({ type: "closed" });
   }
 
-  async function handleEdit(updated: GameRecord) {
-    const ok = await commitPlayerGames((games) => games.map((g) => (g.id === updated.id ? updated : g)), "比赛数据已更新");
+  async function handleEdit(updated: Game) {
+    const ok = await commitGames(
+      (games) => games.map((g) => (g.id === updated.id ? updated : g)),
+      "比赛数据已更新",
+    );
     if (ok) setDialog({ type: "closed" });
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(gameId: string) {
     if (!window.confirm("确认删除此场比赛记录？")) return;
-    await commitPlayerGames((games) => games.filter((g) => g.id !== id), "比赛数据已更新");
+    await commitGames(
+      (games) => games.filter((g) => g.id !== gameId),
+      "比赛数据已更新",
+    );
   }
 
   const summary = useMemo(() => {
-    const officialGames = (player?.profile.games ?? []).filter((g) => g.gameType === "official");
-    const trainingGames = (player?.profile.games ?? []).filter((g) => g.gameType === "training");
-    const records = tab === "official" ? officialGames : trainingGames;
+    const statLines = playerGames
+      .map((g) => g.statLines.find((sl) => sl.playerId === playerId))
+      .filter(Boolean) as PlayerGameStatLine[];
 
-    const pitchingGames = records.filter((g) => g.ip !== null && g.ip > 0);
-    const totalOuts = pitchingGames.reduce((sum, g) => sum + inningsToOuts(g.ip), 0);
+    const pitchingLines = statLines.filter((sl) => sl.ip !== null && sl.ip > 0);
+    const totalOuts = pitchingLines.reduce((sum, sl) => sum + inningsToOuts(sl.ip), 0);
     const totalIp = totalOuts / 3;
-    const totalEr = pitchingGames.reduce((sum, g) => sum + (g.er ?? 0), 0);
+    const totalEr = pitchingLines.reduce((sum, sl) => sum + (sl.er ?? 0), 0);
     const era = totalOuts > 0 ? ((totalEr * 27) / totalOuts).toFixed(2) : null;
-    const totalHitsPitching = pitchingGames.reduce((sum, g) => sum + (g.hPitching ?? 0), 0);
-    const totalBbPitching = pitchingGames.reduce((sum, g) => sum + (g.bbPitching ?? 0), 0);
-    const whip = totalOuts > 0 ? (((totalHitsPitching + totalBbPitching) * 3) / totalOuts).toFixed(2) : null;
+    const totalHitsPitching = pitchingLines.reduce((sum, sl) => sum + (sl.hPitching ?? 0), 0);
+    const totalBbPitching = pitchingLines.reduce((sum, sl) => sum + (sl.bbPitching ?? 0), 0);
+    const whip = totalOuts > 0
+      ? (((totalHitsPitching + totalBbPitching) * 3) / totalOuts).toFixed(2)
+      : null;
 
     return {
-      count: records.length,
-      pa: records.reduce((sum, g) => sum + g.pa, 0),
-      ab: records.reduce((sum, g) => sum + g.ab, 0),
-      h: records.reduce((sum, g) => sum + g.h, 0),
-      hr: records.reduce((sum, g) => sum + g.hr, 0),
-      rbi: records.reduce((sum, g) => sum + g.rbi, 0),
-      r: records.reduce((sum, g) => sum + g.r, 0),
-      sb: records.reduce((sum, g) => sum + g.sb, 0),
-      bb: records.reduce((sum, g) => sum + g.bb, 0),
-      so: records.reduce((sum, g) => sum + g.so, 0),
-      avg: records.reduce((sum, g) => sum + g.ab, 0) > 0
-        ? (records.reduce((sum, g) => sum + g.h, 0) / records.reduce((sum, g) => sum + g.ab, 0)).toFixed(3).replace(/^0/, "")
+      count: statLines.length,
+      pa: statLines.reduce((sum, sl) => sum + sl.pa, 0),
+      ab: statLines.reduce((sum, sl) => sum + sl.ab, 0),
+      h: statLines.reduce((sum, sl) => sum + sl.h, 0),
+      hr: statLines.reduce((sum, sl) => sum + sl.hr, 0),
+      rbi: statLines.reduce((sum, sl) => sum + sl.rbi, 0),
+      r: statLines.reduce((sum, sl) => sum + sl.r, 0),
+      sb: statLines.reduce((sum, sl) => sum + sl.sb, 0),
+      bb: statLines.reduce((sum, sl) => sum + sl.bb, 0),
+      so: statLines.reduce((sum, sl) => sum + sl.so, 0),
+      avg: statLines.reduce((sum, sl) => sum + sl.ab, 0) > 0
+        ? (statLines.reduce((sum, sl) => sum + sl.h, 0) / statLines.reduce((sum, sl) => sum + sl.ab, 0))
+            .toFixed(3)
+            .replace(/^0/, "")
         : null,
       era,
       whip,
-      ipGames: pitchingGames.length,
+      ipGames: pitchingLines.length,
       totalIp,
       totalIpDisplay: formatOutsAsInnings(totalOuts),
-      soPitching: pitchingGames.reduce((sum, g) => sum + (g.soPitching ?? 0), 0),
+      soPitching: pitchingLines.reduce((sum, sl) => sum + (sl.soPitching ?? 0), 0),
     };
-  }, [player, tab]);
+  }, [playerGames, playerId]);
 
   const playerLabel = player
     ? `${player.name} · #${player.number} · ${player.positions.join(" / ") || "待定守位"}`
@@ -326,41 +362,44 @@ export function GamesPageClient({
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedGames.map((record) => (
-                      <tr key={record.id}>
-                        <td>{record.date || "--"}</td>
-                        <td>{record.opponent || "--"}</td>
-                        <td>{record.pa}</td>
-                        <td>{record.ab}</td>
-                        <td>{record.h}</td>
-                        <td>{record.hr}</td>
-                        <td>{record.rbi}</td>
-                        <td>{record.r}</td>
-                        <td>{record.sb}</td>
-                        <td>{record.bb}</td>
-                        <td>{record.so}</td>
-                        <td>{record.ip ?? "--"}</td>
-                        <td>{record.er ?? "--"}</td>
-                        <td>
-                          <div className={styles.rowActions}>
-                            <button
-                              className={styles.inlineBtn}
-                              onClick={() => setDialog({ type: "edit", record })}
-                              type="button"
-                            >
-                              编辑
-                            </button>
-                            <button
-                              className={`${styles.inlineBtn} ${styles.inlineBtnDanger}`}
-                              onClick={() => handleDelete(record.id)}
-                              type="button"
-                            >
-                              删除
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {sortedGames.map((game) => {
+                      const sl = game.statLines.find((s) => s.playerId === playerId);
+                      return (
+                        <tr key={game.id}>
+                          <td>{game.date || "--"}</td>
+                          <td>{game.opponent || "--"}</td>
+                          <td>{sl?.pa ?? 0}</td>
+                          <td>{sl?.ab ?? 0}</td>
+                          <td>{sl?.h ?? 0}</td>
+                          <td>{sl?.hr ?? 0}</td>
+                          <td>{sl?.rbi ?? 0}</td>
+                          <td>{sl?.r ?? 0}</td>
+                          <td>{sl?.sb ?? 0}</td>
+                          <td>{sl?.bb ?? 0}</td>
+                          <td>{sl?.so ?? 0}</td>
+                          <td>{sl?.ip ?? "--"}</td>
+                          <td>{sl?.er ?? "--"}</td>
+                          <td>
+                            <div className={styles.rowActions}>
+                              <button
+                                className={styles.inlineBtn}
+                                onClick={() => setDialog({ type: "edit", gameId: game.id })}
+                                type="button"
+                              >
+                                编辑
+                              </button>
+                              <button
+                                className={`${styles.inlineBtn} ${styles.inlineBtnDanger}`}
+                                onClick={() => handleDelete(game.id)}
+                                type="button"
+                              >
+                                删除
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -371,8 +410,14 @@ export function GamesPageClient({
         {dialog.type !== "closed" && (
           <GameDialog
             mode={dialog.type}
-            record={dialog.type === "edit" ? dialog.record : emptyGameRecord(tab)}
+            game={
+              dialog.type === "edit"
+                ? workspace.games.find((g) => g.id === dialog.gameId) ?? null
+                : null
+            }
             player={player}
+            tab={tab}
+            playerId={playerId}
             onSubmit={dialog.type === "add" ? handleAdd : handleEdit}
             onClose={() => setDialog({ type: "closed" })}
           />
@@ -382,53 +427,72 @@ export function GamesPageClient({
   );
 }
 
+// ── Game dialog ──
+
 type GameDialogProps = {
   mode: "add" | "edit";
-  record: GameRecord;
+  game: Game | null;
   player: Player;
-  onSubmit: (record: GameRecord) => void;
+  tab: TabType;
+  playerId: string;
+  onSubmit: (game: Game) => void;
   onClose: () => void;
 };
 
-function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDialogProps) {
-  const [record, setRecord] = useState<GameRecord>(initial);
+function GameDialog({ mode, game: initial, player, tab, playerId, onSubmit, onClose }: GameDialogProps) {
+  const starter = mode === "add" || !initial
+    ? emptyGame(tab, playerId)
+    : initial;
+
+  const [game, setGame] = useState<Game>(starter);
   const [error, setError] = useState("");
   const title = mode === "add" ? "新增比赛" : "编辑比赛";
 
+  const statLine = game.statLines.find((sl) => sl.playerId === playerId) ?? emptyStatLine(playerId);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!record.date || !record.opponent) {
+    if (!game.date || !game.opponent) {
       setError("日期和对手不能为空");
       return;
     }
-    if (!hasValidInningNotation(record.ip)) {
+    if (!hasValidInningNotation(statLine.ip)) {
       setError("投球局数只能以 .0 / .1 / .2 结尾");
       return;
     }
     setError("");
-    onSubmit(record);
+    onSubmit(game);
   }
 
-  function update(field: Partial<GameRecord>) {
-    setRecord((prev) => ({ ...prev, ...field }));
+  function updateGame(field: Partial<Game>) {
+    setGame((prev) => ({ ...prev, ...field }));
     setError("");
   }
 
-  function updateNum(field: keyof GameRecord, value: string) {
-    const n = value === "" ? 0 : Number(value);
-    if (!Number.isFinite(n) || n < 0) return;
-    update({ [field]: n } as Partial<GameRecord>);
+  function updateStatLine(field: Partial<PlayerGameStatLine>) {
+    setGame((prev) => ({
+      ...prev,
+      statLines: prev.statLines.map((sl) =>
+        sl.playerId === playerId ? { ...sl, ...field } : sl,
+      ),
+    }));
+    setError("");
   }
 
-  function updateNullable(field: keyof GameRecord, value: string) {
+  function updateStatNum(field: keyof PlayerGameStatLine, value: string) {
+    const n = value === "" ? 0 : Number(value);
+    if (!Number.isFinite(n) || n < 0) return;
+    updateStatLine({ [field]: n } as Partial<PlayerGameStatLine>);
+  }
+
+  function updateStatNullable(field: keyof PlayerGameStatLine, value: string) {
     if (value === "") {
-      update({ [field]: null } as Partial<GameRecord>);
+      updateStatLine({ [field]: null } as Partial<PlayerGameStatLine>);
       return;
     }
-
     const n = Number(value);
     if (!Number.isFinite(n) || n < 0) return;
-    update({ [field]: n } as Partial<GameRecord>);
+    updateStatLine({ [field]: n } as Partial<PlayerGameStatLine>);
   }
 
   return (
@@ -445,15 +509,15 @@ function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDi
               <span>日期</span>
               <input
                 type="date"
-                value={record.date}
-                onChange={(e) => update({ date: e.target.value })}
+                value={game.date}
+                onChange={(e) => updateGame({ date: e.target.value })}
               />
             </label>
             <label className={styles.dialogField}>
               <span>对手</span>
               <input
-                value={record.opponent}
-                onChange={(e) => update({ opponent: e.target.value })}
+                value={game.opponent}
+                onChange={(e) => updateGame({ opponent: e.target.value })}
                 maxLength={40}
                 placeholder="队伍名"
               />
@@ -461,8 +525,8 @@ function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDi
             <label className={styles.dialogField}>
               <span>类型</span>
               <select
-                value={record.gameType}
-                onChange={(e) => update({ gameType: e.target.value as GameRecord["gameType"] })}
+                value={game.gameType}
+                onChange={(e) => updateGame({ gameType: e.target.value as Game["gameType"] })}
               >
                 <option value="official">正式比赛</option>
                 <option value="training">训练比赛</option>
@@ -478,8 +542,8 @@ function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDi
                 <input
                   type="number"
                   min="0"
-                  value={record[key]}
-                  onChange={(e) => updateNum(key, e.target.value)}
+                  value={statLine[key]}
+                  onChange={(e) => updateStatNum(key, e.target.value)}
                 />
               </label>
             ))}
@@ -494,8 +558,8 @@ function GameDialog({ mode, record: initial, player, onSubmit, onClose }: GameDi
                   type="number"
                   min="0"
                   step={key === "ip" ? "0.1" : "1"}
-                  value={record[key] ?? ""}
-                  onChange={(e) => updateNullable(key, e.target.value)}
+                  value={statLine[key] ?? ""}
+                  onChange={(e) => updateStatNullable(key, e.target.value)}
                 />
               </label>
             ))}
