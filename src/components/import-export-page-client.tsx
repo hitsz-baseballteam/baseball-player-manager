@@ -24,7 +24,6 @@ import {
 const NAV_ITEMS = [
   { label: "总览", href: "/" },
   { label: "名册", href: "/roster" },
-  { label: "排阵", href: "/lineup" },
   { label: "战术场景", href: "/scenarios" },
   { label: "数据中心", href: "/import-export", active: true },
   { label: "设置", href: "/settings" },

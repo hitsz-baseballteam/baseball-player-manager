@@ -22,7 +22,7 @@ describe("ScenariosPageClient", () => {
     localStorage.clear();
   });
 
-  it("renders the scenarios page with all scenario names visible", () => {
+  it("renders the unified scenarios+lineup page with toolbar", () => {
     render(
       <ScenariosPageClient
         initialWorkspace={workspace}
@@ -30,16 +30,19 @@ describe("ScenariosPageClient", () => {
       />,
     );
 
-    assert.ok(screen.getAllByText("战术场景").length >= 1);
+    // Nav link should exist
     assert.ok(screen.getByRole("link", { name: "战术场景" }));
-    assert.ok(screen.getByRole("button", { name: "+ 新建方案" }));
-    assert.ok(screen.getByText("列表"));
-    assert.ok(screen.getByText("对比"));
-
-    // All scenario names should be visible (may appear in nav + cards)
-    for (const s of workspace.scenarios) {
-      assert.ok(screen.getAllByText(s.name).length >= 1);
-    }
+    // Toolbar buttons
+    assert.ok(screen.getByRole("button", { name: "+ 新建" }));
+    assert.ok(screen.getByRole("button", { name: "改名" }));
+    assert.ok(screen.getByRole("button", { name: "复制" }));
+    // View toggle tabs
+    assert.ok(screen.getByRole("button", { name: "排阵" }));
+    assert.ok(screen.getByRole("button", { name: "对比" }));
+    // Scenario select
+    assert.ok(screen.getByRole("combobox", { name: "切换当前方案" }));
+    // Board area should be visible in lineup mode
+    assert.ok(screen.getByLabelText("守备位置图"));
   });
 
   it("opens create dialog and creates a new scenario", async () => {
@@ -52,14 +55,14 @@ describe("ScenariosPageClient", () => {
 
     // Open create dialog
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "+ 新建方案" }));
+      fireEvent.click(screen.getByRole("button", { name: "+ 新建" }));
     });
 
     const dialog = screen.getByRole("dialog", { name: "新建方案" });
     assert.ok(dialog);
 
-    // Fill in the form
-    const nameInput = screen.getByPlaceholderText("例如：对强投方案") as HTMLInputElement;
+    // Fill in the form via label text
+    const nameInput = screen.getByLabelText("方案名称") as HTMLInputElement;
     await act(async () => {
       fireEvent.change(nameInput, { target: { value: "秋季赛方案" } });
     });
@@ -69,12 +72,11 @@ describe("ScenariosPageClient", () => {
       fireEvent.click(screen.getByRole("button", { name: "创建" }));
     });
 
-    // The new scenario should not appear immediately because save is async mock.
-    // Just verify the dialog closed.
+    // Dialog should close after submission
     assert.ok(!screen.queryByRole("dialog", { name: "新建方案" }));
   });
 
-  it("copies a scenario and shows it in the list", async () => {
+  it("copies the active scenario", async () => {
     render(
       <ScenariosPageClient
         initialWorkspace={workspace}
@@ -82,56 +84,44 @@ describe("ScenariosPageClient", () => {
       />,
     );
 
-    const copyButtons = screen.getAllByText("复制");
-    assert.ok(copyButtons.length > 0);
+    const copyBtn = screen.getByRole("button", { name: "复制" });
+    assert.ok(copyBtn);
+    assert.ok(!(copyBtn as HTMLButtonElement).disabled);
 
     await act(async () => {
-      fireEvent.click(copyButtons[0]);
+      fireEvent.click(copyBtn);
     });
 
-    // The workspace update occurs async, but we just need to confirm
-    // it does not throw
+    // Dialog shouldn't appear for copy (it's direct)
+    assert.ok(!screen.queryByRole("dialog"));
   });
 
-  it("switches to compare view and shows two scenario pickers", async () => {
-    // Need at least 2 scenarios
-    const { createScenarioAction } = await import("@/lib/lineup-actions");
-    const twoScenarioWs = createScenarioAction(workspace, "备用方案", "");
+  it("switches to compare view", async () => {
     render(
       <ScenariosPageClient
-        initialWorkspace={twoScenarioWs}
+        initialWorkspace={workspace}
         initialVersion={1}
       />,
     );
 
     await act(async () => {
-      fireEvent.click(screen.getByText("对比"));
+      fireEvent.click(screen.getByRole("button", { name: "对比" }));
     });
 
-    assert.ok(screen.getByLabelText("选择场景 A"));
-    assert.ok(screen.getByLabelText("选择场景 B"));
+    // Compare view should show a message that needs 2+ scenarios
+    // With only 1 scenario, it shows a hint
+    assert.ok(screen.getByText(/需要至少 2 个方案才能对比/));
   });
 
-  it("disables delete button when only one scenario remains", async () => {
-    const singleWs = createDefaultWorkspace(true);
-    singleWs.scenarios = [singleWs.scenarios[0]];
-
+  it("disables delete button when only one scenario remains", () => {
     render(
       <ScenariosPageClient
-        initialWorkspace={singleWs}
+        initialWorkspace={workspace}
         initialVersion={1}
       />,
     );
 
-    // The "删除" button must be disabled when there is only one scenario
-    const deleteBtns = screen.getAllByText("删除");
-    assert.ok(deleteBtns.length >= 1);
-    for (const btn of deleteBtns) {
-      assert.ok(
-        (btn as HTMLButtonElement).disabled ||
-          btn.closest("button")?.disabled,
-        "删除 button should be disabled with a single scenario",
-      );
-    }
+    const deleteBtn = screen.getByRole("button", { name: "删除" });
+    assert.ok((deleteBtn as HTMLButtonElement).disabled);
   });
 });

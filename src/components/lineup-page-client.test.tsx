@@ -31,7 +31,7 @@ describe("LineupPageClient", () => {
     );
 
     assert.ok(screen.getByText("排阵工作台"));
-    assert.ok(screen.getByRole("link", { name: "排阵" }));
+    assert.ok(screen.getByRole("link", { name: "战术场景" }));
     assert.ok(screen.getByLabelText("守备位置图"));
     assert.ok(screen.getByText("打线顺序"));
     assert.ok(screen.getByText("全队球员"));

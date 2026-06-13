@@ -40,7 +40,6 @@ type PlayerManagerClientProps = {
 const NAV_ITEMS = [
   { label: "总览", href: "/", active: true },
   { label: "名册", href: "/roster" },
-  { label: "排阵", href: "/lineup" },
   { label: "战术场景", href: "/scenarios" },
   { label: "数据中心", href: "/import-export" },
   { label: "设置", href: "/settings" },
@@ -211,13 +210,13 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
               onRenameScenario={() => navigate("/scenarios")}
               onDuplicateScenario={handleDuplicateScenario}
               onClearAssignments={handleClearAssignments}
-              onScenarioChange={handleScenarioChange}
-              onOpenWorkspace={() => navigate("/lineup")}
+              onOpenWorkspace={() => navigate("/scenarios")}
               onOpenScenarioPanel={() => navigate("/scenarios")}
               onOpenRosterPanel={() => navigate("/roster")}
-              onOpenFieldPanel={() => navigate("/lineup")}
-              onOpenLineupPanel={() => navigate("/lineup")}
-              onOpenWarningsPanel={() => navigate("/lineup")}
+              onOpenFieldPanel={() => navigate("/scenarios")}
+              onOpenLineupPanel={() => navigate("/scenarios")}
+              onOpenWarningsPanel={() => navigate("/scenarios")}
+              onScenarioChange={handleScenarioChange}
             />
           )}
         />
