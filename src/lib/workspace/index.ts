@@ -10,6 +10,9 @@ export type {
   PitcherRadar,
   FielderRadar,
   GameRecord,
+  InningRecord,
+  PlayerGameStatLine,
+  Game,
   PlayerProfile,
   ScenarioAssignments,
   Scenario,
@@ -57,7 +60,10 @@ export {
   sanitizeScenario,
   sanitizeAssignments,
   sanitizeWorkspace,
+  sanitizeGame,
+  sanitizeGames,
 } from "./sanitizers";
+
 
 export {
   getActiveScenario,

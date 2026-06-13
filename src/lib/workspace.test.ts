@@ -141,7 +141,7 @@ describe("workspace sanitizers", () => {
 
   it("builds a fallback workspace when input is malformed", () => {
     const workspace = sanitizeWorkspace({ players: "bad-data" });
-    assert.equal(workspace.version, 2);
+    assert.equal(workspace.version, 3);
     assert.equal(workspace.scenarios.length, 1);
     assert.equal(workspace.players.length, 0);
   });

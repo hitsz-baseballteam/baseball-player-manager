@@ -65,6 +65,45 @@ export type GameRecord = {
   hPitching: number | null;
 };
 
+export type InningRecord = {
+  inning: number;
+  hits: number;
+  runs: number;
+  batters: string[];
+};
+
+export type PlayerGameStatLine = {
+  playerId: string;
+  pa: number;
+  ab: number;
+  h: number;
+  hr: number;
+  rbi: number;
+  r: number;
+  sb: number;
+  bb: number;
+  so: number;
+  ip: number | null;
+  er: number | null;
+  soPitching: number | null;
+  bbPitching: number | null;
+  hPitching: number | null;
+  po: number;
+  a: number;
+  e: number;
+};
+
+export type Game = {
+  id: string;
+  date: string;
+  opponent: string;
+  gameType: "official" | "training";
+  totalInnings: number;
+  innings: InningRecord[];
+  statLines: PlayerGameStatLine[];
+  note?: string;
+};
+
 export type PlayerProfile = {
   profileType: PlayerProfileType;
   age: number | null;
@@ -98,10 +137,11 @@ export type Scenario = {
 };
 
 export type Workspace = {
-  version: 2;
+  version: 3;
   players: Player[];
   scenarios: Scenario[];
   activeScenarioId: string;
+  games: Game[];
   preferences: {
     helpDismissed: boolean;
   };
@@ -109,19 +149,21 @@ export type Workspace = {
 
 export type WorkspaceExportPayload = {
   type: "workspace";
-  version: 2;
+  version: 3;
   exportedAt: string;
   players: Player[];
   scenarios: Scenario[];
+  games: Game[];
   activeScenarioId: string;
 };
 
 export type ScenarioExportPayload = {
   type: "scenario";
-  version: 2;
+  version: 3;
   exportedAt: string;
   players: Player[];
   scenario: Scenario;
+  games: Game[];
 };
 
 export type PendingImport =
@@ -144,7 +186,7 @@ export type PendingImport =
 // ── Constants ──
 
 export const HISTORY_LIMIT = 30;
-export const WORKSPACE_SCHEMA_VERSION = 2;
+export const WORKSPACE_SCHEMA_VERSION = 3;
 export const DEFAULT_WORKSPACE_SLUG = "default";
 
 export const POSITIONS = [

@@ -163,6 +163,7 @@ export function createDefaultWorkspace(helpDismissed: boolean): Workspace {
     players,
     scenarios: [scenario],
     activeScenarioId: scenario.id,
+    games: [],
     preferences: {
       helpDismissed,
     },

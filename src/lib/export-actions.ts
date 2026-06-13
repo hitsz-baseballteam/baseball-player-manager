@@ -33,6 +33,7 @@ export function buildWorkspaceExport(workspace: Workspace): WorkspaceExportPaylo
     exportedAt: new Date().toISOString(),
     players: workspace.players,
     scenarios: workspace.scenarios,
+    games: workspace.games,
     activeScenarioId: workspace.activeScenarioId,
   };
 }
@@ -60,6 +61,7 @@ export function buildScenarioExport(
     exportedAt: new Date().toISOString(),
     players: workspace.players.filter((player) => referencedIds.has(player.id)),
     scenario,
+    games: workspace.games,
   };
 }
 

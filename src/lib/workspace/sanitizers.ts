@@ -17,6 +17,9 @@ import {
   type ScenarioAssignments,
   type Workspace,
   type GameRecord,
+  type Game,
+  type InningRecord,
+  type PlayerGameStatLine,
 } from "./types";
 import {
   createDefaultPlayerProfile,
@@ -204,7 +207,8 @@ export function sanitizePlayerProfile(
       3,
       8,
     ),
-    games: sanitizeGameRecords((source as Record<string, unknown>)?.games),
+
+  games: sanitizeGameRecords((source as Record<string, unknown>)?.games),
     pitchTypes: sanitizeStringList(source?.pitchTypes, 6, 10),
     scoutingSummary: String(source?.scoutingSummary ?? "").trim().slice(0, 180),
     radar: {
@@ -299,13 +303,76 @@ export function sanitizeWorkspace(value: unknown): Workspace {
     ? (source.activeScenarioId as string)
     : scenarios[0].id;
 
+  const games = sanitizeGames(Array.isArray(source.games) ? source.games : []);
+
   return {
     version: WORKSPACE_SCHEMA_VERSION,
     players,
     scenarios,
     activeScenarioId,
+    games,
     preferences: {
       helpDismissed: Boolean(source.preferences?.helpDismissed),
     },
   };
+}
+
+// ── Game sanitizers ──
+
+function sanitizeStatLine(value: unknown): PlayerGameStatLine {
+  const s = value as Record<string, unknown> | null | undefined;
+  return {
+    playerId: String(s?.playerId ?? ""),
+    pa: sanitizeGameInt(s?.pa),
+    ab: sanitizeGameInt(s?.ab),
+    h: sanitizeGameInt(s?.h),
+    hr: sanitizeGameInt(s?.hr),
+    rbi: sanitizeGameInt(s?.rbi),
+    r: sanitizeGameInt(s?.r),
+    sb: sanitizeGameInt(s?.sb),
+    bb: sanitizeGameInt(s?.bb),
+    so: sanitizeGameInt(s?.so),
+    ip: sanitizeGameInnings(s?.ip),
+    er: sanitizeNullableNumber(s?.er, 0, 99),
+    soPitching: sanitizeNullableNumber(s?.soPitching, 0, 99, true),
+    bbPitching: sanitizeNullableNumber(s?.bbPitching, 0, 99, true),
+    hPitching: sanitizeNullableNumber(s?.hPitching, 0, 99, true),
+    po: sanitizeGameInt(s?.po),
+    a: sanitizeGameInt(s?.a),
+    e: sanitizeGameInt(s?.e),
+  };
+}
+
+function sanitizeInning(value: unknown): InningRecord {
+  const s = value as Record<string, unknown> | null | undefined;
+  return {
+    inning: Math.max(1, sanitizeGameInt(s?.inning) || 1),
+    hits: sanitizeGameInt(s?.hits),
+    runs: sanitizeGameInt(s?.runs),
+    batters: sanitizeStringList(s?.batters, 12, 36),
+  };
+}
+
+export function sanitizeGame(value: unknown): Game | null {
+  const s = value as Record<string, unknown> | null | undefined;
+  if (!s?.id || !s?.date || !s?.opponent) return null;
+  return {
+    id: String(s.id),
+    date: String(s.date),
+    opponent: String(s.opponent).trim().slice(0, 40),
+    gameType: s.gameType === "training" ? "training" : "official",
+    totalInnings: Math.max(1, sanitizeGameInt(s.totalInnings) || 9),
+    innings: (Array.isArray(s.innings) ? s.innings : []).map(sanitizeInning),
+    statLines: (Array.isArray(s.statLines) ? s.statLines : [])
+      .map(sanitizeStatLine)
+      .filter((sl) => sl.playerId),
+    note: String(s.note ?? "").trim().slice(0, 200) || undefined,
+  };
+}
+
+export function sanitizeGames(value: unknown): Game[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(sanitizeGame)
+    .filter((g): g is Game => g !== null);
 }

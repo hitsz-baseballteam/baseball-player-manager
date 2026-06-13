@@ -34,7 +34,7 @@ describe("export-actions", () => {
       const result = buildWorkspaceExport(workspace);
 
       assert.equal(result.type, "workspace");
-      assert.equal(result.version, 2);
+      assert.equal(result.version, 3);
       assert.ok(result.exportedAt);
       assert.equal(result.players, workspace.players);
       assert.equal(result.scenarios, workspace.scenarios);

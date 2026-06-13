@@ -4,6 +4,7 @@ import {
   sanitizeWorkspace,
   type Workspace,
 } from "@/lib/workspace";
+import { migrateV2toV3 } from "@/lib/migrate-v2-to-v3";
 import { getPool } from "@/lib/db";
 
 type WorkspaceRow = {
@@ -23,6 +24,11 @@ function toIsoString(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
+function hydrate(data: unknown): Workspace {
+  const migrated = migrateV2toV3(data);
+  return sanitizeWorkspace((migrated ?? data) as Workspace);
+}
+
 export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
   const pool = getPool();
 
@@ -39,7 +45,7 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   if (selectResult.rows[0]) {
     const row = selectResult.rows[0];
     return {
-      workspace: sanitizeWorkspace(row.data),
+      workspace: hydrate(row.data),
       version: row.version,
       updatedAt: toIsoString(row.updated_at),
     };
@@ -59,7 +65,7 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   if (insertResult.rows[0]) {
     const row = insertResult.rows[0];
     return {
-      workspace: sanitizeWorkspace(row.data),
+      workspace: hydrate(row.data),
       version: row.version,
       updatedAt: toIsoString(row.updated_at),
     };
@@ -81,7 +87,7 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   }
 
   return {
-    workspace: sanitizeWorkspace(row.data),
+    workspace: hydrate(row.data),
     version: row.version,
     updatedAt: toIsoString(row.updated_at),
   };
