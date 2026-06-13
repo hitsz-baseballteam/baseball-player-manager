@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import styles from "@/components/player-profile-editor.module.css";
+import { RadarChart } from "@/components/radar-chart";
 import {
   createDefaultPlayerProfile,
   FIELDER_RADAR_LABELS,
@@ -381,7 +382,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   {current.name}
                 </h1>
                 <p className={styles.deck}>
-                  {profile.scoutingSummary || "在这里记录该球员的角色轮廓、比赛气质与培养方向，让档案读起来像一页完整的球探笔记。"}
+                  {profile.scoutingSummary || "记录角色轮廓与培养方向"}
                 </p>
               </div>
               <div className={styles.numberPlate} aria-label={`背号 ${current.number}`}>
@@ -405,27 +406,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
             </div>
           </div>
 
-          <aside className={styles.identityCard}>
-            <div className={styles.kickerMuted}>球员备注</div>
-            <dl className={styles.identityList}>
-              <div>
-                <dt>年龄</dt>
-                <dd>{profile.age ?? "待补充"}</dd>
-              </div>
-              <div>
-                <dt>身体条件</dt>
-                <dd>{physicalLabel}</dd>
-              </div>
-              <div>
-                <dt>守位</dt>
-                <dd>{positionsLabel}</dd>
-              </div>
-              <div>
-                <dt>球种 / 角色</dt>
-                <dd>{profile.pitchTypes.join(" · ") || "待补充"}</dd>
-              </div>
-            </dl>
-          </aside>
         </section>
 
         <section className={styles.editorGrid}>
@@ -436,7 +416,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   <div className={styles.kickerMuted}>基本信息</div>
                   <h2>身份与角色</h2>
                 </div>
-                <p>先完善最常被查看的信息，保证档案首屏可快速扫读。</p>
               </div>
 
               <div className={styles.fieldGridTwo}>
@@ -518,6 +497,34 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   ))}
                 </div>
               </div>
+
+              <div className={styles.field}>
+                <label htmlFor="profile-pitches">球种</label>
+                <input
+                  id="profile-pitches"
+                  value={profile.pitchTypes.join("，")}
+                  onChange={(event) =>
+                    updateProfile({
+                      pitchTypes: event.target.value
+                        .split(/[,，/]/)
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                        .slice(0, 6),
+                    })}
+                  placeholder="例如：四缝线，滑球，变速球"
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="scouting-summary">球探摘要</label>
+                <textarea
+                  id="scouting-summary"
+                  value={profile.scoutingSummary}
+                  onChange={(event) =>
+                    updateProfile({ scoutingSummary: event.target.value })}
+                  maxLength={180}
+                />
+              </div>
             </article>
 
             <article className={styles.sectionCard}>
@@ -526,7 +533,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   <div className={styles.kickerMuted}>身体素质</div>
                   <h2>身体素质与模型</h2>
                 </div>
-                <p>球员可在同一份档案中保存投手与野手两套观察维度。</p>
               </div>
 
               <div className={styles.fieldGridTwo}>
@@ -723,43 +729,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
               </div>
             </article>
 
-            <article className={styles.sectionCard}>
-              <div className={styles.sectionHeader}>
-                <div>
-                  <div className={styles.kickerMuted}>球探纪要</div>
-                  <h2>球探纪要</h2>
-                </div>
-                <p>用简洁、可复读的语言记录这个球员最值得记住的特征。</p>
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="profile-pitches">球种</label>
-                <input
-                  id="profile-pitches"
-                  value={profile.pitchTypes.join("，")}
-                  onChange={(event) =>
-                    updateProfile({
-                      pitchTypes: event.target.value
-                        .split(/[,，/]/)
-                        .map((item) => item.trim())
-                        .filter(Boolean)
-                        .slice(0, 6),
-                    })}
-                  placeholder="例如：四缝线，滑球，变速球"
-                />
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="scouting-summary">球探摘要</label>
-                <textarea
-                  id="scouting-summary"
-                  value={profile.scoutingSummary}
-                  onChange={(event) =>
-                    updateProfile({ scoutingSummary: event.target.value })}
-                  maxLength={180}
-                />
-              </div>
-            </article>
           </div>
 
           <div className={styles.secondaryColumn}>
@@ -769,7 +738,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                   <div className={styles.kickerMuted}>能力轮廓</div>
                   <h2>六维能力图</h2>
                 </div>
-                <p>按当前模型切换标签，保持一眼可读的轮廓感。</p>
               </div>
 
               <div className={styles.radarWrap}>
@@ -783,16 +751,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                     <strong>{item.value ?? "--"}</strong>
                   </div>
                 ))}
-              </div>
-            </article>
-
-            <article className={styles.sectionCard}>
-              <div className={styles.sectionHeader}>
-                <div>
-                  <div className={styles.kickerMuted}>六维评分</div>
-                  <h2>六维评分</h2>
-                </div>
-                <p>使用 20–80 球探刻度，空值表示暂未观察。</p>
               </div>
 
               <div className={styles.gradeGrid}>
@@ -899,123 +857,6 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
   );
 }
 
-function RadarChart({
-  values,
-}: {
-  values: Array<{ label: string; value: number | null }>;
-}) {
-  const center = 150;
-  const radius = 106;
-  const levels = [20, 35, 50, 65, 80];
-  const axisPoints = values.map((_, index) =>
-    polarToCartesian(center, center, radius, index, values.length),
-  );
-  const polygonPoints = values.map((item, index) => {
-    const normalized = item.value === null ? 0.18 : (item.value - 20) / 60;
-    return polarToCartesian(
-      center,
-      center,
-      radius * Math.max(normalized, 0.18),
-      index,
-      values.length,
-    );
-  });
-
-  return (
-    <svg
-      viewBox="0 0 300 300"
-      role="img"
-      aria-label="球员六维能力图"
-      className={styles.chartSvg}
-    >
-      {levels.map((level) => {
-        const points = values
-          .map((_, index) =>
-            polarToCartesian(
-              center,
-              center,
-              radius * ((level - 20) / 60),
-              index,
-              values.length,
-            ),
-          )
-          .map((point) => `${point.x},${point.y}`)
-          .join(" ");
-
-        return (
-          <polygon
-            key={level}
-            points={points}
-            fill="none"
-            stroke="var(--profile-grid-line)"
-            strokeWidth="1"
-            strokeDasharray={level === 80 ? undefined : "3 5"}
-          />
-        );
-      })}
-
-      {axisPoints.map((point, index) => (
-        <g key={values[index].label}>
-          <line
-            x1={center}
-            y1={center}
-            x2={point.x}
-            y2={point.y}
-            stroke="var(--profile-axis-line)"
-            strokeWidth="1"
-          />
-          <text
-            x={point.x}
-            y={point.y}
-            fill="var(--profile-text-muted)"
-            fontSize="11"
-            textAnchor={point.x >= center ? "start" : "end"}
-            dominantBaseline={point.y >= center ? "hanging" : "auto"}
-          >
-            {values[index].label}
-          </text>
-        </g>
-      ))}
-
-      <circle
-        cx={center}
-        cy={center}
-        r="2.5"
-        fill="var(--profile-accent)"
-        opacity="0.8"
-      />
-      <polygon
-        points={polygonPoints.map((point) => `${point.x},${point.y}`).join(" ")}
-        fill="var(--profile-polygon-fill)"
-        stroke="var(--profile-accent)"
-        strokeWidth="2"
-      />
-      {polygonPoints.map((point, index) => (
-        <circle
-          key={`${values[index].label}-dot`}
-          cx={point.x}
-          cy={point.y}
-          r="3.5"
-          fill="var(--profile-accent-strong)"
-        />
-      ))}
-    </svg>
-  );
-}
-
-export function polarToCartesian(
-  centerX: number,
-  centerY: number,
-  radius: number,
-  index: number,
-  total: number,
-) {
-  const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-  return {
-    x: centerX + radius * Math.cos(angle),
-    y: centerY + radius * Math.sin(angle),
-  };
-}
 
 export function formatMetric(value: number | null, suffix: string) {
   return value === null ? "--" : `${value} ${suffix}`;

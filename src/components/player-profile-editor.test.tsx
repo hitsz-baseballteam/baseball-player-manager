@@ -1,7 +1,8 @@
 import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
-import { PlayerProfileEditor, polarToCartesian, formatMetric } from "./player-profile-editor";
+import { PlayerProfileEditor, formatMetric } from "./player-profile-editor";
+import { polarToCartesian } from "./radar-chart";
 import type { Player } from "@/lib/workspace";
 
 function createTestPlayer(overrides: Partial<Player> = {}): Player {
