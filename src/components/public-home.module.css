@@ -532,34 +532,66 @@
   line-height: 1.8;
 }
 
+.joinGrid {
+  position: relative;
+  display: grid;
+  max-width: 1040px;
+  grid-template-columns: minmax(320px, 1fr) minmax(280px, 360px);
+  gap: 24px;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
 .contact {
   position: relative;
-  display: inline-grid;
-  min-width: min(520px, 100%);
+  display: grid;
+  min-width: 0;
   gap: 7px;
   padding: 26px;
   color: white;
   background: var(--public-navy);
   box-shadow: 9px 9px 0 white;
+  text-align: left;
 }
 
 .contact strong {
   font-size: 24px;
 }
 
-.contact button {
-  display: inline-flex;
-  min-height: 46px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  color: white;
-  background: transparent;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
+.contactNote {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.qrCard {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 20px;
+  color: var(--public-navy);
+  background: var(--public-paper);
+  box-shadow: 9px 9px 0 rgba(6, 45, 79, 0.22);
+  text-align: left;
+}
+
+.qrFrame {
+  overflow: hidden;
+  background: white;
+}
+
+.qrImage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.qrCard figcaption {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.7;
 }
 
 .footer {
@@ -785,6 +817,10 @@
     padding: 96px 22px;
   }
 
+  .joinGrid {
+    grid-template-columns: 1fr;
+  }
+
   .footer {
     align-items: flex-start;
     gap: 24px;
@@ -845,6 +881,10 @@
 
   .contact strong {
     font-size: 19px;
+  }
+
+  .qrCard {
+    padding: 16px;
   }
 
   .footer {

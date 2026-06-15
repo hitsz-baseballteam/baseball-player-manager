@@ -8,10 +8,6 @@ export type PublicSiteContent = {
   steps: Array<{ number: string; title: string; detail: string }>;
   values: Array<{ title: string; detail: string }>;
   training: Array<{ label: string; value: string }>;
-  contact: {
-    manager: string;
-    wechat: string;
-  };
 };
 
 export const PUBLIC_SITE_CONTENT: PublicSiteContent = {
@@ -40,8 +36,4 @@ export const PUBLIC_SITE_CONTENT: PublicSiteContent = {
     { label: "经验要求", value: "零基础也欢迎" },
     { label: "参与方式", value: "联系经理预约跟练" },
   ],
-  contact: {
-    manager: "球队经理——陶YF",
-    wechat: "t90507002fyt",
-  },
 };

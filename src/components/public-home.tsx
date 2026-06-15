@@ -6,7 +6,6 @@ import { useState } from "react";
 import {
   ArrowRight,
   Baseball,
-  Copy,
   Eye,
   List,
   LockKey,
@@ -23,13 +22,6 @@ const stepIcons = [Eye, PersonSimpleRun, UsersThree];
 
 export function PublicHome() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  async function copyWechat() {
-    await navigator.clipboard.writeText(content.contact.wechat);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  }
 
   return (
     <main className={styles.site}>
@@ -102,8 +94,8 @@ export function PublicHome() {
 
         <div className={styles.heroBand}>
           <div className={styles.heroContact}>
-            <span>{content.contact.manager}</span>
-            <strong>微信 {content.contact.wechat}</strong>
+            <span>2026 秋季招新</span>
+            <strong>扫码加入棒球队微信群</strong>
           </div>
           <div className={styles.heroActions}>
             <a className={styles.primaryAction} href="#join">
@@ -207,13 +199,28 @@ export function PublicHome() {
         <p className={styles.joinLead}>
           无论你以前有没有接触过棒球，都可以先来看看、跟练一次，再决定是否正式入队。
         </p>
-        <div className={styles.contact}>
-          <span>{content.contact.manager}</span>
-          <strong>微信 {content.contact.wechat}</strong>
-          <button type="button" onClick={copyWechat}>
-            <Copy size={20} weight="bold" />
-            {copied ? "已复制微信号" : "复制微信号"}
-          </button>
+        <div className={styles.joinGrid}>
+          <div className={styles.contact}>
+            <span>入群方式</span>
+            <strong>扫码加入棒球队微信群</strong>
+            <p className={styles.contactNote}>
+              新生、零基础同学都可以先扫码进群，训练时间和招新安排都会在群里同步。
+            </p>
+          </div>
+          <figure className={styles.qrCard}>
+            <div className={styles.qrFrame}>
+              <Image
+                src="/team/wechat-group-qr.jpg"
+                alt="哈工大深圳棒球队微信群二维码"
+                width={420}
+                height={420}
+                className={styles.qrImage}
+              />
+            </div>
+            <figcaption>
+              扫码进入棒球队微信群，先围观训练通知和招新安排。
+            </figcaption>
+          </figure>
         </div>
       </section>
 
