@@ -132,19 +132,27 @@ export function StatsPageClient({
         setWorkspace(sanitizeWorkspace(result.workspace));
       } catch (error) {
         // On any failure, reload server snapshot to roll back optimistic update
+        let reloaded = false;
         try {
           const snapshot = await loadWorkspaceSnapshot();
           setVersion(snapshot.version);
           setWorkspace(sanitizeWorkspace(snapshot.workspace));
+          reloaded = true;
         } catch {
           // If reload also fails, leave current state as-is (best effort)
         }
 
-        if (isVersionConflict(error)) {
-          toastRef.current?.showToast("数据已被其他会话更新，已恢复到最新状态，请重新操作。");
+        if (reloaded) {
+          if (isVersionConflict(error)) {
+            toastRef.current?.showToast("数据已被其他会话更新，已恢复到最新状态，请重新操作。");
+          } else {
+            console.error("Save failed:", error);
+            setSaveError("保存失败，已恢复到最新数据，请重试。");
+          }
         } else {
-          console.error("Save failed:", error);
-          setSaveError("保存失败，已恢复到最新数据，请重试。");
+          console.error("Save failed and reload failed:", error);
+          toastRef.current?.showToast("保存失败且无法连接服务器，当前显示内容可能未同步。");
+          setSaveError("保存失败，请检查网络后刷新页面。");
         }
       } finally {
         setIsSaving(false);
