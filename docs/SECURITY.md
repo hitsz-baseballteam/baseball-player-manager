@@ -15,11 +15,11 @@
 `src/lib/auth.ts` 实现：
 
 ```
-POST /api/unlock
-  body: { passcode: "..." }
+POST /panel/login (表单提交到 server action)
+  → src/app/panel/login/actions.ts: unlockAction(formData)
   → scrypt 校验 against process.env.APP_ADMIN_PASSCODE_HASH
-  → 成功：set signed cookie "baseball_manager_unlock"
-  → 失败：401
+  → 成功：set signed cookie "baseball_manager_unlock" 并 redirect 到目标 `/panel/*`
+  → 失败：redirect 回 `/panel/login?error=...`
 ```
 
 ### Cookie 结构
@@ -48,7 +48,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
   → 有效：放行
 ```
 
-`/api/unlock` 和 `/api/logout` 不受中间件保护（无需认证）。
+`/panel/login` 及其 server action 提交路径、`/api/logout` 都不受 `src/proxy.ts` 保护。
 
 登录回跳通过 `normalizePanelNextPath()` 限定在 `/panel` 命名空间内，并拒绝登录页自身，避免开放重定向和回跳循环。
 
@@ -66,7 +66,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 | `AUTH_SECRET` | Cookie HMAC 签名密钥 | 服务端（`auth.ts`） |
 
 **规则**：
-- 三个变量仅在服务端代码中使用，不会暴露到客户端 bundle
+- 以上变量仅在服务端代码中使用，不会暴露到客户端 bundle
 - 缺少时在首次使用时抛出明确错误，不静默失败
 - `.env.example` 提供模版，`.env.local` 包含实际值（已在 `.gitignore`）
 - 建议通过 `npm run auth:env -- "your-passcode"` 生成口令哈希和随机签名密钥
@@ -93,7 +93,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 ## 安全约束
 
 - 口令不再以明文环境变量参与运行时鉴权；部署时应保护 `APP_ADMIN_PASSCODE_HASH` 和 `AUTH_SECRET`
-- 解锁接口已有内存级速率限制：按 IP 5 次 / 60 秒；Workspace 读写和登出也有限流；如需跨实例一致限制，仍需在反向代理或外部网关补充
+- 登录入口已有内存级速率限制：按 IP 5 次 / 60 秒；Workspace 读写和登出也有限流；如需跨实例一致限制，仍需在反向代理或外部网关补充
 - 当前没有单独的 CSRF token 机制；防护主要依赖 `sameSite=lax` cookie 与 JSON API 形态
-- 已通过 `next.config.ts` 增加 CSP、`X-Frame-Options`、`X-Content-Type-Options`、`Referrer-Policy` 和 `Permissions-Policy`
+- 已通过 `next.config.ts` 增加 CSP、`X-Frame-Options`、`X-Content-Type-Options`、`Referrer-Policy` 和 `Permissions-Policy`；其中 `script-src` 当前放行 `'unsafe-inline'` 以兼容 Next App Router 的 hydration bootstrap
 - `next.config.ts` 对 `/panel/*` 与 `/api/*` 设置 `private, no-store`，Cloudflare 不应为这些路径配置覆盖源站的公共缓存规则

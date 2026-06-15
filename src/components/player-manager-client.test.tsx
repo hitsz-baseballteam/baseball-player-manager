@@ -105,10 +105,12 @@ describe("PlayerManagerClient", () => {
     await user.click(screen.getByRole("button", { name: /^新建方案/ }));
     assert.equal(savedWorkspaces.length, 2);
     assert.equal(savedWorkspaces[1]?.scenarios.length, baseWorkspace.scenarios.length + 1);
+    assert.equal(savedWorkspaces[1]?.activeScenarioId, savedWorkspaces[1]?.scenarios.at(-1)?.id);
 
     await user.click(screen.getAllByRole("button", { name: "复制方案" })[0]);
     assert.equal(savedWorkspaces.length, 3);
     assert.ok((savedWorkspaces[2]?.scenarios.length ?? 0) > (savedWorkspaces[1]?.scenarios.length ?? 0));
+    assert.equal(savedWorkspaces[2]?.activeScenarioId, savedWorkspaces[2]?.scenarios.at(-1)?.id);
 
     await user.click(screen.getByRole("button", { name: /^清空/ }));
     assert.equal(savedWorkspaces.length, 4);

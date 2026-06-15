@@ -18,7 +18,7 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 | Path | What it currently owns |
 |---|---|
 | `src/app/` | Next.js routes, pages, global styles, and API endpoints |
-| `src/components/` | React UI components, including the homepage app shell, command-desk overview, unlock form, help UI, theme toggle, toast/guide overlays, and player profile editor |
+| `src/components/` | React UI components, including the homepage app shell, command-desk overview, help/toast/guide overlays, roster and scenario workbenches, and player profile editor |
 | `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and cross-page client helpers |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
@@ -43,6 +43,7 @@ From `package.json`:
 |---|---|
 | `src/app/page.tsx` | Public HITSZ Baseball recruitment homepage; does not read the private workspace |
 | `src/app/panel/login/page.tsx` | Shared-passcode login page with validated return-path support |
+| `src/app/panel/login/actions.ts` | Login server action that rate-limits passcode attempts, sets the signed cookie, and redirects |
 | `src/app/panel/page.tsx` | Authenticated command-desk homepage |
 | `src/app/panel/roster/page.tsx` | Authenticated roster workbench |
 | `src/app/panel/scenarios/page.tsx` | Authenticated scenario and lineup workbench |
@@ -50,8 +51,8 @@ From `package.json`:
 | `src/app/panel/settings/page.tsx` | Authenticated settings, import/export, reset, logout, and help page |
 | `src/app/panel/players/[playerId]/games/page.tsx` | Authenticated player game-data page |
 | `src/app/panel/players/[playerId]/page.tsx` | Authenticated player profile page |
-| `src/app/{roster,scenarios,stats,settings}/` | Legacy routes that permanently redirect to their `/panel` equivalents |
-| `src/app/api/unlock/route.ts` | Verifies shared passcode, applies rate limiting, sets signed cookie |
+| `src/app/{roster,scenarios,stats,settings,players/**}/` | Redirect aliases that permanently forward to their `/panel` equivalents |
+| `src/app/lineup/page.tsx` | Compatibility redirect that forwards `/lineup` to `/panel/scenarios` |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads and writes the shared workspace snapshot |
 | `src/proxy.ts` | Protects `/panel/*` and `/api/workspace` by validating the signed unlock cookie |
@@ -93,14 +94,14 @@ The app uses a shared-passcode model rather than per-user accounts. The public h
 Relevant files:
 
 - `src/lib/auth.ts` — verifies `APP_ADMIN_PASSCODE_HASH`, signs cookies with `AUTH_SECRET`, and enforces absolute session expiry
-- `src/app/api/unlock/route.ts` — verifies the submitted passcode and sets the `baseball_manager_unlock` cookie
-- `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used by unlock, logout, and workspace routes
+- `src/app/panel/login/actions.ts` — verifies the submitted passcode, applies rate limiting, sets the `baseball_manager_unlock` cookie, and redirects
+- `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used by login submissions, logout, and workspace routes
 - `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace` requests with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
 Observed limits and boundaries:
 
-- unlock attempts are limited per IP to 5 requests per 60 seconds
+- login submissions are limited per IP to 5 requests per 60 seconds
 - workspace reads/writes and logout requests also have route-level rate limits
 - the unlock cookie is `httpOnly`, `sameSite=lax`, `secure` in production, and includes a server-validated absolute expiry
 - `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
@@ -111,13 +112,14 @@ Observed limits and boundaries:
 The legacy homepage runtime has been retired. The current UI is now route-based React throughout.
 
 - `src/components/player-manager-client.tsx` renders the homepage command desk using `AppShell` + `HomeOverview`
-- `src/components/roster-page-client.tsx`, `lineup-page-client.tsx`, `scenarios-page-client.tsx`, `import-export-page-client.tsx`, `settings-page-client.tsx`, and `player-profile-page-client.tsx` each own one dedicated workbench/page surface
+- `src/components/roster-page-client.tsx`, `scenarios-page-client.tsx`, `stats-page-client.tsx`, `settings-page-client.tsx`, `player-profile-page-client.tsx`, and `games-page-client.tsx` each own one dedicated workbench/page surface
+- `src/components/lineup-page-client.tsx` remains as a standalone extracted lineup-board implementation and test surface, but no live route renders it directly
 - shared business logic is factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
-- `Toast`, `HelpDrawer`, `GuideOverlay`, and `ThemeToggle` are reusable adjunct UI layered around the page shells rather than around a DOM manager
+- `Toast`, `HelpDrawer`, and `GuideOverlay` are reusable adjunct UI layered around the page shells rather than around a DOM manager
 
 This means the repository now has one primary UI mode:
 
-1. React route pages and shell-driven workbenches for home / roster / lineup / scenarios / import-export / settings / player profile
+1. React route pages and shell-driven workbenches for public home / command desk / roster / scenarios / stats / settings / player profile / player games, with redirect aliases for legacy entry paths
 
 ### 5. Database schema
 

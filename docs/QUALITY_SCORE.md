@@ -20,11 +20,11 @@
 | **数据访问** (`db.ts` + `workspace-store.ts`) | B+ | 乐观并发控制正确；连接层与 `DATABASE_URL` / `pg` 约定保持一致，并补充了 Supabase/Vercel SSL 兼容处理，但缺少连接池失败重试逻辑 |
 | **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；仍是共享口令模型 |
 | **API 路由** (`api/*`) | B | 结构化错误返回，但缺少请求体校验中间件 |
-| **React 组件** (`components/`) | A | `AppShell` 已统一承载首页、名册、排阵、场景、数据中心、设置、档案页与比赛数据页；球员档案页现已直接链接比赛数据页，`GamesPageClient` 对棒球局数记法、增删改保存与摘要计算都有页面级测试覆盖 |
+| **React 组件** (`components/`) | A | `AppShell` 已统一承载控制台首页、名册、战术场景、数据中心、设置、档案页与比赛数据页；球员档案页现已直接链接比赛数据页，`GamesPageClient` 对棒球局数记法、增删改保存与摘要计算都有页面级测试覆盖 |
 | **旧 DOM 运行时** | A | 首页 legacy runtime 已清退，不再构成当前实现复杂度 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
-| **导入导出** | B+ | 已迁入 `export-actions.ts` + `/import-export` 数据中心页面；仍缺少 CSV 导入 |
-| 测试 | A- | 当前 195 个测试结果项（194 通过 + 1 todo），覆盖业务逻辑、页面级工作台（首页 / 名册 / 排阵 / 场景 / 档案 / 数据中心 / 设置 / 比赛数据）、共享逻辑层、认证/限流与 API 路由；比赛数据页已补上增删改保存、局数记法与摘要计算验证，并覆盖导入路径上的局数清洗 |
+| **导入导出** | B+ | 已迁入 `export-actions.ts` + 设置页的数据导入导出区；仍缺少 CSV 导入 |
+| 测试 | A- | 当前 `npm test` 报告 216 个测试、213 通过、3 个 todo，覆盖业务逻辑、页面级工作台（控制台首页 / 名册 / 战术场景 / 档案 / 数据中心 / 设置 / 比赛数据）、共享逻辑层、认证/限流与 API 路由；比赛数据页已补上增删改保存、局数记法与摘要计算验证，并覆盖导入路径上的局数清洗 |
 
 ## 按架构层级评分
 
@@ -34,8 +34,8 @@
 | Config | A | 明确、有边界校验 |
 | Repo | B+ | 乐观并发持久化 + 读写边界净化 |
 | Service | B | 核心逻辑有测试，边界覆盖可改进 |
-| Runtime | B+ | API 路由已覆盖主要路径（当前 7 个通过 + 1 个 todo），解锁接口有限流 |
-| UI (React) | A | 首页、名册、排阵、场景、数据中心、设置与档案页都已落入统一 React 壳层并有组件测试；当前主要缺口不再是迁移，而是后续体验深化与视觉回归自动化 |
+| Runtime | B+ | API 路由已覆盖主要路径，workspace 读写/冲突/限流与 logout 都有测试，登录入口也有限流 |
+| UI (React) | A | 控制台首页、名册、战术场景、数据中心、设置与档案页都已落入统一 React 壳层并有组件测试；当前主要缺口不再是迁移，而是后续体验深化与视觉回归自动化 |
 | UI (Legacy DOM) | A | legacy homepage runtime 已清退；当前无活跃 legacy UI 运行路径 |
 
 ## 技术债务影响
@@ -43,10 +43,10 @@
 | 债务 | 影响分数 | 当前状态 |
 |---|---|---|
 | DOM 管理器过大 | UI (Legacy DOM) C+→A | ✅ 先提取为 4 个模块，再在首页 legacy retirement 中彻底删除运行时链 |
-| 无前端组件测试 | UI (React) B→A | ✅ 主要 React 工作台与页面客户端均已有测试，覆盖首页 / 名册 / 排阵 / 场景 / 数据中心 / 设置 |
+| 无前端组件测试 | UI (React) B→A | ✅ 主要 React 工作台与页面客户端均已有测试，覆盖控制台首页 / 名册 / 战术场景 / 数据中心 / 设置 |
 | 首页 legacy runtime | UI (Legacy DOM) B→A | ✅ `index.html` / `legacy-template.ts` / `legacy-bridge.ts` / `player-manager-dom.ts` / `dom-*` 已从运行路径清退 |
 | 无 CI/CD | —→B | ✅ GitHub Actions 已添加（lint + test + build） |
-| 无 API 集成测试 | Runtime B→B+ | ✅ 2 个 API route 已覆盖主要路径（当前 7 个通过 + 1 个 todo） |
+| 无 API 集成测试 | Runtime B→B+ | ✅ API 路由已覆盖主要路径，含 workspace 读写/冲突/限流与 logout |
 | 无速率限制 | Runtime B→B+ | ✅ 内存速率限制（5 次/分钟） |
 | 无保存重试 | Repo B→B+ | ✅ saveWithRetry（409 自动重试 3 次） |
 | Turbopack 不兼容 | — | ✅ --webpack 已移除，Turbopack 正常 |
@@ -83,3 +83,4 @@
 | 2026-06-05 | HelpDrawer 打开/关闭链路收口 | 分数不变；帮助抽屉改为仅在打开时 portal 渲染，补齐固定定位/层级样式，并统一首页/设置页的打开入口与关闭测试 |
 | 2026-06-12 | P0 修复：`parseImportPayload` 文件名参数化、去掉 route 双重 sanitize、修复测试文件 TS 错误（10→0） | 分数不变 |
 | 2026-06-12 | P1 改进：DB 连接池文档补充、5 个新测试文件（home-overview / field-board / bench-panel / lineup-order / scenario-compare / scenario-list）+ 23 个测试、player-profile-editor 导出 `polarToCartesian`/`formatMetric` 并新增 7 个测试 | 测试 A-→A-、React 组件 A→A |
+| 2026-06-15 | 当前态文档同步 | 分数不变；修正登录链路、`/lineup` 与导入导出位置、已删除主题入口等文档漂移 |

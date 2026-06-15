@@ -4,8 +4,10 @@
 
 当前前端已经收敛为 **纯 React / Next.js App Router**：
 
-- 首页 `/` 是 React 总控台（command desk）
-- `/roster`、`/lineup`、`/scenarios`、`/import-export`、`/settings`、`/players/[playerId]` 都是独立 React 页面
+- `/` 是公开球队主页；认证控制台首页是 `/panel`
+- 真实工作台页面位于 `/panel/*`，包括名册、战术场景、数据中心、设置和球员档案
+- `/roster`、`/scenarios`、`/stats`、`/settings`、`/players/[playerId]` 及其比赛数据路由保留为永久重定向别名
+- `/lineup` 仅保留兼容入口，永久重定向到 `/panel/scenarios`
 - 旧的 homepage legacy DOM runtime（`index.html` / `legacy-template.ts` / `legacy-bridge.ts` / `player-manager-dom.ts` / `dom-*`）已清退
 - 共享业务逻辑继续沉淀在 `src/lib/` 中，由多个页面复用
 
@@ -13,7 +15,7 @@
 
 ### Server Components（默认）
 
-各业务页面 `page.tsx` 默认是服务端组件，职责统一：
+各受保护业务页面 `page.tsx` 默认是服务端组件，职责统一：
 
 - 读取 cookie，执行认证守卫
 - 调用 `getOrCreateWorkspaceSnapshot()` 加载共享 workspace
@@ -36,23 +38,20 @@ page.tsx (server)
 
 | 组件 | 职责 |
 |---|---|
-| `UnlockForm` | 纯客户端：输入 passcode → POST `/api/unlock` |
 | `AppShell` | 全局壳层：导航、页面题头、状态卡、内容槽位 |
 | `HomeOverview` | 首页总控区：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse |
-| `PlayerManagerClient` | 首页 command-desk 客户端：直接动作、页面跳转、帮助/引导/主题 |
+| `PlayerManagerClient` | 首页 command-desk 客户端：直接动作、页面跳转、帮助/引导 |
 | `RosterPageClient` | 名册工作台状态：workspace/version、筛选、选择、对话框、保存与冲突处理 |
 | `RosterOverview` | 名册工作台视图层：filters、counts、cards、bulk actions |
-| `LineupPageClient` | 排阵工作台状态：scenario 切换、守位/棒次拖拽、保存与冲突处理 |
+| `LineupPageClient` | 独立排阵板实现，保留为抽取后的守位/棒次工作台组件与测试载体；当前生产路由已并入 `ScenariosPageClient` |
 | `ScenariosPageClient` | 场景页状态：CRUD、当前方案切换、对比模式、保存与冲突处理 |
-| `ImportExportPageClient` | 数据中心状态：导出、JSON 导入预览与确认导入 |
-| `SettingsPageClient` | 设置页状态：主题、重置数据、退出登录、帮助/引导入口 |
+| `SettingsPageClient` | 设置页状态：工作区状态、导入导出、重置数据、退出登录 |
 | `GamesPageClient` | 比赛数据页状态：正式/训练 tab、逐场增删改、合计摘要、保存与冲突处理；IP 使用棒球记法（`.1`=1 出局、`.2`=2 出局） |
 | `PlayerProfilePageClient` | 球员档案页状态：workspace 读写 + 版本冲突处理，并提供跳转到比赛数据页的入口 |
 | `PlayerProfileEditor` | 纯客户端：档案表单 + SVG 雷达图；page 形态在顶部提供“查看比赛数据”链接 |
 | `Toast` | Portal 渲染的 toast 通知 |
 | `HelpDrawer` | 帮助抽屉 |
 | `GuideOverlay` | 新手引导浮层 |
-| `ThemeToggle` | 主题切换按钮 |
 
 ## 组件文件结构
 
@@ -71,15 +70,12 @@ src/components/
 ├── scenario-list.tsx
 ├── lineup-page-client.tsx
 ├── scenarios-page-client.tsx
-├── import-export-page-client.tsx
 ├── settings-page-client.tsx
 ├── player-profile-page-client.tsx
 ├── player-profile-editor.tsx
-├── unlock-form.tsx
 ├── toast.tsx
 ├── help-drawer.tsx
-├── guide-overlay.tsx
-└── theme-toggle.tsx
+└── guide-overlay.tsx
 
 src/lib/
 ├── auth.ts
@@ -140,15 +136,18 @@ API route + optimistic concurrency
 
 | 路由 | 类型 | 功能 |
 |---|---|---|
-| `/` | Server + Client | 首页总控台：提醒、快捷动作、方案摘要、阵容概览 |
-| `/roster` | Server + Client | 名册工作台：筛选、批量操作、档案入口 |
-| `/lineup` | Server + Client | 排阵工作台：守备图、棒次、替补区、自动排阵 |
-| `/scenarios` | Server + Client | 场景管理：CRUD + 双方案对比 |
-| `/import-export` | Server + Client | 数据中心：JSON 导入预览、JSON/CSV 导出 |
-| `/settings` | Server + Client | 设置与帮助：主题、重置数据、退出登录、帮助入口 |
-| `/players/[playerId]/games` | Server + Client | 比赛数据：正式 / 训练双 tab、逐场增删编辑、合计摘要卡，ERA/WHIP 按棒球局数记法计算 |
-| `/players/[playerId]` | Server + Client | 球员档案独立页，页内提供进入比赛数据页的链接 |
-| `/api/unlock` | API (POST) | 验证 passcode，签发 cookie |
+| `/` | Server + Client | 公开球队主页：品牌、招新、球队信息 |
+| `/panel/login` | Server + Server Action | 共享口令登录页；表单提交到 `unlockAction` |
+| `/panel` | Server + Client | 控制台首页：提醒、快捷动作、方案摘要、阵容概览 |
+| `/panel/roster` | Server + Client | 名册工作台：筛选、批量操作、档案入口 |
+| `/panel/scenarios` | Server + Client | 战术场景工作台：方案 CRUD、守备图、棒次、对比视图 |
+| `/panel/stats` | Server + Client | 数据中心：球员统计与比赛记录管理 |
+| `/panel/settings` | Server + Client | 设置页：工作区状态、导入导出、重置数据、退出登录 |
+| `/panel/players/[playerId]/games` | Server + Client | 比赛数据：正式 / 训练双 tab、逐场增删编辑、合计摘要卡，ERA/WHIP 按棒球局数记法计算 |
+| `/panel/players/[playerId]` | Server + Client | 球员档案独立页，页内提供进入比赛数据页的链接 |
+| `/roster` `/scenarios` `/stats` `/settings` | Redirect | 永久重定向到对应 `/panel/*` 页面 |
+| `/players/[playerId]` `/players/[playerId]/games` | Redirect | 永久重定向到对应 `/panel/*` 页面 |
+| `/lineup` | Redirect | 兼容入口，重定向到 `/panel/scenarios` |
 | `/api/logout` | API (POST) | 清除 cookie |
 | `/api/workspace` | API (GET/PUT) | 工作区读写 |
 

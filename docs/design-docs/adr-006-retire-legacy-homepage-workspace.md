@@ -2,6 +2,8 @@
 
 状态：已采纳
 
+注：本文记录的是 2026-06-05 当时的决策语境。后续在 2026-06-13，`/lineup` 已并入 `/panel/scenarios`，导入导出已收敛到 `/panel/settings`；阅读下文路由示例时请以此现状为准。
+
 ## 背景
 
 到 2026-06-05 为止，`/roster`、`/lineup`、`/scenarios`、`/import-export`、`/settings` 和 `/players/[playerId]` 都已经迁移到独立 React 页面，但首页 `/` 仍保留一条 legacy 运行时链：

@@ -9,7 +9,8 @@ export const CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'none'",
   "img-src 'self' data:",
   "object-src 'none'",
-  "script-src 'self'",
+  // Next App Router injects bootstrap scripts needed for hydration and client navigation.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
 ].join("; ");
 

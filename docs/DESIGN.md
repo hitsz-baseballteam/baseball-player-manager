@@ -63,7 +63,7 @@
 
 ### 主题切换
 
-主题通过 `<html data-theme="...">` 属性切换，配合 `transition: background 0.3s, color 0.3s` 实现平滑过渡。当前由 `ThemeToggle` 组件负责切换 `document.documentElement.dataset.theme`，并将选择持久化到 `localStorage`。
+主题仍通过 `<html data-theme="...">` 属性生效，配合 `transition: background 0.3s, color 0.3s` 保留平滑过渡能力。当前生产 UI 没有用户可见的 `ThemeToggle` 入口，默认使用 classic 主题；如未来重新引入入口或在测试中设置 `data-theme`，三套 token 仍可正常切换。
 
 ## 字体
 
@@ -88,7 +88,7 @@
 控制台首页 `/panel` 通过 `src/components/app-shell.tsx` 提供统一壳层，视觉角色是：
 
 - **Command Sidebar**：首页使用深绿侧栏承载一级导航；窄屏回落为顶部导航条
-- **Command Masthead**：比赛日指挥台题头、同步状态、当前方案与帮助 / 主题动作
+- **Command Masthead**：比赛日指挥台题头、同步状态、当前方案与帮助动作
 - **HomeOverview**：以球场守备阵型为主视觉，右侧并列阵容警报与 1–9 棒打序，底部承载出勤指标、快捷动作与自动排阵
 - **RosterOverview**：名册工作台页面，包含筛选、统计、球员卡片列表、批量动作条、抽屉档案入口与完整档案页跳转
 
@@ -98,11 +98,11 @@
 
 ## 解锁页特殊设计
 
-解锁页（`UnlockForm` 组件）不跟随主题切换。它使用独立的渐变色背景和入口卡片样式（`.unlock-shell`、`.unlock-card`），始终以暖绿 / 奶油色调呈现，与首页壳层保持同一品牌语言，但不依赖已解锁后的主题状态。
+解锁页（`/panel/login` 页面）不跟随主题切换。它使用独立的渐变色背景和入口卡片样式（`.unlock-shell`、`.unlock-card`），始终以暖绿 / 奶油色调呈现，与首页壳层保持同一品牌语言，但不依赖已解锁后的主题状态。
 
 ## 交互设计
 
-- **过渡动画**：主题切换使用 0.3s CSS transition；悬停态用 `:hover` 伪类
+- **过渡动画**：全局背景/前景色保留 0.3s CSS transition；悬停态用 `:hover` 伪类
 - **焦点可见**：输入框聚焦时显示 4px 绿色光晕（`box-shadow`），确保可访问性
 - **禁用态**：按钮 `:disabled` 降低不透明度至 0.6 + 禁用光标
 - **响应式**：首页壳层的 hero / command desk / metrics / scenario snapshot / lineup pulse 都基于网格和 `auto-fit` 卡片收缩；Alert Deck、Command Strip、Metrics 与 Lineup Pulse 会在窄屏回落为单列；次级动作区会从五列回落到三列再到单列；解锁卡片 `width: min(620px, 100%)`，移动端回落到 24px 内边距；帮助抽屉、引导卡和 toast 继续沿用 portal 结构但贴近新壳层；档案编辑器支持 drawer（侧边抽屉）和 page（独立页面）两种展示模式

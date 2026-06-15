@@ -118,7 +118,9 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     void applyWorkspaceMutation(
       (current) => {
         const name = createUniqueScenarioName("新方案", current.scenarios);
-        return createScenarioAction(current, name, "");
+        const updated = createScenarioAction(current, name, "");
+        const createdId = updated.scenarios.at(-1)?.id;
+        return createdId ? setActiveScenarioAction(updated, createdId) : updated;
       },
       { success: "已创建新方案", failure: "新建方案失败，请稍后重试" },
     );
@@ -126,7 +128,11 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
 
   const handleDuplicateScenario = useCallback(() => {
     void applyWorkspaceMutation(
-      (current) => copyScenarioAction(current, current.activeScenarioId),
+      (current) => {
+        const updated = copyScenarioAction(current, current.activeScenarioId);
+        const copiedId = updated.scenarios.at(-1)?.id;
+        return copiedId ? setActiveScenarioAction(updated, copiedId) : updated;
+      },
       { success: "已复制当前方案", failure: "复制方案失败，请稍后重试" },
     );
   }, [applyWorkspaceMutation]);
