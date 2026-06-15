@@ -1,6 +1,20 @@
 import type { NextConfig } from "next";
 
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "connect-src 'self'",
+  "font-src 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data:",
+  "object-src 'none'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+].join("; ");
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   async redirects() {
     return [
       {
@@ -43,6 +57,10 @@ const nextConfig: NextConfig = {
   async headers() {
     const privateHeaders = [
       {
+        key: "Content-Security-Policy",
+        value: CONTENT_SECURITY_POLICY,
+      },
+      {
         key: "Cache-Control",
         value: "private, no-store, max-age=0",
       },
@@ -50,9 +68,29 @@ const nextConfig: NextConfig = {
         key: "Cloudflare-CDN-Cache-Control",
         value: "no-store",
       },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), geolocation=(), microphone=()",
+      },
+      {
+        key: "Referrer-Policy",
+        value: "strict-origin-when-cross-origin",
+      },
+      {
+        key: "X-Content-Type-Options",
+        value: "nosniff",
+      },
+      {
+        key: "X-Frame-Options",
+        value: "DENY",
+      },
     ];
 
     return [
+      {
+        source: "/:path*",
+        headers: privateHeaders.filter((header) => header.key !== "Cache-Control" && header.key !== "Cloudflare-CDN-Cache-Control"),
+      },
       {
         source: "/panel/:path*",
         headers: privateHeaders,

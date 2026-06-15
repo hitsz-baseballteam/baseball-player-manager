@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { UnlockForm } from "@/components/unlock-form";
-import { isUnlockCookieValid, UNLOCK_COOKIE_NAME } from "@/lib/auth";
+import { readUnlockSession, UNLOCK_COOKIE_NAME } from "@/lib/auth";
 import { normalizePanelNextPath } from "@/lib/routes";
 
 export default async function PanelLoginPage({
@@ -14,7 +14,7 @@ export default async function PanelLoginPage({
   const destination = normalizePanelNextPath(next);
   const unlockCookie = cookieStore.get(UNLOCK_COOKIE_NAME)?.value;
 
-  if (isUnlockCookieValid(unlockCookie)) {
+  if (readUnlockSession(unlockCookie)) {
     redirect(destination);
   }
 

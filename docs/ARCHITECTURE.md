@@ -73,7 +73,7 @@ From `package.json`:
 
 Database access is split across:
 
-- `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`, with Supabase-host detection that normalizes `sslmode` handling and applies explicit TLS options for Node/Vercel compatibility
+- `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`, with Supabase-host detection that normalizes `sslmode` handling and enforces strict TLS certificate verification
 - `src/lib/workspace-store.ts` — read/create/update operations for the single shared workspace snapshot
 
 Observed behavior:
@@ -92,16 +92,17 @@ The app uses a shared-passcode model rather than per-user accounts. The public h
 
 Relevant files:
 
-- `src/lib/auth.ts` — derives an HMAC-SHA256 signature from `APP_ADMIN_PASSCODE`
+- `src/lib/auth.ts` — verifies `APP_ADMIN_PASSCODE_HASH`, signs cookies with `AUTH_SECRET`, and enforces absolute session expiry
 - `src/app/api/unlock/route.ts` — verifies the submitted passcode and sets the `baseball_manager_unlock` cookie
-- `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used only by unlock requests
+- `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used by unlock, logout, and workspace routes
 - `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace` requests with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
 Observed limits and boundaries:
 
 - unlock attempts are limited per IP to 5 requests per 60 seconds
-- the unlock cookie is `httpOnly`, `sameSite=lax`, and `secure` in production
+- workspace reads/writes and logout requests also have route-level rate limits
+- the unlock cookie is `httpOnly`, `sameSite=lax`, `secure` in production, and includes a server-validated absolute expiry
 - `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
 - panel and API responses receive `private, no-store` headers through `next.config.ts`
 

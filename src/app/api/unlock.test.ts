@@ -2,16 +2,25 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 let POST: (request: Request) => Promise<Response>;
+let createPasscodeHash: (passcode: string) => string;
 
 describe("unlock route", () => {
   beforeEach(async () => {
-    process.env.APP_ADMIN_PASSCODE = "test-passcode";
+    const auth = await import("@/lib/auth");
+    createPasscodeHash = auth.createPasscodeHash;
+    process.env.AUTH_SECRET = "test-auth-secret";
+    process.env.APP_ADMIN_PASSCODE_HASH = createPasscodeHash("test-passcode");
+    delete process.env.APP_ADMIN_PASSCODE;
     // Re-import to pick up fresh env + rate limiter state
     const mod = await import("./unlock/route");
     POST = mod.POST;
+    const { clearRateLimits } = await import("@/lib/rate-limiter");
+    clearRateLimits();
   });
 
   afterEach(() => {
+    delete process.env.AUTH_SECRET;
+    delete process.env.APP_ADMIN_PASSCODE_HASH;
     delete process.env.APP_ADMIN_PASSCODE;
   });
 
@@ -28,6 +37,7 @@ describe("unlock route", () => {
     const setCookie = response.headers.getSetCookie();
     assert.ok(setCookie.length > 0);
     assert.ok(setCookie[0].startsWith("baseball_manager_unlock="));
+    assert.match(setCookie[0], /HttpOnly/i);
   });
 
   it("returns 401 on wrong passcode", async () => {
@@ -55,8 +65,6 @@ describe("unlock route", () => {
   });
 
   it("returns 429 after exceeding rate limit", async () => {
-    // Fire 5 successful requests (different IPs wouldn't hit limit,
-    // but repeated same-IP requests within the window will)
     for (let i = 0; i < 5; i++) {
       const request = new Request("http://localhost/api/unlock", {
         method: "POST",
@@ -81,5 +89,23 @@ describe("unlock route", () => {
     assert.equal(response.status, 429);
     const body = await response.json();
     assert.equal(body.error, "rate_limited");
+  });
+
+  it("throws on legacy-only auth configuration", async () => {
+    delete process.env.AUTH_SECRET;
+    delete process.env.APP_ADMIN_PASSCODE_HASH;
+    process.env.APP_ADMIN_PASSCODE = "legacy-passcode";
+
+    await assert.rejects(
+      () =>
+        POST(
+          new Request("http://localhost/api/unlock", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ passcode: "legacy-passcode" }),
+          }),
+        ),
+      /APP_ADMIN_PASSCODE is no longer supported/,
+    );
   });
 });

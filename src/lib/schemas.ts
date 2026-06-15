@@ -2,6 +2,8 @@ import { z } from "zod";
 
 // ── API request schemas ──
 
+export const WORKSPACE_REQUEST_MAX_BYTES = 512 * 1024;
+
 export const workspacePutSchema = z.object({
   workspace: z.record(z.string(), z.unknown()).refine(
     (val) => typeof val === "object" && val !== null && !Array.isArray(val),

@@ -6,6 +6,11 @@ import {
   STATUS_LABELS,
   HAND_LABELS,
   WORKSPACE_SCHEMA_VERSION,
+  MAX_GAME_INNINGS,
+  MAX_GAME_STAT_LINES,
+  MAX_WORKSPACE_GAMES,
+  MAX_WORKSPACE_PLAYERS,
+  MAX_WORKSPACE_SCENARIOS,
   type Hand,
   type PitcherRadar,
   type FielderRadar,
@@ -131,6 +136,7 @@ export function sanitizePositions(value: unknown): PositionCode[] {
 
 export function sanitizePlayers(players: unknown[]): Player[] {
   return players
+    .slice(0, MAX_WORKSPACE_PLAYERS)
     .filter((player): player is Record<string, unknown> => {
       return Boolean(player && typeof player === "object");
     })
@@ -261,6 +267,7 @@ export function sanitizeWorkspace(value: unknown): Workspace {
   const players = sanitizePlayers(Array.isArray(source.players) ? source.players : []);
   const validIds = new Set(players.map((player) => player.id));
   const scenarios = (Array.isArray(source.scenarios) ? source.scenarios : [])
+    .slice(0, MAX_WORKSPACE_SCENARIOS)
     .map((scenario) => sanitizeScenario(scenario, validIds))
     .filter((scenario): scenario is Scenario => Boolean(scenario));
 
@@ -335,8 +342,11 @@ export function sanitizeGame(value: unknown): Game | null {
     opponent: String(s.opponent).trim().slice(0, 40),
     gameType: s.gameType === "training" ? "training" : "official",
     totalInnings: Math.max(1, sanitizeGameInt(s.totalInnings) || 9),
-    innings: (Array.isArray(s.innings) ? s.innings : []).map(sanitizeInning),
+    innings: (Array.isArray(s.innings) ? s.innings : [])
+      .slice(0, MAX_GAME_INNINGS)
+      .map(sanitizeInning),
     statLines: (Array.isArray(s.statLines) ? s.statLines : [])
+      .slice(0, MAX_GAME_STAT_LINES)
       .map(sanitizeStatLine)
       .filter((sl) => sl.playerId),
     note: String(s.note ?? "").trim().slice(0, 200) || undefined,
@@ -346,6 +356,7 @@ export function sanitizeGame(value: unknown): Game | null {
 export function sanitizeGames(value: unknown): Game[] {
   if (!Array.isArray(value)) return [];
   return value
+    .slice(0, MAX_WORKSPACE_GAMES)
     .map(sanitizeGame)
     .filter((g): g is Game => g !== null);
 }

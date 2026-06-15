@@ -46,3 +46,7 @@ export function checkRateLimit(
   entry.count += 1;
   return true;
 }
+
+export function clearRateLimits() {
+  store.clear();
+}

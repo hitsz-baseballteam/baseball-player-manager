@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { isUnlockCookieValid, UNLOCK_COOKIE_NAME } from "@/lib/auth";
+import { readUnlockSession, UNLOCK_COOKIE_NAME } from "@/lib/auth";
 import { PANEL_ROUTES } from "@/lib/routes";
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const unlockCookie = request.cookies.get(UNLOCK_COOKIE_NAME)?.value;
+  const session = readUnlockSession(unlockCookie);
 
-  if (isUnlockCookieValid(unlockCookie)) {
+  if (session) {
     return NextResponse.next();
   }
 

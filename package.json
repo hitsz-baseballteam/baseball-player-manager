@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "auth:env": "tsx scripts/auth-env.ts",
     "dev": "tsx scripts/next-dev.ts",
     "build": "next build",
     "start": "next start",

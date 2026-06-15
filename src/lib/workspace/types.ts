@@ -168,6 +168,11 @@ export type PendingImport =
 export const HISTORY_LIMIT = 30;
 export const WORKSPACE_SCHEMA_VERSION = 3;
 export const DEFAULT_WORKSPACE_SLUG = "default";
+export const MAX_WORKSPACE_PLAYERS = 200;
+export const MAX_WORKSPACE_SCENARIOS = 50;
+export const MAX_WORKSPACE_GAMES = 400;
+export const MAX_GAME_INNINGS = 30;
+export const MAX_GAME_STAT_LINES = 200;
 
 export const POSITIONS = [
   { code: "P", label: "投手", x: 50, y: 55 },
