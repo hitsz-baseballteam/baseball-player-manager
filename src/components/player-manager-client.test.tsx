@@ -85,7 +85,7 @@ describe("PlayerManagerClient", () => {
       />,
     );
 
-    await screen.findByRole("heading", { name: "比赛日总控台" });
+    await screen.findByRole("heading", { name: "比赛日指挥台" });
 
     assert.equal(screen.queryByText("深入编辑工作台"), null);
     assert.ok(screen.getByRole("button", { name: /^自动排阵/ }));

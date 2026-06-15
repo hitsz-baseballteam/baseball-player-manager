@@ -49,13 +49,10 @@ describe("HomeOverview", () => {
     const ws = createDefaultWorkspace(true);
     render(<HomeOverview {...makeProps(ws)} />);
 
-    // Metric pills should be present with labels
-    const pills = screen.getAllByRole("button").filter((b) =>
-      b.className.includes("mock-metricPill")
-    );
-    // Should find the metric pills with numeric values
-    assert.ok(pills.length >= 3);
     assert.ok(screen.getByText("可上场"));
+    assert.ok(screen.getByText("轮休/伤停"));
+    assert.ok(screen.getAllByText("守位").length >= 1);
+    assert.ok(screen.getAllByText("棒次").length >= 1);
   });
 
   it("shows quick action buttons", () => {
@@ -64,7 +61,7 @@ describe("HomeOverview", () => {
 
     assert.ok(screen.getByText("自动排阵"));
     assert.ok(screen.getByText("新增球员"));
-    assert.ok(screen.getByText("导入"));
+    assert.ok(screen.getByText("导入数据"));
     assert.ok(screen.getByText("新建方案"));
   });
 
@@ -72,9 +69,9 @@ describe("HomeOverview", () => {
     const ws = createDefaultWorkspace(true);
     render(<HomeOverview {...makeProps(ws)} />);
 
-    // With empty lineup, "守位未满" should appear in the warning chip
+    // With empty lineup, the warning panel should expose the incomplete defense.
+    assert.ok(screen.getByRole("heading", { name: "阵容警报" }));
     assert.ok(screen.getByText(/守位未满/));
-    assert.ok(screen.getByText("!"));
   });
 
   it("shows scenario switch control", () => {

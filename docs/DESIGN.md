@@ -75,12 +75,14 @@
 
 首页现在通过 `src/components/app-shell.tsx` 提供统一壳层，视觉角色是：
 
-- **Global Header**：产品名、一级导航、帮助 / 主题动作
-- **Page Masthead**：比赛日总控台题头 + 当前方案身份卡
-- **HomeOverview**：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse，以及通往名册 / 排阵 / 场景 / 数据中心的明确入口
+- **Command Sidebar**：首页使用深绿侧栏承载一级导航；窄屏回落为顶部导航条
+- **Command Masthead**：比赛日指挥台题头、同步状态、当前方案与帮助 / 主题动作
+- **HomeOverview**：以球场守备阵型为主视觉，右侧并列阵容警报与 1–9 棒打序，底部承载出勤指标、快捷动作与自动排阵
 - **RosterOverview**：名册工作台页面，包含筛选、统计、球员卡片列表、批量动作条、抽屉档案入口与完整档案页跳转
 
 壳层样式放在 `src/components/app-shell.module.css`，总控区样式放在 `src/components/home-overview.module.css`。首页已不再依赖 legacy DOM 模板或 legacy frame，页面字体与布局完全由 React 壳层控制。
+
+首页赛事指挥台的视觉参考保存在 `public/ui-reference/game-day-command-center.png`，球场底图资产保存在 `public/assets/baseball-field-command-board.png`。球员节点和动作控件必须保持为真实 HTML 控件，不能烘焙进底图。
 
 ## 解锁页特殊设计
 

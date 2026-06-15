@@ -176,8 +176,9 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     <ToastProvider toastRef={toastRef}>
       <div ref={appRootRef}>
         <AppShell
-          eyebrow="总控台"
-          title="比赛日总控台"
+          variant="command"
+          eyebrow="Baseball Player Manager"
+          title="比赛日指挥台"
           description={heroDescription}
           statusLabel="当前方案"
           statusValue={activeScenario.name}

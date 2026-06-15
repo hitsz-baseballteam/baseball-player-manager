@@ -1,5 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import {
+  Baseball,
+  ChartBar,
+  CheckCircle,
+  ClipboardText,
+  GearSix,
+  House,
+  UsersThree,
+} from "@phosphor-icons/react/dist/ssr";
 
 import styles from "@/components/app-shell.module.css";
 
@@ -21,6 +30,7 @@ type SummaryItem = {
 };
 
 type AppShellProps = {
+  variant?: "default" | "command";
   eyebrow: string;
   title: string;
   description: string;
@@ -39,6 +49,7 @@ type AppShellProps = {
 };
 
 export function AppShell({
+  variant = "default",
   eyebrow,
   title,
   description,
@@ -55,6 +66,71 @@ export function AppShell({
   frameVariant = "default",
   children,
 }: AppShellProps) {
+  if (variant === "command") {
+    return (
+      <div className={styles.commandShell}>
+        <aside className={styles.commandSidebar}>
+          <Link href="/" className={styles.commandCrest} aria-label="Baseball Player Manager 首页">
+            <Baseball size={34} weight="duotone" aria-hidden="true" />
+          </Link>
+
+          <nav className={styles.commandNav} aria-label="主导航">
+            {navItems.map((item) => {
+              const Icon = getNavIcon(item.label);
+              const className = item.active
+                ? `${styles.commandNavItem} ${styles.commandNavItemActive}`
+                : styles.commandNavItem;
+
+              if (item.disabled || !item.href) {
+                return (
+                  <span key={item.label} className={styles.commandNavItemDisabled}>
+                    <Icon size={25} weight="duotone" aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </span>
+                );
+              }
+
+              return (
+                <Link key={item.label} href={item.href} className={className}>
+                  <Icon size={25} weight={item.active ? "fill" : "duotone"} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <div className={styles.commandWorkspace}>
+          <header className={styles.commandHeader}>
+            <div className={styles.commandHeading}>
+              <div className={styles.commandEyebrow}>{eyebrow}</div>
+              <h1 className={styles.commandTitle}>{title}</h1>
+              <p className={styles.commandDescription}>{description}</p>
+            </div>
+
+            <div className={styles.commandHeaderStatus}>
+              {statusValue ? (
+                <div className={styles.commandStatus}>
+                  <CheckCircle className={styles.commandStatusMark} size={31} weight="duotone" aria-hidden="true" />
+                  <span>
+                    <strong>{statusLabel}: {statusValue}</strong>
+                    {statusMeta ? <small>{statusMeta}</small> : null}
+                  </span>
+                </div>
+              ) : null}
+              {actions ? <div className={styles.commandActions}>{actions}</div> : null}
+            </div>
+          </header>
+
+          <main className={styles.commandMain}>
+            {content ? <div className={styles.commandContent}>{content}</div> : null}
+            {children}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   const frameBodyClassName = frameVariant === "legacy"
     ? `${styles.frameBody} ${styles.frameBodyLegacy}`
     : styles.frameBody;
@@ -170,4 +246,12 @@ export function AppShell({
       </main>
     </div>
   );
+}
+
+function getNavIcon(label: string) {
+  if (label === "总览") return House;
+  if (label === "名册") return UsersThree;
+  if (label.includes("场景") || label.includes("排阵")) return ClipboardText;
+  if (label.includes("数据")) return ChartBar;
+  return GearSix;
 }

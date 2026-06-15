@@ -19,7 +19,7 @@ describe("ThemeToggle", () => {
     render(<ThemeToggle />);
     const btn = screen.getByRole("button");
     assert.ok(btn.textContent?.includes("经典"));
-    assert.ok(btn.textContent?.includes("☀️"));
+    assert.equal(btn.getAttribute("aria-label"), "切换主题，当前：经典");
   });
 
   it("cycles theme on click: classic → night → field → classic", async () => {
@@ -32,12 +32,12 @@ describe("ThemeToggle", () => {
     await user.click(btn);
     assert.equal(document.documentElement.dataset.theme, "night");
     assert.ok(btn.textContent?.includes("暗夜"));
-    assert.ok(btn.textContent?.includes("🌙"));
+    assert.equal(btn.getAttribute("aria-label"), "切换主题，当前：暗夜");
 
     await user.click(btn);
     assert.equal(document.documentElement.dataset.theme, "field");
     assert.ok(btn.textContent?.includes("球场"));
-    assert.ok(btn.textContent?.includes("⚾"));
+    assert.equal(btn.getAttribute("aria-label"), "切换主题，当前：球场");
 
     await user.click(btn);
     assert.equal(document.documentElement.dataset.theme, "classic");

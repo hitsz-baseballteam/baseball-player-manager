@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Baseball, MoonStars, Sun } from "@phosphor-icons/react";
 
 const THEMES = ["classic", "night", "field"] as const;
 type Theme = (typeof THEMES)[number];
@@ -9,12 +10,6 @@ const THEME_LABELS: Record<Theme, string> = {
   classic: "经典",
   night: "暗夜",
   field: "球场",
-};
-
-const THEME_ICONS: Record<Theme, string> = {
-  classic: "☀️",
-  night: "🌙",
-  field: "⚾",
 };
 
 const STORAGE_KEY = "baseball-manager-theme";
@@ -54,6 +49,7 @@ export function ThemeToggle({
       return THEMES[(idx + 1) % THEMES.length];
     });
   }, []);
+  const Icon = theme === "classic" ? Sun : theme === "night" ? MoonStars : Baseball;
 
   return (
     <button
@@ -63,7 +59,7 @@ export function ThemeToggle({
       onClick={cycleTheme}
       aria-label={`切换主题，当前：${THEME_LABELS[theme]}`}
     >
-      <span className="theme-icon">{THEME_ICONS[theme]}</span>
+      <Icon className="theme-icon" size={19} weight="duotone" aria-hidden="true" />
       <span className="btn-label">{THEME_LABELS[theme]}</span>
     </button>
   );
