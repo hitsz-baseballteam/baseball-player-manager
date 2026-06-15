@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  ArrowLeft,
   Baseball,
   ChartBar,
   CheckCircle,
@@ -181,7 +182,13 @@ export function AppShell({
           </nav>
         ) : null}
 
-        {actions ? <div className={styles.actions}>{actions}</div> : null}
+        <div className={styles.actions}>
+          <Link href={PANEL_ROUTES.home} className={styles.backButton}>
+            <ArrowLeft size={16} weight="bold" aria-hidden="true" />
+            <span>返回首页</span>
+          </Link>
+          {actions}
+        </div>
       </header>
 
       <main className={styles.main}>

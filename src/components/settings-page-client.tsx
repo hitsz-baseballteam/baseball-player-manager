@@ -3,10 +3,7 @@
 import { useCallback, useRef, useState, type ChangeEvent } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { GuideOverlay, type GuideHandle } from "@/components/guide-overlay";
-import { HelpDrawer, type HelpDrawerHandle } from "@/components/help-drawer";
 import styles from "@/components/settings-page-client.module.css";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import {
   cloneWorkspace,
@@ -43,26 +40,12 @@ export function SettingsPageClient({
   initialWorkspace,
   initialVersion,
 }: SettingsPageClientProps) {
-  const appRootRef = useRef<HTMLDivElement>(null);
   const toastRef = useRef<ToastHandle | null>(null);
-  const helpRef = useRef<HelpDrawerHandle | null>(null);
-  const guideRef = useRef<GuideHandle | null>(null);
 
   const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
   const [version, setVersion] = useState(initialVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(false);
-
-  const handleHelpOpen = useCallback(() => setHelpOpen(true), []);
-  const handleHelpClose = useCallback(() => setHelpOpen(false), []);
-  const handleGuideDismiss = useCallback(() => setGuideOpen(false), []);
-  const handleReplayGuide = useCallback(() => {
-    setHelpOpen(false);
-    setGuideOpen(true);
-    queueMicrotask(() => guideRef.current?.open());
-  }, []);
 
   // ── Import/Export ──
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -186,38 +169,18 @@ export function SettingsPageClient({
     }
   }, []);
 
-  const openGuide = useCallback(() => {
-    setGuideOpen(true);
-    queueMicrotask(() => guideRef.current?.open());
-  }, []);
-
-  const openHelp = useCallback(() => {
-    handleHelpOpen();
-  }, [handleHelpOpen]);
-
   return (
     <ToastProvider toastRef={toastRef}>
-      <div ref={appRootRef} className={styles.helpMount}>
-        <AppShell
+      <AppShell
           eyebrow="Workspace Settings"
-          title="设置与帮助"
-          description="管理当前工作区外观、重置示例数据、访问控制与帮助入口。"
+          title="设置"
+          description="查看共享工作区状态、导入或导出数据、管理访问控制。"
           statusLabel="工作区"
           statusValue={`v${version}`}
           statusMeta={isSaving ? "保存中…" : "设置页已连接共享工作区"}
           navItems={[...NAV_ITEMS]}
-          actions={<ThemeToggle />}
         >
           <div className={styles.layout}>
-            <section className={styles.card} aria-label="外观主题区">
-              <p className={styles.eyebrow}>Appearance</p>
-              <h2 className={styles.title}>外观主题</h2>
-              <p className={styles.description}>当前支持经典 / 夜场 / 球场三套主题，可随时切换。</p>
-              <div className={styles.actionRow}>
-                <ThemeToggle />
-              </div>
-            </section>
-
             <section className={styles.card} aria-label="工作区状态区">
               <p className={styles.eyebrow}>Workspace</p>
               <h2 className={styles.title}>工作区状态</h2>
@@ -257,20 +220,6 @@ export function SettingsPageClient({
               <div className={styles.actionRow}>
                 <button className={styles.btnSecondary} type="button" onClick={handleLogout}>
                   退出登录
-                </button>
-              </div>
-            </section>
-
-            <section className={styles.card} aria-label="帮助与引导区">
-              <p className={styles.eyebrow}>Help</p>
-              <h2 className={styles.title}>帮助与引导</h2>
-              <p className={styles.description}>重新播放引导流程，或打开帮助抽屉查看主要操作说明。</p>
-              <div className={styles.actionRow}>
-                <button className={styles.btnPrimary} type="button" onClick={openGuide}>
-                  重新播放引导
-                </button>
-                <button className={styles.btnSecondary} type="button" onClick={openHelp}>
-                  打开帮助
                 </button>
               </div>
             </section>
@@ -322,20 +271,6 @@ export function SettingsPageClient({
             </section>
           </div>
         </AppShell>
-      </div>
-      <HelpDrawer
-        isOpen={helpOpen}
-        onOpen={handleHelpOpen}
-        onClose={handleHelpClose}
-        onReplayGuide={handleReplayGuide}
-        helpRef={helpRef}
-      />
-      <GuideOverlay
-        isOpen={guideOpen}
-        onDismiss={handleGuideDismiss}
-        guideRef={guideRef}
-        rootRef={appRootRef}
-      />
     </ToastProvider>
   );
 }

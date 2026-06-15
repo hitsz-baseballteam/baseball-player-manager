@@ -44,7 +44,7 @@ describe("SettingsPageClient", () => {
     window.history.replaceState({}, "", originalHref);
   });
 
-  it("renders 4 sections and core action buttons", () => {
+  it("renders 3 sections and core action buttons", () => {
     render(
       <SettingsPageClient
         initialWorkspace={workspace}
@@ -52,15 +52,19 @@ describe("SettingsPageClient", () => {
       />,
     );
 
-    assert.ok(screen.getByLabelText("外观主题区"));
     assert.ok(screen.getByLabelText("工作区状态区"));
     assert.ok(screen.getByLabelText("访问控制区"));
-    assert.ok(screen.getByLabelText("帮助与引导区"));
-    assert.ok(screen.getAllByRole("button", { name: /切换主题，当前：/ }).length >= 1);
+    assert.ok(screen.getByLabelText("数据导入导出区"));
+    // removed sections
+    assert.equal(screen.queryByLabelText("外观主题区"), null);
+    assert.equal(screen.queryByLabelText("帮助与引导区"), null);
+    // no theme/help/intro buttons any more
+    assert.equal(screen.queryByRole("button", { name: /切换主题，当前：/ }), null);
+    assert.equal(screen.queryByRole("button", { name: "重新播放引导" }), null);
+    assert.equal(screen.queryByRole("button", { name: "打开帮助" }), null);
+    // core actions still there
     assert.ok(screen.getByRole("button", { name: "重置示例数据" }));
     assert.ok(screen.getByRole("button", { name: "退出登录" }));
-    assert.ok(screen.getByRole("button", { name: "重新播放引导" }));
-    assert.ok(screen.getByRole("button", { name: "打开帮助" }));
   });
 
   it("clicking 重置示例数据 calls window.confirm", async () => {
@@ -96,33 +100,16 @@ describe("SettingsPageClient", () => {
     assert.equal(fetchCalls[0]?.init?.method, "POST");
   });
 
-  it("clicking 重新播放引导 opens GuideOverlay", async () => {
+  it("clicking 重新播放引导 is no longer a settings-page action", () => {
     render(
       <SettingsPageClient
         initialWorkspace={workspace}
         initialVersion={7}
       />,
     );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "重新播放引导" }));
-    });
-
-    assert.ok(await screen.findByText(/步骤 1 \/ /));
-  });
-
-  it("clicking 打开帮助 opens HelpDrawer", async () => {
-    render(
-      <SettingsPageClient
-        initialWorkspace={workspace}
-        initialVersion={7}
-      />,
+    assert.equal(
+      screen.queryByRole("button", { name: "重新播放引导" }),
+      null,
     );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "打开帮助" }));
-    });
-
-    assert.ok(await screen.findByRole("dialog", { name: "使用指引 / 帮助" }));
   });
 });

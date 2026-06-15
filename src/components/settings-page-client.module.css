@@ -124,9 +124,7 @@
   color: var(--theme-danger);
 }
 
-.helpMount {
-  display: contents;
-}
+
 
 @media (max-width: 880px) {
   .layout {
