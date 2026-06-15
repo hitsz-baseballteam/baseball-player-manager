@@ -26,6 +26,7 @@ import {
 } from "@/lib/workspace";
 import {
   isVersionConflict,
+  loadWorkspaceSnapshot,
   saveWithRetry,
 } from "@/lib/workspace-client";
 
@@ -95,6 +96,13 @@ export function StatsPageClient({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Refs to avoid stale closures in async save handler and prevent concurrent saves
+  const workspaceRef = useRef(workspace);
+  workspaceRef.current = workspace;
+  const versionRef = useRef(version);
+  versionRef.current = version;
+  const savingRef = useRef(false);
+
   const [tab, setTab] = useState<TabType>("players");
   const [playerSortKey, setPlayerSortKey] = useState<PlayerSortKey>("AVG");
   const [playerSortDir, setPlayerSortDir] = useState<SortDir>("desc");
@@ -106,25 +114,44 @@ export function StatsPageClient({
   // It is used both for optimistic local update and conflict retry.
   const handleSave = useCallback(
     async (applyMutation: (current: Workspace) => Workspace) => {
-      const optimistic = applyMutation(workspace);
+      // Prevent concurrent saves within the same session
+      if (savingRef.current) {
+        toastRef.current?.showToast("操作已在保存中，请稍后再试。");
+        return;
+      }
+      savingRef.current = true;
+
+      const optimistic = applyMutation(workspaceRef.current);
       setWorkspace(optimistic);
       setIsSaving(true);
       setSaveError(null);
+
       try {
-        const result = await saveWithRetry(optimistic, version, applyMutation);
+        const result = await saveWithRetry(optimistic, versionRef.current, applyMutation);
         setVersion(result.version);
         setWorkspace(sanitizeWorkspace(result.workspace));
       } catch (error) {
+        // On any failure, reload server snapshot to roll back optimistic update
+        try {
+          const snapshot = await loadWorkspaceSnapshot();
+          setVersion(snapshot.version);
+          setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        } catch {
+          // If reload also fails, leave current state as-is (best effort)
+        }
+
         if (isVersionConflict(error)) {
-          toastRef.current?.showToast("工作区已被他人更新，请重新操作。");
+          toastRef.current?.showToast("数据已被其他会话更新，已恢复到最新状态，请重新操作。");
         } else {
-          setSaveError("保存失败，请重试。");
+          console.error("Save failed:", error);
+          setSaveError("保存失败，已恢复到最新数据，请重试。");
         }
       } finally {
         setIsSaving(false);
+        savingRef.current = false;
       }
     },
-    [workspace, version],
+    [],
   );
 
   // ── Player leaderboard ──
@@ -306,6 +333,7 @@ export function StatsPageClient({
               <button
                 className={styles.btnSmall}
                 onClick={() => setDialog({ type: "add" })}
+                disabled={isSaving}
               >
                 ＋ 添加比赛
               </button>
@@ -352,8 +380,8 @@ export function StatsPageClient({
                           <td style={{ fontSize: "11px", color: "var(--theme-muted)" }}>{inningSummary}</td>
                           <td>
                             <div className={styles.gameLogActions} onClick={(e) => e.stopPropagation()}>
-                              <button className={styles.btnSmall} onClick={() => setDialog({ type: "edit", game })}>编辑</button>
-                              <button className={styles.btnSmallDanger} onClick={() => handleDeleteGame(game.id)}>删除</button>
+                              <button className={styles.btnSmall} onClick={() => setDialog({ type: "edit", game })} disabled={isSaving}>编辑</button>
+                              <button className={styles.btnSmallDanger} onClick={() => handleDeleteGame(game.id)} disabled={isSaving}>删除</button>
                             </div>
                           </td>
                         </tr>
@@ -458,6 +486,7 @@ export function StatsPageClient({
           players={workspace.players}
           onSubmit={dialog.type === "add" ? handleAddGame : handleEditGame}
           onClose={() => setDialog({ type: "closed" })}
+          disabled={isSaving}
         />
       )}
     </ToastProvider>
@@ -472,6 +501,7 @@ type GameDialogProps = {
   players: Player[];
   onSubmit: (game: Game) => void;
   onClose: () => void;
+  disabled?: boolean;
 };
 
 function GameDialog({
@@ -480,6 +510,7 @@ function GameDialog({
   players,
   onSubmit,
   onClose,
+  disabled = false,
 }: GameDialogProps) {
   const [game, setGame] = useState<Game>(initial);
   const [step, setStep] = useState<"info" | "innings" | "stats">("info");
@@ -699,7 +730,7 @@ function GameDialog({
 
           <div className={styles.dialogActions}>
             <button className={styles.btnSecondary} onClick={onClose} type="button">取消</button>
-            <button className={styles.btnPrimary} type="submit">{mode === "add" ? "添加" : "保存"}</button>
+            <button className={styles.btnPrimary} type="submit" disabled={disabled}>{mode === "add" ? "添加" : "保存"}</button>
           </div>
         </form>
       </div>
