@@ -46,6 +46,7 @@ const mockConfig = {
   loadWorkspaceSnapshot: null as
     | (() => Promise<{ workspace: Workspace; version: number; updatedAt: string }>)
     | null,
+  isVersionConflict: null as ((error: unknown) => boolean) | null,
 };
 
 function defaultSaveRetry(workspace: Workspace, version: number) {
@@ -70,6 +71,7 @@ describe("StatsPageClient save lock & rollback", () => {
   beforeEach(async () => {
     mockConfig.saveWithRetry = defaultSaveRetry;
     mockConfig.loadWorkspaceSnapshot = defaultReload;
+    mockConfig.isVersionConflict = null;
 
     document.documentElement.removeAttribute("data-theme");
     window.confirm = (() => true) as typeof window.confirm;
@@ -86,7 +88,9 @@ describe("StatsPageClient save lock & rollback", () => {
           if (fn) return fn();
           return defaultReload();
         },
-        isVersionConflict() {
+        isVersionConflict(error: unknown) {
+          const fn = mockConfig.isVersionConflict;
+          if (fn) return fn(error);
           return false;
         },
       },
@@ -172,7 +176,15 @@ describe("StatsPageClient save lock & rollback", () => {
   });
 
   it("disables action buttons while save is in progress", async () => {
-    // A slow save that lets us inspect the UI mid-flight
+    // Two games so that after deleting one, edit/delete for the other remain
+    const ws = makeWorkspace();
+    ws.games.push({
+      ...ws.games[0]!,
+      id: "g-2",
+      date: "2026-06-02",
+      opponent: "对手二",
+    });
+
     const saveStarted = new Promise<void>((resolve) => {
       mockConfig.saveWithRetry = async (workspace: Workspace, version: number) => {
         resolve();
@@ -186,16 +198,45 @@ describe("StatsPageClient save lock & rollback", () => {
     });
 
     const user = userEvent.setup();
+
+    render(<StatsPageClient initialWorkspace={ws} initialVersion={1} />);
+
+    await user.click(screen.getByRole("button", { name: "比赛数据" }));
+    await user.click(screen.getAllByRole("button", { name: "删除" })[0]!);
+    await saveStarted;
+
+    // Add button must be disabled
+    assert.ok(screen.getByRole("button", { name: "＋ 添加比赛" }).hasAttribute("disabled"));
+
+    // The second game's edit button must also be disabled
+    assert.ok(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled"));
+  });
+
+  it("on version conflict with reload success: shows conflict message and rolls back", async () => {
+    mockConfig.saveWithRetry = async () => {
+      const err = new Error("version_conflict");
+      throw err;
+    };
+    mockConfig.isVersionConflict = () => true;
+    mockConfig.loadWorkspaceSnapshot = async () => {
+      const ws = cloneWorkspace(makeWorkspace());
+      ws.games = [];
+      return { workspace: ws, version: 2, updatedAt: "2026-06-15T10:00:00.000Z" };
+    };
+
+    const user = userEvent.setup();
     const ws = makeWorkspace();
 
     render(<StatsPageClient initialWorkspace={ws} initialVersion={1} />);
 
     await user.click(screen.getByRole("button", { name: "比赛数据" }));
-    await user.click(screen.getByRole("button", { name: "删除" }));
-    await saveStarted;
+    assert.ok(screen.getByText("测试对手"));
 
-    // All action buttons should be disabled during save
-    const addBtn = screen.getByRole("button", { name: "＋ 添加比赛" });
-    assert.ok(addBtn.hasAttribute("disabled"));
+    await user.click(screen.getByRole("button", { name: "删除" }));
+
+    // Version conflict triggers reload; rollback shows server state (empty games)
+    await waitFor(() => {
+      assert.equal(screen.queryByText("测试对手"), null);
+    });
   });
 });

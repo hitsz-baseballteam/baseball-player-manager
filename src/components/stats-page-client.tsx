@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -371,7 +371,7 @@ export function StatsPageClient({
                       .map((inn) => `${inn.inning}回:${inn.hits}安${inn.runs}得`)
                       .join(" · ");
                     return (
-                      <>
+                      <Fragment key={game.id}>
                         <tr
                           key={game.id}
                           className={isExpanded ? styles.expanded : undefined}
@@ -476,7 +476,7 @@ export function StatsPageClient({
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>
