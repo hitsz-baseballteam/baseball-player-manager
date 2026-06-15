@@ -1,24 +1,22 @@
-import { cookies } from "next/headers";
+import type { Metadata } from "next";
 
-import { PlayerManagerClient } from "@/components/player-manager-client";
-import { UnlockForm } from "@/components/unlock-form";
-import { isUnlockCookieValid, UNLOCK_COOKIE_NAME } from "@/lib/auth";
-import { getOrCreateWorkspaceSnapshot } from "@/lib/workspace-store";
+import { PublicHome } from "@/components/public-home";
 
-export default async function HomePage() {
-  const cookieStore = await cookies();
-  const unlockCookie = cookieStore.get(UNLOCK_COOKIE_NAME)?.value;
+export const metadata: Metadata = {
+  title: "哈工大深圳棒球队 | HITSZ Baseball",
+  description: "哈尔滨工业大学（深圳）棒球队官网。2026 秋季招新，零基础也欢迎。",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "哈工大深圳棒球队",
+    description: "下一球，等你上场。2026 秋季招新，零基础也欢迎。",
+    url: "https://hitsz-baseball.online",
+    siteName: "HITSZ Baseball",
+    locale: "zh_CN",
+    type: "website",
+    images: [{ url: "/team/team-fence.jpg", width: 1920, height: 1280 }],
+  },
+};
 
-  if (!isUnlockCookieValid(unlockCookie)) {
-    return <UnlockForm />;
-  }
-
-  const snapshot = await getOrCreateWorkspaceSnapshot();
-
-  return (
-    <PlayerManagerClient
-      initialWorkspace={snapshot.workspace}
-      initialVersion={snapshot.version}
-    />
-  );
+export default function HomePage() {
+  return <PublicHome />;
 }

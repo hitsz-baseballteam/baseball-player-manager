@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import styles from "@/components/player-profile-editor.module.css";
+import { PANEL_ROUTES } from "@/lib/routes";
 import { RadarChart } from "@/components/radar-chart";
 import {
   createDefaultPlayerProfile,
@@ -326,7 +327,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
   const shellClass = props.variant === "page"
     ? pageShellClassName
     : styles.drawerShell;
-  const gamesHref = `/players/${encodeURIComponent(current.id)}/games`;
+  const gamesHref = PANEL_ROUTES.playerGames(current.id);
 
   const frameContent = (
     <section className={styles.frame}>

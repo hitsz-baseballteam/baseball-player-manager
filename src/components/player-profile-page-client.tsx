@@ -16,14 +16,9 @@ import {
   loadWorkspaceSnapshot,
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
+import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
-const NAV_ITEMS = [
-  { label: "总览", href: "/" },
-  { label: "名册", href: "/roster", active: true },
-  { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/stats" },
-  { label: "设置", href: "/settings" },
-] as const;
+const NAV_ITEMS = panelNavItems("名册");
 
 type PlayerProfilePageClientProps = {
   initialWorkspace: Workspace;
@@ -105,7 +100,7 @@ export function PlayerProfilePageClient(
           pageSurface="embedded"
           saving={saving}
           statusMessage={statusMessage}
-          backHref="/roster"
+          backHref={PANEL_ROUTES.roster}
           onSave={handleSave}
         />
       }

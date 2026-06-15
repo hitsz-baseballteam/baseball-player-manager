@@ -26,6 +26,7 @@ import {
   swapDefensePositions,
   validateScenarioName,
 } from "@/lib/lineup-actions";
+import { panelNavItems } from "@/lib/routes";
 import {
   analyzeScenarioWarnings,
   getActiveScenario,
@@ -39,13 +40,7 @@ import {
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
 
-const NAV_ITEMS = [
-  { label: "总览", href: "/" },
-  { label: "名册", href: "/roster" },
-  { label: "战术场景", href: "/scenarios", active: true },
-  { label: "数据中心", href: "/stats" },
-  { label: "设置", href: "/settings" },
-] as const;
+const NAV_ITEMS = panelNavItems("战术场景");
 
 type ScenarioDialogState =
   | { type: "closed" }

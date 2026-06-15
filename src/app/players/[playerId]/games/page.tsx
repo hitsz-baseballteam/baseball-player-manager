@@ -1,32 +1,12 @@
-import { cookies } from "next/headers";
+import { permanentRedirect } from "next/navigation";
 
-import { GamesPageClient } from "@/components/games-page-client";
-import { UnlockForm } from "@/components/unlock-form";
-import { isUnlockCookieValid, UNLOCK_COOKIE_NAME } from "@/lib/auth";
-import { getOrCreateWorkspaceSnapshot } from "@/lib/workspace-store";
+import { PANEL_ROUTES } from "@/lib/routes";
 
 export default async function GamesPage({
   params,
 }: {
   params: Promise<{ playerId: string }>;
 }) {
-  const cookieStore = await cookies();
-  const unlockCookie = cookieStore.get(UNLOCK_COOKIE_NAME)?.value;
-
-  if (!isUnlockCookieValid(unlockCookie)) {
-    return <UnlockForm />;
-  }
-
-  const [{ playerId }, snapshot] = await Promise.all([
-    params,
-    getOrCreateWorkspaceSnapshot(),
-  ]);
-
-  return (
-    <GamesPageClient
-      initialWorkspace={snapshot.workspace}
-      initialVersion={snapshot.version}
-      playerId={playerId}
-    />
-  );
+  const { playerId } = await params;
+  permanentRedirect(PANEL_ROUTES.playerGames(playerId));
 }

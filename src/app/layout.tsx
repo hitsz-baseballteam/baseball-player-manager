@@ -47,8 +47,12 @@ const notoSansSc = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Baseball Player Manager",
-  description: "PostgreSQL-backed baseball roster and lineup manager",
+  metadataBase: new URL("https://hitsz-baseball.online"),
+  title: {
+    default: "哈工大深圳棒球队",
+    template: "%s | HITSZ Baseball",
+  },
+  description: "哈尔滨工业大学（深圳）棒球队官网与队员控制台",
 };
 
 export default function RootLayout({

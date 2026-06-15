@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-12.
+This document describes the repository as currently observed on 2026-06-15.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -41,18 +41,20 @@ From `package.json`:
 
 | Entry point | Role |
 |---|---|
-| `src/app/page.tsx` | Home page; checks unlock cookie, renders `UnlockForm` when locked, otherwise loads workspace snapshot and renders the React command-desk homepage |
-| `src/app/roster/page.tsx` | Roster workbench page; checks auth, loads workspace, renders React roster workbench inside `AppShell` |
-| `src/app/lineup/page.tsx` | Lineup workbench page; checks auth, loads workspace, renders React lineup board inside `AppShell` |
-| `src/app/scenarios/page.tsx` | Scenario management page; checks auth, loads workspace, renders React scenario list/compare UI inside `AppShell` |
-| `src/app/import-export/page.tsx` | Data-center page; checks auth, loads workspace, renders JSON import + export actions inside `AppShell` |
-| `src/app/settings/page.tsx` | Settings/help page; checks auth, loads workspace, renders theme/reset/logout/help controls inside `AppShell` |
-| `src/app/players/[playerId]/games/page.tsx` | Game-data page; checks auth, loads workspace, renders React game records with official/training tabs inside `AppShell`, and computes pitching summaries from baseball inning notation |
-| `src/app/players/[playerId]/page.tsx` | Player profile page; checks auth, loads workspace, renders React editor inside `AppShell`, and links into the player’s game-data page |
+| `src/app/page.tsx` | Public HITSZ Baseball recruitment homepage; does not read the private workspace |
+| `src/app/panel/login/page.tsx` | Shared-passcode login page with validated return-path support |
+| `src/app/panel/page.tsx` | Authenticated command-desk homepage |
+| `src/app/panel/roster/page.tsx` | Authenticated roster workbench |
+| `src/app/panel/scenarios/page.tsx` | Authenticated scenario and lineup workbench |
+| `src/app/panel/stats/page.tsx` | Authenticated statistics and game-data center |
+| `src/app/panel/settings/page.tsx` | Authenticated settings, import/export, reset, logout, and help page |
+| `src/app/panel/players/[playerId]/games/page.tsx` | Authenticated player game-data page |
+| `src/app/panel/players/[playerId]/page.tsx` | Authenticated player profile page |
+| `src/app/{roster,scenarios,stats,settings}/` | Legacy routes that permanently redirect to their `/panel` equivalents |
 | `src/app/api/unlock/route.ts` | Verifies shared passcode, applies rate limiting, sets signed cookie |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads and writes the shared workspace snapshot |
-| `src/proxy.ts` | Protects `/api/workspace` routes by validating the signed unlock cookie |
+| `src/proxy.ts` | Protects `/panel/*` and `/api/workspace` by validating the signed unlock cookie |
 | `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components
@@ -86,21 +88,22 @@ On the client side, `src/lib/workspace-client.ts` wraps `/api/workspace` and pro
 
 ### 3. Authentication and request protection
 
-The app uses a shared-passcode model rather than per-user accounts.
+The app uses a shared-passcode model rather than per-user accounts. The public homepage is deliberately outside this boundary.
 
 Relevant files:
 
 - `src/lib/auth.ts` — derives an HMAC-SHA256 signature from `APP_ADMIN_PASSCODE`
 - `src/app/api/unlock/route.ts` — verifies the submitted passcode and sets the `baseball_manager_unlock` cookie
 - `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used only by unlock requests
-- `src/proxy.ts` — rejects unauthenticated `/api/workspace` requests with `401`
+- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace` requests with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
 Observed limits and boundaries:
 
 - unlock attempts are limited per IP to 5 requests per 60 seconds
 - the unlock cookie is `httpOnly`, `sameSite=lax`, and `secure` in production
-- API route protection is applied only to `/api/workspace/:path*`
+- `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
+- panel and API responses receive `private, no-store` headers through `next.config.ts`
 
 ### 4. React page-shell architecture
 

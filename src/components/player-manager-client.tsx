@@ -31,19 +31,14 @@ import {
   loadWorkspaceSnapshot,
   saveWithRetry,
 } from "@/lib/workspace-client";
+import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
 type PlayerManagerClientProps = {
   initialWorkspace: Workspace;
   initialVersion: number;
 };
 
-const NAV_ITEMS = [
-  { label: "总览", href: "/", active: true },
-  { label: "名册", href: "/roster" },
-  { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/stats" },
-  { label: "设置", href: "/settings" },
-] as const;
+const NAV_ITEMS = panelNavItems("总览");
 
 function downloadText(fileName: string, content: string, mime: string): void {
   const blob = new Blob([content], { type: mime });
@@ -203,20 +198,20 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
               remoteVersion={remoteVersion}
               saveStatus={saveStatus}
               onAutoAssign={handleAutoAssign}
-              onAddPlayer={() => navigate("/roster")}
-              onImport={() => navigate("/import-export")}
+              onAddPlayer={() => navigate(PANEL_ROUTES.roster)}
+              onImport={() => navigate(PANEL_ROUTES.settings)}
               onCreateScenario={handleCreateScenario}
               onExportWorkspace={handleExportWorkspace}
               onExportScenario={handleExportScenario}
-              onRenameScenario={() => navigate("/scenarios")}
+              onRenameScenario={() => navigate(PANEL_ROUTES.scenarios)}
               onDuplicateScenario={handleDuplicateScenario}
               onClearAssignments={handleClearAssignments}
-              onOpenWorkspace={() => navigate("/scenarios")}
-              onOpenScenarioPanel={() => navigate("/scenarios")}
-              onOpenRosterPanel={() => navigate("/roster")}
-              onOpenFieldPanel={() => navigate("/scenarios")}
-              onOpenLineupPanel={() => navigate("/scenarios")}
-              onOpenWarningsPanel={() => navigate("/scenarios")}
+              onOpenWorkspace={() => navigate(PANEL_ROUTES.scenarios)}
+              onOpenScenarioPanel={() => navigate(PANEL_ROUTES.scenarios)}
+              onOpenRosterPanel={() => navigate(PANEL_ROUTES.roster)}
+              onOpenFieldPanel={() => navigate(PANEL_ROUTES.scenarios)}
+              onOpenLineupPanel={() => navigate(PANEL_ROUTES.scenarios)}
+              onOpenWarningsPanel={() => navigate(PANEL_ROUTES.scenarios)}
               onScenarioChange={handleScenarioChange}
             />
           )}

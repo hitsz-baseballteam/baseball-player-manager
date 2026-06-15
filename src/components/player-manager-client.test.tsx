@@ -97,7 +97,7 @@ describe("PlayerManagerClient", () => {
     await user.click(screen.getByRole("button", { name: /^导入/ }));
     await user.click(screen.getByRole("button", { name: "管理方案" }));
 
-    assert.deepEqual(pushes, ["/roster", "/import-export", "/scenarios"]);
+    assert.deepEqual(pushes, ["/panel/roster", "/panel/settings", "/panel/scenarios"]);
 
     await user.click(screen.getByRole("button", { name: /^自动排阵/ }));
     assert.equal(savedWorkspaces.length, 1);

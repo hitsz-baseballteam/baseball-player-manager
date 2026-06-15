@@ -5,6 +5,8 @@
 ### 摘要
 
 - **方法**：共享 passcode + HMAC-SHA256 签名 cookie
+- **公开边界**：`/` 为公开球队主页，不读取或渲染私有 Workspace 数据
+- **受保护边界**：`/panel/*` 与 `/api/workspace/*`
 - **无用户系统**：单一管理员 passcode，无多用户、无 RBAC
 - **无外部认证提供商**：不使用 Supabase Auth、OAuth、JWT
 
@@ -34,17 +36,20 @@ baseball_manager_unlock = "v1:unlocked.<hex-signature>"
 
 ### API 鉴权
 
-`src/proxy.ts` 作为 Next.js 中间件保护 `/api/workspace` 路由：
+`src/proxy.ts` 作为 Next.js 请求代理保护控制台和 Workspace API：
 
 ```
-每个请求到 /api/workspace/*
+每个请求到 /panel/* 或 /api/workspace/*
   → 读取 cookie "baseball_manager_unlock"
   → isUnlockCookieValid(cookie)
-  → 无效：401 { error: "unauthorized" }
+  → 页面无效：302 到 /panel/login?next=原路径
+  → API 无效：401 { error: "unauthorized" }
   → 有效：放行
 ```
 
 `/api/unlock` 和 `/api/logout` 不受中间件保护（无需认证）。
+
+登录回跳通过 `normalizePanelNextPath()` 限定在 `/panel` 命名空间内，并拒绝登录页自身，避免开放重定向和回跳循环。
 
 ### 登出
 
@@ -86,3 +91,4 @@ baseball_manager_unlock = "v1:unlocked.<hex-signature>"
 - 解锁接口已有内存级速率限制：按 IP 5 次 / 60 秒；如需跨实例一致限制，仍需在反向代理或外部网关补充
 - 当前没有单独的 CSRF token 机制；防护主要依赖 `sameSite=lax` cookie 与 JSON API 形态
 - 无 CSP 头：当前未设置 Content-Security-Policy，如需可通过 Next.js headers 配置添加
+- `next.config.ts` 对 `/panel/*` 与 `/api/*` 设置 `private, no-store`，Cloudflare 不应为这些路径配置覆盖源站的公共缓存规则

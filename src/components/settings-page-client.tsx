@@ -30,14 +30,9 @@ import {
   buildWorkspaceExport,
   parseImportPayload,
 } from "@/lib/export-actions";
+import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
-const NAV_ITEMS = [
-  { label: "总览", href: "/" },
-  { label: "名册", href: "/roster" },
-  { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/stats" },
-  { label: "设置", href: "/settings", active: true },
-] as const;
+const NAV_ITEMS = panelNavItems("设置");
 
 type SettingsPageClientProps = {
   initialWorkspace: Workspace;
@@ -187,7 +182,7 @@ export function SettingsPageClient({
         credentials: "same-origin",
       });
     } finally {
-      window.location.href = "/";
+      window.location.href = PANEL_ROUTES.login;
     }
   }, []);
 

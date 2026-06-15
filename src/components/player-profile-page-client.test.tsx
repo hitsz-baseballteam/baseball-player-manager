@@ -28,7 +28,7 @@ describe("PlayerProfilePageClient", () => {
     const backLinks = screen.getAllByText("返回工作区");
     assert.ok(backLinks.length > 0);
     const gamesLink = screen.getByRole("link", { name: "查看比赛数据" });
-    assert.equal(gamesLink.getAttribute("href"), `/players/${player.id}/games`);
+    assert.equal(gamesLink.getAttribute("href"), `/panel/players/${player.id}/games`);
     assert.ok(screen.getAllByText(/球员档案已连接共享工作区/).length >= 1);
   });
 });

@@ -20,14 +20,9 @@ import {
   loadWorkspaceSnapshot,
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
+import { panelNavItems } from "@/lib/routes";
 
-const NAV_ITEMS = [
-  { label: "总览", href: "/" },
-  { label: "名册", href: "/roster" },
-  { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/stats" },
-  { label: "设置", href: "/settings" },
-] as const;
+const NAV_ITEMS = panelNavItems("");
 
 type TabType = "official" | "training";
 

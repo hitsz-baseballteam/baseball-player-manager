@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 
 import styles from "@/components/app-shell.module.css";
+import { PANEL_ROUTES } from "@/lib/routes";
 
 type NavItem = {
   label: string;
@@ -70,7 +71,7 @@ export function AppShell({
     return (
       <div className={styles.commandShell}>
         <aside className={styles.commandSidebar}>
-          <Link href="/" className={styles.commandCrest} aria-label="Baseball Player Manager 首页">
+          <Link href={PANEL_ROUTES.home} className={styles.commandCrest} aria-label="Baseball Player Manager 首页">
             <Baseball size={34} weight="duotone" aria-hidden="true" />
           </Link>
 

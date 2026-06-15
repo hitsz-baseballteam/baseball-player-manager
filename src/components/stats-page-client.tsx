@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -10,9 +10,6 @@ import {
   computeBattingLine,
   computeFieldingLine,
   computePitchingLine,
-  type BattingLine,
-  type FieldingLine,
-  type PitchingLine,
 } from "@/lib/stats";
 import {
   cloneWorkspace,
@@ -29,14 +26,9 @@ import {
   loadWorkspaceSnapshot,
   saveWithRetry,
 } from "@/lib/workspace-client";
+import { panelNavItems } from "@/lib/routes";
 
-const NAV_ITEMS = [
-  { label: "总览", href: "/" },
-  { label: "名册", href: "/roster" },
-  { label: "战术场景", href: "/scenarios" },
-  { label: "数据中心", href: "/stats", active: true },
-  { label: "设置", href: "/settings" },
-] as const;
+const NAV_ITEMS = panelNavItems("数据中心");
 
 type TabType = "players" | "games";
 type PlayerSortKey = "G" | "AVG" | "HR" | "RBI" | "OPS" | "E" | "FPCT" | "ERA" | "WHIP" | "SO";
@@ -98,10 +90,13 @@ export function StatsPageClient({
 
   // Refs to avoid stale closures in async save handler and prevent concurrent saves
   const workspaceRef = useRef(workspace);
-  workspaceRef.current = workspace;
   const versionRef = useRef(version);
-  versionRef.current = version;
   const savingRef = useRef(false);
+
+  useEffect(() => {
+    workspaceRef.current = workspace;
+    versionRef.current = version;
+  }, [workspace, version]);
 
   const [tab, setTab] = useState<TabType>("players");
   const [playerSortKey, setPlayerSortKey] = useState<PlayerSortKey>("AVG");

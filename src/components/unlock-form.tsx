@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-export function UnlockForm() {
+import { normalizePanelNextPath, PANEL_ROUTES } from "@/lib/routes";
+
+type UnlockFormProps = {
+  nextPath?: string;
+};
+
+export function UnlockForm({ nextPath = PANEL_ROUTES.home }: UnlockFormProps) {
   const router = useRouter();
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");
@@ -36,6 +42,7 @@ export function UnlockForm() {
       }
 
       startTransition(() => {
+        router.replace(normalizePanelNextPath(nextPath));
         router.refresh();
       });
     } catch {
@@ -49,7 +56,7 @@ export function UnlockForm() {
     <main className="unlock-shell">
       <section className="unlock-card">
         <div className="unlock-crest">Game Day Entry</div>
-        <div className="unlock-eyebrow">Baseball Player Manager</div>
+        <div className="unlock-eyebrow">HITSZ Baseball · Team Panel</div>
         <h1>进入球队共享工作区</h1>
         <p>
           这是比赛日用的共享球员与排阵控制台。输入管理员口令后，才能查看名册、阵容方案和工作区数据。
