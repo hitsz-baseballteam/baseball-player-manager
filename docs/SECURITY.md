@@ -61,6 +61,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 | 变量 | 用途 | 访问范围 |
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL 连接字符串 | 服务端（`db.ts`） |
+| `DATABASE_CA_CERT` | 自定义数据库 CA PEM（可选） | 服务端（`db.ts`） |
 | `APP_ADMIN_PASSCODE_HASH` | 管理员口令的 scrypt 哈希 | 服务端（`auth.ts`） |
 | `AUTH_SECRET` | Cookie HMAC 签名密钥 | 服务端（`auth.ts`） |
 
@@ -73,7 +74,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 ## 数据库安全
 
 - **连接池**：`pg.Pool`；Supabase 主机使用 `max = 1`，其他主机使用 `max = 5`；`idleTimeoutMillis = 30000`，`connectionTimeoutMillis = 10000`
-- **TLS**：Supabase 主机必须启用严格证书校验，不允许 `rejectUnauthorized: false`
+- **TLS**：Supabase 主机启用严格证书校验，并显式信任内置的 `Supabase Root 2021 CA`；其他私有 CA 场景可通过 `DATABASE_CA_CERT` 提供 PEM，不允许 `rejectUnauthorized: false`
 - **Row-Level Security**：迁移中已对 `public.app_workspace` 启用 RLS，但当前应用的访问控制主要依赖服务端 API 与签名 cookie，而不是基于用户身份的 RLS 策略
 - **无 Supabase Auth / Realtime**：仅使用 PostgreSQL 数据库，不使用 Supabase 其他功能
 - **表结构**：单表 `app_workspace`，列 `slug`（TEXT）、`version`（INT）、`data`（JSONB）
