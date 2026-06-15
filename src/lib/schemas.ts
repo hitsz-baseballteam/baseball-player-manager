@@ -12,9 +12,4 @@ export const workspacePutSchema = z.object({
   version: z.number().int().positive("version must be a positive integer"),
 });
 
-export const unlockPostSchema = z.object({
-  passcode: z.string().min(1, "passcode is required"),
-});
-
 export type WorkspacePutBody = z.infer<typeof workspacePutSchema>;
-export type UnlockPostBody = z.infer<typeof unlockPostSchema>;
