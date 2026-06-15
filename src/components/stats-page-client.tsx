@@ -26,8 +26,7 @@ import {
 } from "@/lib/workspace";
 import {
   isVersionConflict,
-  loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  saveWithRetry,
 } from "@/lib/workspace-client";
 
 const NAV_ITEMS = [
@@ -103,28 +102,29 @@ export function StatsPageClient({
   const [dialog, setDialog] = useState<GameDialogState>({ type: "closed" });
 
   // ── Save ──
+  // applyMutation is the pure function to apply to the latest workspace.
+  // It is used both for optimistic local update and conflict retry.
   const handleSave = useCallback(
-    async (next: Workspace) => {
+    async (applyMutation: (current: Workspace) => Workspace) => {
+      const optimistic = applyMutation(workspace);
+      setWorkspace(optimistic);
       setIsSaving(true);
       setSaveError(null);
       try {
-        const result = await saveWorkspaceSnapshot(next, version);
-        if ("version" in result) {
-          setVersion(result.version);
-          setWorkspace(sanitizeWorkspace(next));
-        } else if (isVersionConflict(result)) {
-          const snapshot = await loadWorkspaceSnapshot();
-          setVersion(snapshot.version);
-          setWorkspace(sanitizeWorkspace(snapshot.workspace));
-          toastRef.current?.showToast("工作区已被他人更新，已自动刷新。");
+        const result = await saveWithRetry(optimistic, version, applyMutation);
+        setVersion(result.version);
+        setWorkspace(sanitizeWorkspace(result.workspace));
+      } catch (error) {
+        if (isVersionConflict(error)) {
+          toastRef.current?.showToast("工作区已被他人更新，请重新操作。");
+        } else {
+          setSaveError("保存失败，请重试。");
         }
-      } catch {
-        setSaveError("保存失败，请重试。");
       } finally {
         setIsSaving(false);
       }
     },
-    [version],
+    [workspace, version],
   );
 
   // ── Player leaderboard ──
@@ -192,25 +192,31 @@ export function StatsPageClient({
   );
 
   // ── Game operations ──
-  function commitGames(nextGames: Game[]) {
-    const next = cloneWorkspace(workspace);
-    next.games = nextGames;
-    handleSave(next);
-  }
-
   function handleAddGame(game: Game) {
-    commitGames([...workspace.games, game]);
+    handleSave((current) => {
+      const next = cloneWorkspace(current);
+      next.games = [...current.games, game];
+      return next;
+    });
     setDialog({ type: "closed" });
   }
 
   function handleEditGame(game: Game) {
-    commitGames(workspace.games.map((g) => (g.id === game.id ? game : g)));
+    handleSave((current) => {
+      const next = cloneWorkspace(current);
+      next.games = current.games.map((g) => (g.id === game.id ? game : g));
+      return next;
+    });
     setDialog({ type: "closed" });
   }
 
   function handleDeleteGame(gameId: string) {
     if (!window.confirm("确认删除该场比赛？")) return;
-    commitGames(workspace.games.filter((g) => g.id !== gameId));
+    handleSave((current) => {
+      const next = cloneWorkspace(current);
+      next.games = current.games.filter((g) => g.id !== gameId);
+      return next;
+    });
   }
 
   return (
