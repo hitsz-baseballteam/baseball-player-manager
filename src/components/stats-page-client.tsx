@@ -3,7 +3,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import styles from "@/components/stats-page-client.module.css";
 import {
@@ -259,7 +258,6 @@ export function StatsPageClient({
         statusValue={`v${version}`}
         statusMeta={isSaving ? "保存中…" : ""}
         navItems={[...NAV_ITEMS]}
-        actions={<ThemeToggle />}
       >
         {/* Tabs */}
         <div className={styles.tabs}>

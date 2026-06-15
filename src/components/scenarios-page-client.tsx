@@ -7,7 +7,6 @@ import { BenchPanel } from "@/components/bench-panel";
 import { FieldBoard } from "@/components/field-board";
 import { LineupOrder } from "@/components/lineup-order";
 import { ScenarioCompare } from "@/components/scenario-compare";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import styles from "@/components/scenarios-page-client.module.css";
 import {
@@ -177,7 +176,6 @@ export function ScenariosPageClient({
         statusValue={`v${version}`}
         statusMeta={isSaving ? "保存中…" : "方案与排阵已连接共享工作区"}
         navItems={[...NAV_ITEMS]}
-        actions={<ThemeToggle />}
       >
         {/* Toolbar */}
         <div className={styles.actionBar}>

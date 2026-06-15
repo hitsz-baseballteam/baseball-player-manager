@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { PlayerProfileEditor } from "@/components/player-profile-editor";
 import {
   cloneWorkspace,
@@ -87,7 +86,6 @@ export function PlayerProfilePageClient(
       statusValue={`v${version}`}
       statusMeta={statusMessage}
       navItems={NAV_ITEMS.map((item) => ({ ...item }))}
-      actions={<ThemeToggle />}
       content={
         <PlayerProfileEditor
           key={

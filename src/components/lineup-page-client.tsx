@@ -6,7 +6,6 @@ import { AppShell } from "@/components/app-shell";
 import { BenchPanel } from "@/components/bench-panel";
 import { FieldBoard } from "@/components/field-board";
 import { LineupOrder } from "@/components/lineup-order";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import styles from "@/components/lineup-page-client.module.css";
 import {
@@ -126,7 +125,6 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
         statusValue={`v${version}`}
         statusMeta={isSaving ? "保存中…" : "排阵已连接共享工作区"}
         navItems={[...NAV_ITEMS]}
-        actions={<ThemeToggle />}
       >
         {/* Action bar */}
         <div className={styles.actionBar}>

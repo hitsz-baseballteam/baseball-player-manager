@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { RosterOverview } from "@/components/roster-overview";
 import { PlayerProfileEditor } from "@/components/player-profile-editor";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
@@ -305,7 +304,6 @@ export function RosterPageClient(props: RosterPageClientProps) {
         statusValue={`v${version}`}
         statusMeta={statusMessage}
         navItems={NAV_ITEMS.map((item) => ({ ...item }))}
-        actions={<ThemeToggle />}
         content={
           <RosterOverview
             workspace={workspace}

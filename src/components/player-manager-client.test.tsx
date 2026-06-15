@@ -119,9 +119,5 @@ describe("PlayerManagerClient", () => {
     assert.ok(lastScenario);
     assert.ok(lastScenario?.assignments.lineup.every((slot) => slot === null));
     assert.ok(Object.values(lastScenario?.assignments.defense ?? {}).every((slot) => slot === null));
-
-    const themeButton = screen.getByRole("button", { name: /切换主题/ });
-    await user.click(themeButton);
-    assert.equal(document.documentElement.dataset.theme, "night");
   });
 });

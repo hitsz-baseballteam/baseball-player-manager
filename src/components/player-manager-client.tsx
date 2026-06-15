@@ -7,7 +7,6 @@ import { AppShell } from "@/components/app-shell";
 import { GuideOverlay, type GuideHandle } from "@/components/guide-overlay";
 import { HelpDrawer, type HelpDrawerHandle } from "@/components/help-drawer";
 import { HomeOverview } from "@/components/home-overview";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import {
   autoAssignActive,
@@ -189,7 +188,6 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
                 <span aria-hidden="true">?</span>
                 <span className="btn-label">帮助</span>
               </button>
-              <ThemeToggle />
             </>
           )}
           content={(

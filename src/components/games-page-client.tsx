@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import styles from "@/components/games-page-client.module.css";
 import {
@@ -242,7 +241,6 @@ export function GamesPageClient({
           title="未找到球员"
           description="当前链接没有对应球员，或该球员已从共享工作区移除。"
           navItems={[...NAV_ITEMS]}
-          actions={<ThemeToggle />}
         />
       </ToastProvider>
     );
@@ -258,7 +256,6 @@ export function GamesPageClient({
         statusValue={`v${version}`}
         statusMeta={saving ? "保存中…" : statusMessage}
         navItems={[...NAV_ITEMS]}
-        actions={<ThemeToggle />}
       >
         <div className={styles.layout}>
           {/* Action bar */}
