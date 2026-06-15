@@ -73,51 +73,67 @@ export function PublicHome() {
       </header>
 
       <section id="top" className={styles.hero}>
-        <div className={styles.heroMedia}>
-          <Image
-            src="/team/team-fence.jpg"
-            alt="哈工大深圳棒球队队员在围网边观看比赛"
-            fill
-            sizes="100vw"
-            className={styles.heroImage}
-            priority
-          />
+        <div className={styles.heroMain}>
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>HITSZ BASEBALL</p>
+            <h1>
+              <span>新生</span>
+              <strong>开球</strong>
+            </h1>
+            <p className={styles.heroSubtitle}>{content.hero.subtitle}</p>
+            <div className={styles.recruitmentMark}>
+              <strong>2026 秋季招新</strong>
+              <span>零基础也欢迎</span>
+            </div>
+          </div>
+
+          <div className={styles.heroMedia}>
+            <Image
+              src="/team/team-huddle.jpg"
+              alt="哈工大深圳棒球队队员赛前围圈"
+              fill
+              sizes="(max-width: 900px) 100vw, 64vw"
+              className={styles.heroImage}
+              priority
+            />
+            <span className={styles.photoTag}>PLAY AS ONE</span>
+          </div>
         </div>
-        <div className={styles.heroCopy}>
-          <p className={styles.eyebrow}>{content.hero.eyebrow}</p>
-          <h1>
-            <span>新生</span>
-            <strong>开球</strong>
-          </h1>
-          <p className={styles.heroSubtitle}>{content.hero.subtitle}</p>
+
+        <div className={styles.heroBand}>
+          <div className={styles.heroContact}>
+            <span>{content.contact.manager}</span>
+            <strong>微信 {content.contact.wechat}</strong>
+          </div>
           <div className={styles.heroActions}>
             <a className={styles.primaryAction} href="#join">
               加入球队
               <ArrowRight size={22} weight="bold" />
             </a>
-            <a className={styles.secondaryAction} href="#about">认识我们</a>
+            <Link className={styles.secondaryAction} href={PANEL_ROUTES.home}>
+              <LockKey size={18} weight="bold" />
+              队员入口
+            </Link>
           </div>
-        </div>
-        <div className={styles.heroBadge}>
-          <strong>零基础</strong>
-          <span>也欢迎</span>
         </div>
       </section>
 
-      <section className={styles.steps} aria-label="加入球队步骤">
-        {content.steps.map((step, index) => {
-          const Icon = stepIcons[index];
-          return (
-            <article key={step.number}>
-              <span className={styles.stepNumber}>{step.number}</span>
-              <Icon size={32} weight="duotone" aria-hidden="true" />
-              <div>
-                <h2>{step.title}</h2>
-                <p>{step.detail}</p>
-              </div>
-            </article>
-          );
-        })}
+      <section className={styles.stepsSection} aria-label="加入球队步骤">
+        <div className={styles.steps}>
+          {content.steps.map((step, index) => {
+            const Icon = stepIcons[index];
+            return (
+              <article key={step.number}>
+                <span className={styles.stepNumber}>{step.number}</span>
+                <Icon size={34} weight="duotone" aria-hidden="true" />
+                <div>
+                  <h2>{step.title}</h2>
+                  <p>{step.detail}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <section id="about" className={styles.about}>
@@ -128,8 +144,8 @@ export function PublicHome() {
         <div className={styles.aboutGrid}>
           <div className={styles.aboutPhoto}>
             <Image
-              src="/team/team-huddle.jpg"
-              alt="哈工大深圳棒球队赛前围圈"
+              src="/team/team-huddle-wide.jpg"
+              alt="哈工大深圳棒球队全队赛前围圈"
               fill
               sizes="(max-width: 800px) 100vw, 58vw"
             />

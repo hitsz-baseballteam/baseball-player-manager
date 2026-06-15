@@ -36,7 +36,18 @@ describe("PublicHome", () => {
     assert.ok(screen.getByRole("heading", { name: /新生.*开球/ }));
     assert.ok(screen.getByText("下一球，等你上场"));
     assert.ok(screen.getByText("零基础友好"));
-    assert.ok(screen.getByText("球队经理——陶YF"));
+    assert.ok(screen.getAllByText("球队经理——陶YF").length >= 2);
+    assert.ok(screen.getAllByText("微信 t90507002fyt").length >= 2);
+    assert.equal(
+      screen
+        .getByRole("img", { name: "哈工大深圳棒球队队员赛前围圈" })
+        .getAttribute("src"),
+      "/team/team-huddle.jpg",
+    );
+    assert.equal(screen.getByRole("link", { name: "加入球队" }).getAttribute("href"), "#join");
+    assert.ok(screen.getByRole("heading", { name: "来看看" }));
+    assert.ok(screen.getByRole("heading", { name: "跟练一次" }));
+    assert.ok(screen.getByRole("heading", { name: "正式入队" }));
     assert.equal(
       screen.getAllByRole("link", { name: /队员入口|队员控制台/ })[0]
         ?.getAttribute("href"),
