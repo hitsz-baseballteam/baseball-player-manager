@@ -88,7 +88,7 @@
 /* ── Reflowed board ── */
 .board {
   display: grid;
-  grid-template-columns: minmax(440px, 1fr) clamp(280px, 30vw, 340px);
+  grid-template-columns: minmax(320px, 1fr) minmax(180px, 260px) minmax(200px, 320px);
   gap: 0;
   min-height: clamp(620px, 70vh, 820px);
   height: clamp(620px, 70vh, 820px);
@@ -103,27 +103,24 @@
 }
 
 .sideRail {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--theme-border);
+  background: var(--theme-bg);
+  overflow: hidden;
+}
+
+.benchColumn {
   min-width: 0;
   min-height: 0;
   border-left: 1px solid var(--theme-border);
   background: var(--theme-surface);
-}
-
-.sideTop {
-  min-height: 0;
-  border-bottom: 1px solid var(--theme-border);
-}
-
-.sideBottom {
-  min-height: 0;
   overflow: hidden;
 }
 
 @media (max-width: 1180px) {
   .board {
-    grid-template-columns: minmax(360px, 1.1fr) minmax(280px, 0.9fr);
+    grid-template-columns: minmax(280px, 1.1fr) minmax(160px, 0.8fr) minmax(180px, 0.8fr);
   }
 }
 
@@ -137,17 +134,14 @@
     border-top: 1px solid var(--theme-border);
   }
 
-  .sideRail {
-    display: contents;
+  .boardField {
+    min-height: clamp(320px, 50vh, 480px);
+  }
+
+  .sideRail,
+  .benchColumn {
     border-left: none;
-    background: transparent;
-  }
-
-  .sideTop {
-    border-bottom: none;
-  }
-
-  .sideBottom {
+    border-top: 1px solid var(--theme-border);
     overflow: visible;
   }
 }

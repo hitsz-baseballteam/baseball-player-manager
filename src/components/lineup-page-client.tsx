@@ -182,7 +182,7 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
           </div>
         )}
 
-        {/* Reflowed board: field first, right rail stacks lineup + bench */}
+        {/* Three-column board: field | lineup | bench */}
         <div className={styles.board}>
           <div className={styles.boardField}>
             <FieldBoard
@@ -195,22 +195,21 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
           </div>
 
           <div className={styles.sideRail}>
-            <div className={styles.sideTop}>
-              <LineupOrder
-                players={workspace.players}
-                lineup={activeScenario.assignments.lineup}
-                onAssign={handleLineupAssign}
-                onClear={handleLineupClear}
-                onMove={handleLineupMove}
-              />
-            </div>
-            <div className={styles.sideBottom}>
-              <BenchPanel
-                players={workspace.players}
-                defense={activeScenario.assignments.defense}
-                lineup={activeScenario.assignments.lineup}
-              />
-            </div>
+            <LineupOrder
+              players={workspace.players}
+              lineup={activeScenario.assignments.lineup}
+              onAssign={handleLineupAssign}
+              onClear={handleLineupClear}
+              onMove={handleLineupMove}
+            />
+          </div>
+
+          <div className={styles.benchColumn}>
+            <BenchPanel
+              players={workspace.players}
+              defense={activeScenario.assignments.defense}
+              lineup={activeScenario.assignments.lineup}
+            />
           </div>
         </div>
       </AppShell>
