@@ -70,11 +70,15 @@ function emptyStatLine(playerId: string): PlayerGameStatLine {
     pa: 0,
     ab: 0,
     h: 0,
+    doubles: 0,
+    triples: 0,
     hr: 0,
     rbi: 0,
     r: 0,
     sb: 0,
     bb: 0,
+    hbp: 0,
+    sf: 0,
     so: 0,
     ip: null,
     er: null,
@@ -84,6 +88,10 @@ function emptyStatLine(playerId: string): PlayerGameStatLine {
     po: 0,
     a: 0,
     e: 0,
+    w: 0,
+    l: 0,
+    sv: 0,
+    np: 0,
   };
 }
 

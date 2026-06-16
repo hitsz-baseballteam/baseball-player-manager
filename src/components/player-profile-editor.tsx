@@ -452,6 +452,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                     <option value="available">可上场</option>
                     <option value="rest">轮休</option>
                     <option value="injured">伤停</option>
+                    <option value="graduated">毕业</option>
                   </select>
                 </div>
                 <div className={styles.field}>
@@ -479,6 +480,24 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                     <option value="L">左投</option>
                     <option value="S">左右皆可</option>
                   </select>
+                </div>
+              </div>
+
+              <div className={styles.fieldGridThree}>
+                <div className={styles.field}>
+                  <label htmlFor="player-joined-at">入社日期</label>
+                  <input
+                    id="player-joined-at"
+                    type="date"
+                    value={current.joinedAt?.slice(0, 10) ?? ""}
+                    onChange={(event) =>
+                      updateDraft({
+                        joinedAt: event.target.value
+                          ? new Date(event.target.value).toISOString()
+                          : undefined,
+                      })
+                    }
+                  />
                 </div>
               </div>
 

@@ -8,14 +8,17 @@ import { ToastProvider, type ToastHandle } from "@/components/toast";
 import {
   cloneWorkspace,
   createDefaultWorkspace,
+  createMilestone,
   sanitizeWorkspace,
   timestampFilePart,
+  type Milestone,
   type PendingImport,
   type Workspace,
 } from "@/lib/workspace";
 import {
   isVersionConflict,
   loadWorkspaceSnapshot,
+  saveWithRetry,
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
 
@@ -169,6 +172,83 @@ export function SettingsPageClient({
     }
   }, []);
 
+  // ── Milestone form ──
+  const [milestoneDraft, setMilestoneDraft] = useState({
+    date: "",
+    title: "",
+    description: "",
+  });
+
+  async function handleAddMilestone() {
+    if (!milestoneDraft.date || !milestoneDraft.title) return;
+    const ms = createMilestone(
+      milestoneDraft.date,
+      milestoneDraft.title,
+      milestoneDraft.description,
+    );
+    setIsSaving(true);
+    setSaveError(null);
+    const next = cloneWorkspace(workspace);
+    next.milestones = [...workspace.milestones, ms];
+    setMilestoneDraft({ date: "", title: "", description: "" });
+    try {
+      const result = await saveWithRetry(next, version, (latest) => {
+        latest.milestones = [...latest.milestones, ms];
+        return latest;
+      });
+      setVersion(result.version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      toastRef.current?.showToast("里程碑已添加");
+    } catch (error) {
+      try {
+        const snapshot = await loadWorkspaceSnapshot();
+        setVersion(snapshot.version);
+        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        if (isVersionConflict(error)) {
+          toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
+        } else {
+          setSaveError("保存失败，已恢复到最新数据。");
+        }
+      } catch {
+        toastRef.current?.showToast("保存失败且无法连接服务器。");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteMilestone(id: string) {
+    setIsSaving(true);
+    setSaveError(null);
+    const ms = workspace.milestones.find((m) => m.id === id);
+    const next = cloneWorkspace(workspace);
+    next.milestones = workspace.milestones.filter((m) => m.id !== id);
+    try {
+      const result = await saveWithRetry(next, version, (latest) => {
+        latest.milestones = latest.milestones.filter((m: { id: string }) => m.id !== id);
+        return latest;
+      });
+      setVersion(result.version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      toastRef.current?.showToast("里程碑已删除");
+    } catch (error) {
+      try {
+        const snapshot = await loadWorkspaceSnapshot();
+        setVersion(snapshot.version);
+        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        if (isVersionConflict(error)) {
+          toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
+        } else {
+          setSaveError("删除失败，已恢复到最新数据。");
+        }
+      } catch {
+        toastRef.current?.showToast("操作失败且无法连接服务器。");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <ToastProvider toastRef={toastRef}>
       <AppShell
@@ -268,6 +348,87 @@ export function SettingsPageClient({
                 </div>
               )}
               {isSaving && <p className={styles.statusText}>正在保存…</p>}
+            </section>
+
+            <section className={styles.card} aria-label="球队里程碑区">
+              <p className={styles.eyebrow}>History</p>
+              <h2 className={styles.title}>球队里程碑</h2>
+              <p className={styles.description}>记录球队历史上的重要时刻，将在名人堂页面展示。</p>
+
+              {workspace.milestones.length > 0 ? (
+                <div className={styles.milestoneList}>
+                  {[...workspace.milestones]
+                    .sort((a, b) => b.date.localeCompare(a.date))
+                    .map((m) => (
+                      <div key={m.id} className={styles.milestoneItem}>
+                        <div className={styles.milestoneHeader}>
+                          <span className={styles.milestoneDate}>{m.date}</span>
+                          <button
+                            className={styles.btnSmallDanger}
+                            type="button"
+                            onClick={() => handleDeleteMilestone(m.id)}
+                          >
+                            删除
+                          </button>
+                        </div>
+                        <strong className={styles.milestoneItemTitle}>{m.title}</strong>
+                        <p className={styles.milestoneItemDesc}>{m.description}</p>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className={styles.statusText}>暂无里程碑记录</p>
+              )}
+
+              <div className={styles.milestoneForm}>
+                <div className={styles.milestoneFormRow}>
+                  <label className={styles.milestoneField}>
+                    <span>日期</span>
+                    <input
+                      type="date"
+                      value={milestoneDraft.date}
+                      onChange={(e) =>
+                        setMilestoneDraft((d) => ({ ...d, date: e.target.value }))
+                      }
+                    />
+                  </label>
+                  <label className={styles.milestoneField}>
+                    <span>标题</span>
+                    <input
+                      value={milestoneDraft.title}
+                      onChange={(e) =>
+                        setMilestoneDraft((d) => ({ ...d, title: e.target.value }))
+                      }
+                      maxLength={60}
+                      placeholder="例如：夺得XX邀请赛冠军"
+                    />
+                  </label>
+                </div>
+                <label className={styles.milestoneField}>
+                  <span>描述</span>
+                  <textarea
+                    value={milestoneDraft.description}
+                    onChange={(e) =>
+                      setMilestoneDraft((d) => ({ ...d, description: e.target.value }))
+                    }
+                    maxLength={280}
+                    rows={2}
+                    placeholder="描述里程碑事件…"
+                  />
+                </label>
+                <button
+                  className={styles.btnPrimary}
+                  type="button"
+                  onClick={handleAddMilestone}
+                  disabled={
+                    !milestoneDraft.date ||
+                    !milestoneDraft.title.trim() ||
+                    isSaving
+                  }
+                >
+                  添加里程碑
+                </button>
+              </div>
             </section>
           </div>
         </AppShell>

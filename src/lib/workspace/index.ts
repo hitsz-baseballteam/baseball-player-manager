@@ -11,6 +11,7 @@ export type {
   FielderRadar,
   Game,
   InningRecord,
+  Milestone,
   PlayerGameStatLine,
   PlayerProfile,
   ScenarioAssignments,
@@ -35,6 +36,9 @@ export {
   FIELDER_RADAR_LABELS,
   GUIDE_STEPS,
   DEFAULT_PLAYERS,
+  HALL_OF_FAME_MIN_DAYS,
+  AWARD_MIN_PA_MULTIPLIER,
+  SEASON_AWARD_LABELS,
 } from "./types";
 
 export {
@@ -47,6 +51,7 @@ export {
   createScenario,
   createDefaultWorkspace,
   cloneWorkspace,
+  createMilestone,
 } from "./base";
 
 export {
@@ -61,6 +66,8 @@ export {
   sanitizeWorkspace,
   sanitizeGame,
   sanitizeGames,
+  sanitizeMilestone,
+  sanitizeMilestones,
 } from "./sanitizers";
 
 

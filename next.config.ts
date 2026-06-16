@@ -10,7 +10,10 @@ export const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data:",
   "object-src 'none'",
   // Next App Router injects bootstrap scripts needed for hydration and client navigation.
-  "script-src 'self' 'unsafe-inline'",
+  // `unsafe-eval` is required by React in development mode (Turbopack / HMR).
+  process.env.NODE_ENV === "development"
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
 ].join("; ");
 

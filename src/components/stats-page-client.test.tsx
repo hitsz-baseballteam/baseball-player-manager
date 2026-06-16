@@ -28,9 +28,10 @@ function makeWorkspace(): Workspace {
       statLines: [
         {
           playerId: "p-test",
-          pa: 4, ab: 4, h: 2, hr: 0, rbi: 1, r: 1, sb: 0, bb: 0, so: 1,
+          pa: 4, ab: 4, h: 2, doubles: 0, triples: 0, hr: 0, rbi: 1, r: 1, sb: 0, bb: 0, hbp: 0, sf: 0, so: 1,
           ip: null, er: null, soPitching: null, bbPitching: null, hPitching: null,
           po: 0, a: 0, e: 0,
+          w: 0, l: 0, sv: 0, np: 0,
         },
       ],
     },

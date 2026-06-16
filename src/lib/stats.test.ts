@@ -1,7 +1,18 @@
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { computeBattingLine, computePitchingLine, computeFieldingLine } from "@/lib/stats";
+import { describe, it } from "node:test";
+import { strict as assert } from "node:assert";
+
+import {
+  computeBattingLine,
+  computePitchingLine,
+  computeFieldingLine,
+  deriveSeasons,
+  filterGamesBySeason,
+  filterGamesByType,
+  qualifiesForRateLeaderboard,
+} from "@/lib/stats";
 import type { Game, PlayerGameStatLine } from "@/lib/workspace";
 
 function game(overrides: Partial<Game> = {}): Game {
@@ -20,9 +31,10 @@ function game(overrides: Partial<Game> = {}): Game {
 function battingSl(playerId: string, overrides: Partial<PlayerGameStatLine> = {}): PlayerGameStatLine {
   return {
     playerId,
-    pa: 4, ab: 4, h: 2, hr: 1, rbi: 2, r: 1, sb: 0, bb: 0, so: 1,
+    pa: 4, ab: 4, h: 2, doubles: 0, triples: 0, hr: 1, rbi: 2, r: 1, sb: 0, bb: 0, hbp: 0, sf: 0, so: 1,
     ip: null, er: null, soPitching: null, bbPitching: null, hPitching: null,
     po: 3, a: 1, e: 0,
+    w: 0, l: 0, sv: 0, np: 0,
     ...overrides,
   };
 }
@@ -30,9 +42,10 @@ function battingSl(playerId: string, overrides: Partial<PlayerGameStatLine> = {}
 function pitchingSl(playerId: string, overrides: Partial<PlayerGameStatLine> = {}): PlayerGameStatLine {
   return {
     playerId,
-    pa: 0, ab: 0, h: 0, hr: 0, rbi: 0, r: 0, sb: 0, bb: 0, so: 0,
+    pa: 0, ab: 0, h: 0, doubles: 0, triples: 0, hr: 0, rbi: 0, r: 0, sb: 0, bb: 0, hbp: 0, sf: 0, so: 0,
     ip: 6, er: 2, soPitching: 5, bbPitching: 1, hPitching: 4,
     po: 0, a: 2, e: 0,
+    w: 1, l: 0, sv: 0, np: 85,
     ...overrides,
   };
 }
@@ -70,7 +83,7 @@ describe("computeBattingLine", () => {
     assert.strictEqual(line.BB, 1);
     assert.strictEqual(line.PA, 9);
     assert.strictEqual(line.AVG, ".429");
-    assert.strictEqual(line.OBP, ".444");
+    assert.strictEqual(line.OBP, ".500");
   });
 });
 
@@ -136,5 +149,86 @@ describe("computeFieldingLine", () => {
     assert.strictEqual(line.E, 1);
     assert.strictEqual(line.TC, 7);
     assert.strictEqual(line.FPCT, ".857");
+  });
+});
+
+describe("computePitchingLine with W/L/SV/NP", () => {
+  it("accumulates W, L, SV, NP from pitching stat lines", () => {
+    const games = [
+      game({ statLines: [pitchingSl("p1", { w: 1, l: 0, sv: 0, np: 90 })] }),
+      game({ statLines: [pitchingSl("p1", { w: 1, l: 0, sv: 1, np: 25 })] }),
+    ];
+    const line = computePitchingLine(games, "p1");
+    assert.strictEqual(line.W, 2);
+    assert.strictEqual(line.L, 0);
+    assert.strictEqual(line.SV, 1);
+    assert.strictEqual(line.NP, 115);
+  });
+
+  it("returns zero for W/L/SV/NP when no pitching appearances", () => {
+    const line = computePitchingLine([], "p1");
+    assert.strictEqual(line.W, 0);
+    assert.strictEqual(line.L, 0);
+    assert.strictEqual(line.SV, 0);
+    assert.strictEqual(line.NP, 0);
+  });
+});
+
+describe("deriveSeasons", () => {
+  it("extracts unique years from game dates", () => {
+    const games = [
+      game({ id: "g1", date: "2025-03-15" }),
+      game({ id: "g2", date: "2025-05-01" }),
+      game({ id: "g3", date: "2026-01-10" }),
+    ];
+    const seasons = deriveSeasons(games);
+    assert.deepStrictEqual(seasons, ["2026", "2025"]);
+  });
+
+  it("returns empty array for no games", () => {
+    assert.deepStrictEqual(deriveSeasons([]), []);
+  });
+
+  it("ignores malformed dates", () => {
+    const games = [
+      game({ id: "g1", date: "not-a-date" }),
+      game({ id: "g2", date: "2026-06-01" }),
+    ];
+    const seasons = deriveSeasons(games);
+    assert.deepStrictEqual(seasons, ["2026"]);
+  });
+});
+
+describe("filterGamesBySeason", () => {
+  it("filters games by year prefix", () => {
+    const games = [
+      game({ id: "g1", date: "2025-03-15" }),
+      game({ id: "g2", date: "2026-06-01" }),
+    ];
+    const filtered = filterGamesBySeason(games, "2026");
+    assert.strictEqual(filtered.length, 1);
+    assert.strictEqual(filtered[0].id, "g2");
+  });
+
+  it("returns all games when season is null", () => {
+    const games = [
+      game({ id: "g1", date: "2025-03-15" }),
+      game({ id: "g2", date: "2026-06-01" }),
+    ];
+    assert.strictEqual(filterGamesBySeason(games, null).length, 2);
+  });
+});
+
+describe("qualifiesForRateLeaderboard", () => {
+  it("returns true when PA meets the threshold (team_games * 1.5)", () => {
+    assert.strictEqual(qualifiesForRateLeaderboard(15, 10), true);
+  });
+
+  it("returns false when PA is below the threshold", () => {
+    assert.strictEqual(qualifiesForRateLeaderboard(14, 10), false);
+  });
+
+  it("returns false when team has no games", () => {
+    assert.strictEqual(qualifiesForRateLeaderboard(10, 0), false);
   });
 });

@@ -4,6 +4,7 @@ import {
   DEFAULT_PLAYERS,
   POSITIONS,
   WORKSPACE_SCHEMA_VERSION,
+  type Milestone,
   type PitcherRadar,
   type FielderRadar,
   type Player,
@@ -164,6 +165,7 @@ export function createDefaultWorkspace(helpDismissed: boolean): Workspace {
     scenarios: [scenario],
     activeScenarioId: scenario.id,
     games: [],
+    milestones: [],
     preferences: {
       helpDismissed,
     },
@@ -172,4 +174,19 @@ export function createDefaultWorkspace(helpDismissed: boolean): Workspace {
 
 export function cloneWorkspace(currentWorkspace: Workspace): Workspace {
   return structuredClone(currentWorkspace);
+}
+
+export function createMilestone(
+  date: string,
+  title: string,
+  description: string,
+  mediaUrl?: string,
+): Milestone {
+  return {
+    id: createId(),
+    date,
+    title: title.trim().slice(0, 60),
+    description: description.trim().slice(0, 280),
+    mediaUrl: mediaUrl?.trim().slice(0, 500) || undefined,
+  };
 }
