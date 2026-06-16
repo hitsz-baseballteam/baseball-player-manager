@@ -4,9 +4,9 @@ import { useCallback, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { BenchPanel } from "@/components/bench-panel";
-import { FieldBoard } from "@/components/field-board";
 import { LineupOrder } from "@/components/lineup-order";
 import { ScenarioCompare } from "@/components/scenario-compare";
+import { SceneFieldBoard } from "@/components/scene-field-board";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import styles from "@/components/scenarios-page-client.module.css";
 import {
@@ -29,7 +29,9 @@ import { panelNavItems } from "@/lib/routes";
 import {
   analyzeScenarioWarnings,
   getActiveScenario,
+  POSITIONS,
   sanitizeWorkspace,
+  type Player,
   type PositionCode,
   type Workspace,
 } from "@/lib/workspace";
@@ -40,6 +42,7 @@ import {
   isVersionConflict,
   loadWorkspaceSnapshot,
   type WorkspaceSnapshot,
+  updatePlayer,
   updateScenario,
   updateScenarioAssignments,
 } from "@/lib/workspace-client";
@@ -71,6 +74,13 @@ export function ScenariosPageClient({
   const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
   const [compareRightId, setCompareRightId] = useState<string | null>(null);
   const toastRef = useRef<ToastHandle | null>(null);
+
+  // DH (Designated Hitter) state
+  const [dhEnabled, setDhEnabled] = useState(false);
+  const [dhPlayerId, setDhPlayerId] = useState<string | null>(null);
+
+  // Roster editor state
+  const [showRosterEditor, setShowRosterEditor] = useState(false);
 
   const activeScenario = getActiveScenario(workspace);
   const warnings = analyzeScenarioWarnings(workspace, activeScenario);
@@ -174,6 +184,119 @@ export function ScenariosPageClient({
   function handleDefenseAssign(position: PositionCode, playerId: string) {
     const updated = assignDefensePosition(workspace, position, playerId);
     const scenario = getActiveScenario(updated);
+    // DH mode: when assigning P, remove new P from lineup (DH bats instead)
+    if (dhEnabled && position === "P") {
+      const lineup = scenario.assignments.lineup;
+      const pIdx = lineup.indexOf(playerId);
+      if (pIdx >= 0) {
+        lineup[pIdx] = dhPlayerId ?? null;
+      }
+    }
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
+  }
+
+  // ── DH toggle ──
+
+  function handleToggleDH() {
+    const updated = structuredClone(workspace);
+    const scenario = getActiveScenario(updated);
+    const lineup = scenario.assignments.lineup;
+    const pitcherId = scenario.assignments.defense["P"];
+
+    if (!dhEnabled) {
+      // Enable DH: remove P from lineup, pick bench player as DH
+      setDhEnabled(true);
+      if (pitcherId) {
+        const pIdx = lineup.indexOf(pitcherId);
+        if (pIdx >= 0) {
+          const benchPlayer = workspace.players.find(
+            (p) => p.status === "available" && p.id !== pitcherId && !lineup.includes(p.id)
+          );
+          const dhId = benchPlayer?.id ?? null;
+          lineup[pIdx] = dhId;
+          setDhPlayerId(dhId);
+          scenario.updatedAt = new Date().toISOString();
+          void handleSave(
+            updated,
+            (_next, currentVersion) =>
+              updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+          );
+        }
+      }
+    } else {
+      // Disable DH: find DH in lineup (player batting but not in defense) and replace with P
+      setDhEnabled(false);
+      if (pitcherId && !lineup.includes(pitcherId)) {
+        // DH is the player in lineup who's not on defense
+        const defenseIds = new Set(Object.values(scenario.assignments.defense).filter(Boolean) as string[]);
+        const dhIdx = lineup.findIndex((id) => id !== null && !defenseIds.has(id!));
+        if (dhIdx >= 0) {
+          lineup[dhIdx] = pitcherId;
+          scenario.updatedAt = new Date().toISOString();
+          void handleSave(
+            updated,
+            (_next, currentVersion) =>
+              updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+          );
+        }
+      }
+      setDhPlayerId(null);
+    }
+  }
+
+  // ── Roster status editor ──
+
+  async function handleRecoverPlayer(player: Player) {
+    const ok = window.confirm(`确认「${player.name} #${player.number}」伤病已恢复？\n\n康复后该球员将出现在替补名单中。`);
+    if (!ok) return;
+    const updated: Player = { ...player, status: "available" };
+    try {
+      const result = await updatePlayer(updated, version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      setVersion(result.version);
+      toastRef.current?.showToast(`${player.name} 已恢复，加入替补名单`);
+    } catch {
+      toastRef.current?.showToast("状态更新失败，请重试");
+    }
+  }
+
+  async function handleTempJoinGraduated(player: Player, days: number | null) {
+    const label = days ? `临时加入 ${days} 天` : "仅此一次（本次比赛）";
+    const ok = window.confirm(
+      `确认让「${player.name} #${player.number}」${label}？\n\n该球员目前为毕业状态，临时加入后将出现在替补名单中。`
+    );
+    if (!ok) return;
+    const updated: Player = { ...player, status: "available" };
+    // Store the temp join expiry if days specified
+    if (days) {
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + days);
+      (updated as any)._tempJoinExpiry = expiry.toISOString();
+    }
+    try {
+      const result = await updatePlayer(updated, version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      setVersion(result.version);
+      toastRef.current?.showToast(`${player.name} 已临时加入替补名单`);
+    } catch {
+      toastRef.current?.showToast("状态更新失败，请重试");
+    }
+  }
+
+  function handleDHAssign(playerId: string) {
+    const updated = structuredClone(workspace);
+    const scenario = getActiveScenario(updated);
+    const lineup = scenario.assignments.lineup;
+    const pitcherId = scenario.assignments.defense["P"];
+    // Replace current DH in lineup
+    const oldDHIdx = dhPlayerId ? lineup.indexOf(dhPlayerId) : (pitcherId ? lineup.indexOf(pitcherId) : -1);
+    if (oldDHIdx >= 0) lineup[oldDHIdx] = playerId;
+    setDhPlayerId(playerId);
+    scenario.updatedAt = new Date().toISOString();
     void handleSave(
       updated,
       (_next, currentVersion) =>
@@ -331,6 +454,15 @@ export function ScenariosPageClient({
               <button className={styles.btnSecondary} onClick={handleClearAll} disabled={isSaving} type="button">
                 清空
               </button>
+              <button
+                className={dhEnabled ? styles.btnDHToggleActive : styles.btnSecondary}
+                onClick={handleToggleDH}
+                disabled={isSaving}
+                type="button"
+                title={dhEnabled ? "关闭DH，投手恢复打击" : "启动DH，指定打击代替投手打击"}
+              >
+                {dhEnabled ? "DH ON" : "DH"}
+              </button>
             </>
           )}
 
@@ -349,36 +481,51 @@ export function ScenariosPageClient({
           </div>
         )}
 
-        {/* Main area */}
+        {/* Main area — 3 columns: Field | Lineup | Bench */}
         <div className={viewMode === "lineup" ? styles.board : styles.main}>
           {viewMode === "lineup" ? (
             <>
+              {/* Column 1: Defense field (overview style) */}
               <div className={styles.boardField}>
-                <FieldBoard
+                <SceneFieldBoard
                   players={workspace.players}
                   defense={activeScenario.assignments.defense}
                   onAssign={handleDefenseAssign}
                   onClear={handleDefenseClear}
                   onSwap={handleDefenseSwap}
+                  dhEnabled={dhEnabled}
+                  dhPlayerId={dhPlayerId}
+                  onDHAssign={handleDHAssign}
                 />
               </div>
-              <div className={styles.sideRail}>
-                <div className={styles.sideTop}>
-                  <LineupOrder
-                    players={workspace.players}
-                    lineup={activeScenario.assignments.lineup}
-                    onAssign={handleLineupAssign}
-                    onClear={handleLineupClear}
-                    onMove={handleLineupMove}
-                  />
+              {/* Column 2: Lineup order */}
+              <div className={styles.boardLineup}>
+                <LineupOrder
+                  players={workspace.players}
+                  lineup={activeScenario.assignments.lineup}
+                  defense={activeScenario.assignments.defense}
+                  onAssign={handleLineupAssign}
+                  onClear={handleLineupClear}
+                  onMove={handleLineupMove}
+                />
+              </div>
+              {/* Column 3: Bench */}
+              <div className={styles.boardBench}>
+                <div className={styles.benchHeader}>
+                  <button
+                    className={styles.btnSmall}
+                    onClick={() => setShowRosterEditor(true)}
+                    type="button"
+                  >
+                    ✏️ 编辑名单
+                  </button>
                 </div>
-                <div className={styles.sideBottom}>
-                  <BenchPanel
-                    players={workspace.players}
-                    defense={activeScenario.assignments.defense}
-                    lineup={activeScenario.assignments.lineup}
-                  />
-                </div>
+                <BenchPanel
+                  players={workspace.players}
+                  defense={activeScenario.assignments.defense}
+                  lineup={activeScenario.assignments.lineup}
+                  excludeIds={[...Object.values(activeScenario.assignments.defense).filter(Boolean) as string[], ...(dhEnabled && dhPlayerId ? [dhPlayerId] : [])]}
+                />
               </div>
             </>
           ) : viewMode === "compare" ? (
@@ -399,6 +546,16 @@ export function ScenariosPageClient({
           ) : null}
         </div>
 
+        {/* Roster status editor popup */}
+        {showRosterEditor && (
+          <RosterStatusEditor
+            players={workspace.players}
+            onRecover={handleRecoverPlayer}
+            onTempJoin={handleTempJoinGraduated}
+            onClose={() => setShowRosterEditor(false)}
+          />
+        )}
+
         {/* Scenario dialog (create / rename) */}
         {dialog.type !== "closed" && (
           <ScenarioDialog
@@ -416,6 +573,114 @@ export function ScenariosPageClient({
         )}
       </AppShell>
     </ToastProvider>
+  );
+}
+
+// ── Roster Status Editor ──
+
+type RosterStatusEditorProps = {
+  players: import("@/lib/workspace").Player[];
+  onRecover: (player: import("@/lib/workspace").Player) => void;
+  onTempJoin: (player: import("@/lib/workspace").Player, days: number | null) => void;
+  onClose: () => void;
+};
+
+function RosterStatusEditor({ players, onRecover, onTempJoin, onClose }: RosterStatusEditorProps) {
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [filter, setFilter] = useState<"all" | "injured" | "graduated">("all");
+
+  const filtered = players.filter((p) => {
+    if (filter === "injured") return p.status === "injured";
+    if (filter === "graduated") return p.status === "graduated";
+    return p.status === "injured" || p.status === "graduated";
+  });
+
+  return (
+    <>
+      <div className={styles.dialogBackdrop} onClick={onClose} />
+      <div className={styles.rosterEditor}>
+        <header className={styles.dialogHeader}>
+          <h3>编辑名单</h3>
+          <button className={styles.dialogClose} onClick={onClose} type="button">×</button>
+        </header>
+
+        <div className={styles.rosterFilter}>
+          <button className={filter === "all" ? styles.rosterFilterActive : styles.rosterFilterBtn}
+            onClick={() => setFilter("all")} type="button">伤停+毕业</button>
+          <button className={filter === "injured" ? styles.rosterFilterActive : styles.rosterFilterBtn}
+            onClick={() => setFilter("injured")} type="button">伤停</button>
+          <button className={filter === "graduated" ? styles.rosterFilterActive : styles.rosterFilterBtn}
+            onClick={() => setFilter("graduated")} type="button">毕业</button>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className={styles.rosterEmpty}>暂无相关球员</p>
+        ) : (
+          <div className={styles.rosterList}>
+            {filtered.map((p) => {
+              const isInjured = p.status === "injured";
+              const isGraduated = p.status === "graduated";
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`${styles.rosterItem} ${selectedPlayer?.id === p.id ? styles.rosterItemActive : ""}`}
+                  onClick={() => setSelectedPlayer(selectedPlayer?.id === p.id ? null : p)}
+                >
+                  <span className={isInjured ? styles.rosterTagInjured : styles.rosterTagGraduated}>
+                    {isInjured ? "伤停" : "毕业"}
+                  </span>
+                  <span className={styles.rosterName}>{p.name}</span>
+                  <span className={styles.rosterNum}>#{p.number}</span>
+                  <span className={styles.rosterPos}>
+                    {p.positions.map((pos) => {
+                      const m: Record<string, string> = { P: "投", C: "捕", "1B": "一", "2B": "二", "3B": "三", SS: "游", LF: "左", CF: "中", RF: "右" };
+                      return m[pos] ?? pos;
+                    }).join("/")}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Action panel for selected player */}
+        {selectedPlayer && (
+          <div className={styles.rosterActions}>
+            {selectedPlayer.status === "injured" ? (
+              <>
+                <p className={styles.rosterActionHint}>
+                  确认「{selectedPlayer.name}」伤病已恢复？
+                </p>
+                <button className={styles.btnPrimary} onClick={() => { onRecover(selectedPlayer); setSelectedPlayer(null); }}>
+                  确认康复，加入替补
+                </button>
+              </>
+            ) : selectedPlayer.status === "graduated" ? (
+              <>
+                <p className={styles.rosterActionHint}>
+                  让「{selectedPlayer.name}」临时加入？
+                </p>
+                <div className={styles.rosterActionBtns}>
+                  <button className={styles.btnPrimary}
+                    onClick={() => { onTempJoin(selectedPlayer, null); setSelectedPlayer(null); }}>
+                    仅此一次
+                  </button>
+                  <button className={styles.btnPrimary}
+                    onClick={() => { onTempJoin(selectedPlayer, 7); setSelectedPlayer(null); }}>
+                    加入 7 天
+                  </button>
+                  <button className={styles.btnPrimary}
+                    onClick={() => { onTempJoin(selectedPlayer, 30); setSelectedPlayer(null); }}>
+                    加入 30 天
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

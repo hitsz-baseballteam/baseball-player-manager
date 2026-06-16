@@ -95,6 +95,8 @@ function getButtonStyle(result: PAResult): string {
       return styles.btnSac;
     case "ROE":
     case "FC":
+    case "SB":
+    case "CS":
       return styles.btnOther;
   }
 }

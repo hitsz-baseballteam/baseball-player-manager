@@ -6,13 +6,11 @@
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
   border-radius: 10px;
-  transition: opacity 200ms ease;
   position: relative;
+  transition: opacity 200ms ease;
 }
 
-.cardInactive {
-  opacity: 0.45;
-}
+.cardInactive { opacity: 0.45; }
 
 /* ── Inning header ── */
 
@@ -22,317 +20,422 @@
   justify-content: space-between;
 }
 
-.inningInfo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.inningInfo { display: flex; align-items: center; gap: 10px; }
 
-.inningBadge {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--theme-accent);
-}
+.inningBadge { font-size: 16px; font-weight: 800; color: var(--theme-accent); }
 
-.halfLabel {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--theme-muted);
-}
+.halfLabel { font-size: 13px; font-weight: 600; color: var(--theme-muted); }
+
+.headerRight { display: flex; align-items: center; gap: 10px; }
+
+.scoreBadge { font-size: 15px; font-weight: 700; color: var(--theme-fg); }
 
 .teamLabelBadge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 6px;
   background: color-mix(in srgb, var(--theme-accent) 15%, transparent);
   color: var(--theme-accent);
 }
 
-/* ── Board grid: Field + Side panel ── */
+/* ── Dual-column: Batting (left) + Fielding (right) ── */
 
-.boardGrid {
+.dualCol {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(200px, 280px);
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  align-items: start;
 }
 
-@media (max-width: 640px) {
-  .boardGrid {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 700px) {
+  .dualCol { grid-template-columns: 1fr; }
 }
 
-.fieldPanel {
-  background: color-mix(in srgb, #2d8a3e 6%, var(--theme-bg));
-  border: 1px solid var(--theme-border);
+.colLabel {
+  font-size: 12px; font-weight: 700; color: var(--theme-muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding-bottom: 4px; border-bottom: 1px solid var(--theme-border);
+}
+
+.battingCol {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.fieldingCol {
+  display: flex; flex-direction: column; gap: 8px;
+  transition: box-shadow 200ms ease;
+}
+
+.fieldingPicking {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 40%, transparent);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+/* ── Opponent section ── */
+
+.opponentSection {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.opponentTopRow {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.opponentRunInfo {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px;
+}
+
+.opponentRunLabel {
+  font-size: 10px; color: var(--theme-muted); font-weight: 600;
+}
+
+.opponentRunValue {
+  font-size: 22px; font-weight: 800; color: var(--theme-accent);
+}
+
+.opponentHint {
+  font-size: 11px; color: var(--theme-muted); font-style: italic;
+  text-align: center; padding: 8px;
+}
+
+/* ── Generic defense (no fielding team) ── */
+
+/* ── Batter card ── */
+
+.batterCard {
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-bg));
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border));
   border-radius: 10px;
-  overflow: hidden;
-  /* Disable interaction on the field (read-only display) */
-  pointer-events: none;
 }
 
-.sidePanel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.batterHeader {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--theme-border);
+  margin-bottom: 8px;
+}
+
+.batterSlot {
+  font-size: 13px; font-weight: 800; color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 15%, transparent);
+  padding: 2px 8px; border-radius: 4px;
+}
+
+.batterName { font-size: 16px; font-weight: 800; color: var(--theme-fg); }
+.batterNum { font-size: 12px; color: var(--theme-muted); margin-left: auto; }
+
+.batterStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px 6px;
+}
+
+.statItem {
+  font-size: 11px; color: var(--theme-muted);
+  font-variant-numeric: tabular-nums;
+  display: flex; gap: 3px;
+}
+.statItem em { font-style: normal; font-weight: 600; color: var(--theme-muted); min-width: 24px; }
+
+.statItemAccent {
+  composes: statItem;
+  color: var(--theme-accent); font-weight: 700;
+}
+.statItemAccent em { color: var(--theme-accent); }
+
+/* ── Status tag ── */
+
+.statusTag {
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  color: var(--theme-accent);
+}
+
+/* ── Generic defense ── */
+
+.genericDefense {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 120px;
+  background: var(--theme-surface-alt);
+  border: 1px dashed var(--theme-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+/* ── Field picker banner ── */
+
+.fieldPickBanner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--theme-accent); color: #fff;
+  border-radius: 6px; font-size: 12px; font-weight: 700;
+  animation: pulseBanner 1s ease-in-out infinite;
+}
+
+.fieldPickCancel {
+  border: 1px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.15);
+  color: #fff; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; cursor: pointer; font-family: inherit;
+}
+
+@keyframes pulseBanner {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
 }
 
 /* ── Outs dots ── */
 
-.outsText {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--theme-muted);
-  letter-spacing: 2px;
-}
+.outsText { font-size: 12px; font-weight: 600; color: var(--theme-muted); letter-spacing: 2px; }
+
+/* ── Field actions ── */
+
+.fieldActions { display: flex; gap: 6px; padding-top: 4px; }
 
 /* ── Control bar ── */
 
 .controlBar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--theme-surface-alt);
-  border-radius: 8px;
-  flex-wrap: wrap;
-}
-
-.controlActions {
-  display: flex;
-  gap: 6px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; background: var(--theme-surface-alt);
+  border-radius: 8px; flex-wrap: wrap; justify-content: center;
 }
 
 .controlBtn {
-  font-size: 12px;
-  padding: 4px 12px;
-  border: 1px solid var(--theme-border);
-  border-radius: 6px;
-  background: var(--theme-surface);
-  color: var(--theme-fg);
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 600;
+  font-size: 12px; padding: 4px 12px;
+  border: 1px solid var(--theme-border); border-radius: 6px;
+  background: var(--theme-surface); color: var(--theme-fg);
+  cursor: pointer; font-family: inherit; font-weight: 600;
 }
-.controlBtn:hover:not(:disabled) {
-  border-color: var(--theme-accent);
-  color: var(--theme-accent);
-}
-.controlBtn:disabled {
-  opacity: 0.4;
-}
-
-.scoreDisplay {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--theme-fg);
-  margin-left: auto;
-}
-.scoreDisplay strong {
-  color: var(--theme-accent);
-  font-size: 20px;
-}
+.controlBtn:hover:not(:disabled) { border-color: var(--theme-accent); color: var(--theme-accent); }
+.controlBtn:disabled { opacity: 0.4; }
 
 .btnSecondary {
-  font-size: 11px;
-  padding: 4px 10px;
-  border: 1px solid var(--theme-border);
-  border-radius: 6px;
-  background: var(--theme-surface);
-  color: var(--theme-fg);
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 600;
+  font-size: 12px; padding: 4px 12px;
+  border: 1px solid var(--theme-border); border-radius: 6px;
+  background: var(--theme-surface); color: var(--theme-fg);
+  cursor: pointer; font-family: inherit; font-weight: 600;
 }
 .btnSecondary:hover:not(:disabled) { background: var(--theme-surface-alt); }
 .btnSecondary:disabled { opacity: 0.4; }
 
 .btnEndGame {
   composes: btnSecondary;
-  border-color: var(--theme-danger);
-  color: var(--theme-danger);
+  border-color: var(--theme-danger); color: var(--theme-danger);
 }
 .btnEndGame:hover:not(:disabled) {
   background: color-mix(in srgb, var(--theme-danger) 10%, var(--theme-surface));
 }
 
 .btnPrimary {
-  padding: 6px 16px;
-  border: none;
-  border-radius: 6px;
-  background: var(--theme-accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
+  padding: 6px 16px; border: none; border-radius: 6px;
+  background: var(--theme-accent); color: #fff;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
 .btnPrimary:hover { opacity: 0.85; }
 
 /* ── Pitcher picker ── */
 
 .pickerOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
   background: rgba(0, 0, 0, 0.3);
 }
 
 .picker {
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
-  border-radius: 10px;
-  padding: 16px;
-  min-width: 200px;
-  max-height: 50vh;
-  overflow-y: auto;
+  background: var(--theme-surface); border: 1px solid var(--theme-border);
+  border-radius: 10px; padding: 16px; min-width: 200px;
+  max-height: 50vh; overflow-y: auto;
   box-shadow: 0 12px 32px var(--theme-shadow-strong);
 }
 
-.picker h4 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: var(--theme-fg);
-}
+.picker h4 { margin: 0 0 10px; font-size: 14px; color: var(--theme-fg); }
 
-.pickerList {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 10px;
-}
+.pickerList { display: grid; gap: 4px; margin-bottom: 10px; }
 
 .pickerBtn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid var(--theme-border);
-  border-radius: 6px;
-  background: var(--theme-surface-alt);
-  color: var(--theme-fg);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: left;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border: 1px solid var(--theme-border);
+  border-radius: 6px; background: var(--theme-surface-alt);
+  color: var(--theme-fg); font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: inherit; text-align: left;
 }
 .pickerBtn:hover {
   border-color: var(--theme-accent);
   background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-alt));
 }
-
-.pickerNum {
-  color: var(--theme-muted);
-  font-size: 11px;
-}
+.pickerNum { color: var(--theme-muted); font-size: 11px; }
 
 /* ── Run selector ── */
 
 .runOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
   background: rgba(0, 0, 0, 0.3);
 }
 
 .runDialog {
-  background: var(--theme-surface);
-  border: 2px solid var(--theme-accent);
-  border-radius: 12px;
-  padding: 20px 28px;
-  text-align: center;
+  background: var(--theme-surface); border: 2px solid var(--theme-accent);
+  border-radius: 12px; padding: 20px 28px; text-align: center;
   box-shadow: 0 12px 32px var(--theme-shadow-strong);
 }
 
-.runQuestion {
-  margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--theme-fg);
-}
+.runQuestion { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: var(--theme-fg); }
 
-.runButtons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 14px;
-}
+.runButtons { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
 
 .runBtn {
-  width: 48px;
-  height: 48px;
-  border: 2px solid var(--theme-border);
-  border-radius: 12px;
-  background: var(--theme-surface-alt);
-  color: var(--theme-fg);
-  font-size: 20px;
-  font-weight: 800;
-  cursor: pointer;
-  font-family: inherit;
+  width: 48px; height: 48px;
+  border: 2px solid var(--theme-border); border-radius: 12px;
+  background: var(--theme-surface-alt); color: var(--theme-fg);
+  font-size: 20px; font-weight: 800; cursor: pointer; font-family: inherit;
   transition: all 100ms ease;
 }
 .runBtn:hover { border-color: var(--theme-accent); }
 .runBtnActive { border-color: var(--theme-accent); background: var(--theme-accent); color: #fff; }
 
-/* ── Half-inning transition overlay ── */
+/* ── Transition overlay ── */
 
 .transitionOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 150;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(3px);
-  border-radius: 10px;
-  animation: fadeIn 0.25s ease;
+  position: absolute; inset: 0; z-index: 150;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(3px);
+  border-radius: 10px; animation: fadeIn 0.25s ease;
 }
 
 .transitionCard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 24px 36px;
-  background: var(--theme-surface);
-  border: 2px solid var(--theme-accent);
-  border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 24px 36px; background: var(--theme-surface);
+  border: 2px solid var(--theme-accent); border-radius: 12px;
   box-shadow: 0 8px 32px var(--theme-shadow-strong);
   animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.transitionIcon {
-  font-size: 36px;
-  animation: bounce 1s ease-in-out infinite;
+.transitionIcon { font-size: 36px; animation: bounce 1s ease-in-out infinite; }
+.transitionLabel { font-size: 18px; font-weight: 800; color: var(--theme-accent); letter-spacing: 0.04em; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* ── Steal buttons ── */
+
+.stealRow { display: flex; gap: 6px; }
+
+.btnSteal {
+  flex: 1; padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, #27ae60 40%, var(--theme-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, #27ae60 10%, var(--theme-surface));
+  color: #1e8449; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.btnSteal:hover:not(:disabled) { background: color-mix(in srgb, #27ae60 20%, var(--theme-surface)); }
+.btnSteal:disabled { opacity: 0.4; }
+
+.btnStealFail {
+  flex: 1; padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--theme-danger) 40%, var(--theme-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-danger) 8%, var(--theme-surface));
+  color: var(--theme-danger); font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.btnStealFail:hover:not(:disabled) { background: color-mix(in srgb, var(--theme-danger) 16%, var(--theme-surface)); }
+.btnStealFail:disabled { opacity: 0.4; }
+
+/* ── Batting stats table ── */
+
+.battingTable {
+  max-height: 260px; overflow-y: auto;
+  background: var(--theme-surface-alt);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
 }
 
-.transitionLabel {
-  font-size: 18px;
-  font-weight: 800;
+.battingTable table {
+  width: 100%; border-collapse: collapse;
+  font-size: 11px; font-variant-numeric: tabular-nums;
+}
+
+.battingTable th {
+  padding: 4px 3px; color: var(--theme-muted);
+  font-weight: 600; font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--theme-border);
+  text-align: center; position: sticky; top: 0;
+  background: var(--theme-surface-alt);
+}
+
+.battingTable td {
+  padding: 3px; text-align: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 50%, transparent);
+  color: var(--theme-fg);
+}
+
+.battingCurrent {
+  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+}
+.battingCurrent td { font-weight: 700; }
+
+.battingSlot { color: var(--theme-muted); font-weight: 600; min-width: 16px; }
+.battingName { font-weight: 600; white-space: nowrap; }
+.battingNum { color: var(--theme-accent); font-size: 9px; margin-left: 2px; }
+.battingPos { color: var(--theme-accent); font-weight: 700; font-size: 10px; }
+.battingEmpty { color: var(--theme-muted); font-style: italic; }
+.battingHit { color: var(--theme-accent); font-weight: 700; }
+
+/* ── Steal runner picker ── */
+
+.stealRunnerList {
+  display: grid; gap: 4px; margin-bottom: 12px; min-width: 180px;
+}
+
+.stealRunnerBtn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border: 1px solid var(--theme-border); border-radius: 8px;
+  background: var(--theme-surface-alt); color: var(--theme-fg);
+  font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.stealRunnerBtn:hover { border-color: var(--theme-accent); background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface-alt)); }
+.stealRunnerBtn strong { color: var(--theme-accent); }
+
+/* ── Bench strip ── */
+
+.benchStrip {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 10px;
+  background: var(--theme-surface-alt);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+}
+
+.benchLabel {
+  font-size: 10px; font-weight: 700; color: var(--theme-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 6px 0; flex-shrink: 0;
+}
+
+.benchCards {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+
+.benchCard {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--theme-border); border-radius: 6px;
+  background: var(--theme-surface); cursor: grab;
+  font-size: 12px; transition: all 100ms ease;
+}
+.benchCard:hover { border-color: var(--theme-accent); }
+.benchCard:active { cursor: grabbing; }
+
+.benchCardNum { color: var(--theme-accent); font-weight: 800; font-size: 11px; }
+.benchCardName { color: var(--theme-fg); font-weight: 600; }
+
+/* ── Steal runner base ── */
+
+.stealRunnerBase {
+  font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  background: color-mix(in srgb, var(--theme-accent) 15%, transparent);
   color: var(--theme-accent);
-  letter-spacing: 0.04em;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
 }

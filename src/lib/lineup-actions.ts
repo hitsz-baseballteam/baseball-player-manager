@@ -25,6 +25,7 @@ export function assignDefensePosition(
 ): Workspace {
   const { ws, scenario } = cloneActive(workspace);
   const defense = scenario.assignments.defense;
+  const lineup = scenario.assignments.lineup;
 
   // Clear the same player from any other defense slot
   for (const pos of Object.keys(defense) as PositionCode[]) {
@@ -33,7 +34,28 @@ export function assignDefensePosition(
     }
   }
 
+  const oldPlayerId = defense[position];
   defense[position] = playerId;
+
+  // Auto-sync lineup: new defender replaces old defender's batting slot
+  if (playerId !== oldPlayerId && !lineup.includes(playerId)) {
+    if (oldPlayerId) {
+      // Replace old defender's slot in the lineup
+      const oldSlot = lineup.indexOf(oldPlayerId);
+      if (oldSlot >= 0) {
+        lineup[oldSlot] = playerId;
+      } else {
+        // Old player wasn't batting — put new player in first empty slot
+        const firstEmpty = lineup.findIndex((slot) => slot === null);
+        if (firstEmpty >= 0) lineup[firstEmpty] = playerId;
+      }
+    } else {
+      // Position was empty — add to first empty batting slot
+      const firstEmpty = lineup.findIndex((slot) => slot === null);
+      if (firstEmpty >= 0) lineup[firstEmpty] = playerId;
+    }
+  }
+
   scenario.updatedAt = new Date().toISOString();
   return ws;
 }

@@ -21,7 +21,8 @@ export type PAResult =
   | "DP"                            // double play
   | "SF" | "SAC"                    // sacrifice fly / sacrifice bunt
   | "ROE"                           // reached on error
-  | "FC";                           // fielder's choice
+  | "FC"                            // fielder's choice
+  | "SB" | "CS";                    // stolen base / caught stealing
 
 /** Phase of the scoreboard workflow. */
 export type ScoreboardPhase = "setup" | "recording" | "review";
@@ -52,6 +53,8 @@ export type PlateAppearance = {
   outsBefore: number;
   outsAfter: number;
   inning: number;
+  /** Which defensive position fielded the ball (for GO/FO/LO/DP/SF/ROE/FC). */
+  fielderPosition?: PositionCode | null;
 };
 
 /** Pitcher change record. */
@@ -476,49 +479,49 @@ export function computeRunnerAdvancement(
     }
 
     case "FC": {
-      // Lead force runner out; other force runners advance 1; batter safe at 1B
-      // Find the most advanced runner eligible for a force play
-      // (force = runner on a base where all bases behind are occupied)
+      // Simplified: eliminate the lead force runner, batter safe at 1B
       const eliminated = new Set<string>();
       const after: RunnerState[] = [];
-
-      // Determine force situation
-      const forceEligible: RunnerState[] = [];
-      let allBehind = true;
+      let eliminatedOne = false;
       for (const r of sorted) {
-        if (allBehind) {
-          forceEligible.push(r);
-        }
-        // Check if there's a gap
-        if (r.base > 1 && !hasRunnerOn[r.base - 1]) {
-          allBehind = false;
-        }
-        if (r.base === 1 && !hasRunnerOn[1]) {
-          // Runner on 1B exists but check if 1B is occupied
-          // Actually this is about the runner being on the base
-        }
-      }
-
-      // Simplified: eliminate the lead force runner
-      for (const r of sorted) {
-        if (forceEligible.includes(r) && eliminated.size === 0 && r.base <= 3) {
+        const isForced = r.base === 1 || (r.base === 2 && hasRunnerOn[1]) || (r.base === 3 && hasRunnerOn[1] && hasRunnerOn[2]);
+        if (isForced && !eliminatedOne) {
           eliminated.add(r.playerId);
+          eliminatedOne = true;
           continue;
         }
-        // Advance remaining force-eligible runners
-        if (forceEligible.includes(r) && eliminated.size > 0) {
-          if (r.base === 3) {
-            // scores — RBI if not a force at home
-          } else {
-            after.push({ playerId: r.playerId, base: (r.base + 1) as 1 | 2 | 3 });
-          }
-        } else if (!forceEligible.includes(r)) {
+        if (isForced && eliminatedOne) {
+          after.push({ playerId: r.playerId, base: Math.min(r.base + 1, 3) as 1 | 2 | 3 });
+        } else {
           after.push(r);
         }
       }
       after.push({ playerId: "__BATTER__", base: 1 });
-      // No RBI on fielder's choice typically
       return { runnersAfter: after, runsScored: 0, batterRbi: 0, batterEndBase: 1 };
+    }
+
+    case "SB": {
+      // Stolen base: lead runner advances 1 base
+      if (sorted.length === 0) return { runnersAfter: [], runsScored: 0, batterRbi: 0, batterEndBase: 0 };
+      const stealer = sorted[0]; // lead runner
+      const after: RunnerState[] = [];
+      let runs = 0;
+      for (const r of sorted) {
+        if (r.playerId === stealer.playerId) {
+          if (r.base === 3) runs++; // steal home
+          else after.push({ playerId: r.playerId, base: (r.base + 1) as 1 | 2 | 3 });
+        } else {
+          after.push(r);
+        }
+      }
+      return { runnersAfter: after, runsScored: runs, batterRbi: 0, batterEndBase: 0 };
+    }
+
+    case "CS": {
+      // Caught stealing: lead runner is out, +1 out
+      if (sorted.length === 0) return { runnersAfter: [], runsScored: 0, batterRbi: 0, batterEndBase: 0 };
+      const after = sorted.slice(1); // remove lead runner
+      return { runnersAfter: after, runsScored: 0, batterRbi: 0, batterEndBase: 0 };
     }
   }
 }
@@ -560,6 +563,27 @@ export function deriveStatsFromPA(
     case "SAC": break; // SAC does not count as AB
     case "ROE": batter.ab++; break;
     case "FC": batter.ab++; break;
+    case "SB":
+      // SB does NOT count as a PA/AB for the batter — it's a base running event
+      // The runner's SB stat is handled separately
+      break;
+    case "CS":
+      // CS does NOT count as a PA/AB for the batter
+      break;
+  }
+
+  // SB/CS: credit the runner who stole/was caught
+  if (result === "SB" || result === "CS") {
+    // Find the lead runner (the one attempting to steal)
+    const leadRunner = pa.runnersBefore[0];
+    if (leadRunner) {
+      sl = ensureStatLine(sl, leadRunner.playerId);
+      const runnerStats = { ...sl[leadRunner.playerId] };
+      if (result === "SB") runnerStats.sb++;
+      else runnerStats.cs++;
+      sl = { ...sl, [leadRunner.playerId]: runnerStats };
+    }
+    return sl; // No further batter stat changes
   }
 
   batter.rbi += pa.rbi;
@@ -608,12 +632,16 @@ function resetFieldingCycles() {
 
 /**
  * Distribute putouts and assists to fielders based on the PA result.
+ * When `pa.fielderPosition` is set (from two-step user input), it takes priority.
  */
 export function distributeFieldingStats(
   pa: PlateAppearance,
   defense: Record<PositionCode, string | null>,
   existingStatLines: Record<string, LiveStatLine>,
+  fielderPosition?: PositionCode | null,
 ): Record<string, LiveStatLine> {
+  // Use PA's fielder position if available
+  const fielder = pa.fielderPosition ?? fielderPosition;
   let sl = { ...existingStatLines };
   const result = pa.result;
 
@@ -643,66 +671,98 @@ export function distributeFieldingStats(
 
     case "GO": {
       incPO(defense["1B"]);
-      const ifIdx = infieldCycle % infieldPositions.length;
-      incA(defense[infieldPositions[ifIdx]]);
-      infieldCycle++;
+      if (fielder) {
+        incA(defense[fielder]);
+      } else {
+        const ifIdx = infieldCycle % infieldPositions.length;
+        incA(defense[infieldPositions[ifIdx]]);
+        infieldCycle++;
+      }
       break;
     }
 
     case "FO": {
-      const ofIdx = outfieldCycle % outfieldPositions.length;
-      incPO(defense[outfieldPositions[ofIdx]]);
-      outfieldCycle++;
+      if (fielder) {
+        incPO(defense[fielder]);
+      } else {
+        const ofIdx = outfieldCycle % outfieldPositions.length;
+        incPO(defense[outfieldPositions[ofIdx]]);
+        outfieldCycle++;
+      }
       break;
     }
 
     case "LO": {
-      // Line out caught by rotating infielder
-      const positions: PositionCode[] = ["P", "1B", "2B", "SS", "3B"];
-      const idx = infieldCycle % positions.length;
-      incPO(defense[positions[idx]]);
-      infieldCycle++;
+      if (fielder) {
+        incPO(defense[fielder]);
+      } else {
+        const positions: PositionCode[] = ["P", "1B", "2B", "SS", "3B"];
+        const idx = infieldCycle % positions.length;
+        incPO(defense[positions[idx]]);
+        infieldCycle++;
+      }
       break;
     }
 
     case "DP": {
       incPO(defense["1B"]);
-      // Two assists — first to the fielder who started the DP, second to the pivot man
-      const allIF: PositionCode[] = ["2B", "SS", "3B"];
-      incA(defense[allIF[infieldCycle % allIF.length]]);
-      incA(defense[allIF[(infieldCycle + 1) % allIF.length]]);
+      if (fielder) {
+        incA(defense[fielder]);
+        // Second assist to pivot man (cycling)
+        const allIF = (["2B", "SS", "3B"] as PositionCode[]).filter(p => p !== fielder);
+        if (allIF.length > 0) incA(defense[allIF[infieldCycle % allIF.length]]);
+      } else {
+        const allIF: PositionCode[] = ["2B", "SS", "3B"];
+        incA(defense[allIF[infieldCycle % allIF.length]]);
+        incA(defense[allIF[(infieldCycle + 1) % allIF.length]]);
+      }
       infieldCycle += 2;
       break;
     }
 
     case "SF": {
-      const ofIdx = outfieldCycle % outfieldPositions.length;
-      incPO(defense[outfieldPositions[ofIdx]]);
-      outfieldCycle++;
+      if (fielder) {
+        incPO(defense[fielder]);
+      } else {
+        const ofIdx = outfieldCycle % outfieldPositions.length;
+        incPO(defense[outfieldPositions[ofIdx]]);
+        outfieldCycle++;
+      }
       break;
     }
 
     case "SAC": {
       incPO(defense["1B"]);
-      const ifIdx = infieldCycle % infieldPositions.length;
-      incA(defense[infieldPositions[ifIdx]]);
-      infieldCycle++;
+      if (fielder) {
+        incA(defense[fielder]);
+      } else {
+        const ifIdx = infieldCycle % infieldPositions.length;
+        incA(defense[infieldPositions[ifIdx]]);
+        infieldCycle++;
+      }
       break;
     }
 
     case "ROE": {
-      // Random fielder gets an error (rotate through all fielding positions)
-      const allFld: PositionCode[] = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"];
-      incE(defense[allFld[infieldCycle % allFld.length]]);
-      infieldCycle++;
+      if (fielder) {
+        incE(defense[fielder]);
+      } else {
+        const allFld: PositionCode[] = ["P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"];
+        incE(defense[allFld[infieldCycle % allFld.length]]);
+        infieldCycle++;
+      }
       break;
     }
 
     case "FC": {
       incPO(defense["1B"]);
-      const ifIdx = infieldCycle % infieldPositions.length;
-      incA(defense[infieldPositions[ifIdx]]);
-      infieldCycle++;
+      if (fielder) {
+        incA(defense[fielder]);
+      } else {
+        const ifIdx = infieldCycle % infieldPositions.length;
+        incA(defense[infieldPositions[ifIdx]]);
+        infieldCycle++;
+      }
       break;
     }
 
@@ -725,6 +785,7 @@ export function distributeFieldingStats(
 export function recordPlateAppearance(
   game: ScoreboardGame,
   result: PAResult,
+  fielderPosition?: PositionCode | null,
 ): ScoreboardGame {
   if (game.phase !== "recording") return game;
 
@@ -766,13 +827,19 @@ export function recordPlateAppearance(
         : r as RunnerState,
     ),
     outsBefore: game.outs,
-    outsAfter: Math.min(game.outs + (result !== "ROE" && result !== "BB" && result !== "HBP" && result !== "1B" && result !== "2B" && result !== "3B" && result !== "HR" && result !== "FC" ? (result === "DP" ? 2 : 1) : 0), 3),
+    outsAfter: Math.min(game.outs + (
+      result === "CS" ? 1 :
+      result === "SB" ? 0 :
+      result !== "ROE" && result !== "BB" && result !== "HBP" && result !== "1B" && result !== "2B" && result !== "3B" && result !== "HR" && result !== "FC"
+        ? (result === "DP" ? 2 : 1) : 0
+    ), 3),
     inning: game.currentInning,
+    fielderPosition: fielderPosition ?? null,
   };
 
   // Update stat lines
   let statLines = deriveStatsFromPA(pa, game.statLines);
-  statLines = distributeFieldingStats(pa, game.defense, statLines);
+  statLines = distributeFieldingStats(pa, game.defense, statLines, fielderPosition);
 
   // Update pitching stats for current pitcher
   if (game.currentPitcherId) {
@@ -793,13 +860,15 @@ export function recordPlateAppearance(
     return { ...inn, plateAppearances: [...inn.plateAppearances, pa] };
   });
 
-  // Advance batter index
-  let nextBatterIndex = (batterIndex + 1) % 9;
-  // Skip empty slots
-  let attempts = 0;
-  while (!lineup[nextBatterIndex] && attempts < 9) {
-    nextBatterIndex = (nextBatterIndex + 1) % 9;
-    attempts++;
+  // Advance batter index (skip for SB/CS — batter stays at plate)
+  let nextBatterIndex = batterIndex;
+  if (result !== "SB" && result !== "CS") {
+    nextBatterIndex = (batterIndex + 1) % 9;
+    let attempts = 0;
+    while (!lineup[nextBatterIndex] && attempts < 9) {
+      nextBatterIndex = (nextBatterIndex + 1) % 9;
+      attempts++;
+    }
   }
 
   // Update score

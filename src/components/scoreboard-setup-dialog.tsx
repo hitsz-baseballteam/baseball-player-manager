@@ -10,6 +10,7 @@ import styles from "./scoreboard-setup-dialog.module.css";
 type ScoreboardSetupDialogProps = {
   workspace: Workspace;
   mode: "standard" | "dual";
+  batFirst?: boolean;  // only for standard mode: true=先攻, false=先防
   onStart: (
     setup: GameSetup,
     teamA: TeamSetup,
@@ -21,6 +22,7 @@ type ScoreboardSetupDialogProps = {
 export function ScoreboardSetupDialog({
   workspace,
   mode,
+  batFirst,
   onStart,
   onCancel,
 }: ScoreboardSetupDialogProps) {
@@ -67,7 +69,13 @@ export function ScoreboardSetupDialog({
       <div className={styles.backdrop} onClick={onCancel} />
       <div className={styles.dialog} role="dialog" aria-label="比赛设置">
         <header className={styles.dialogHeader}>
-          <h3>{mode === "dual" ? "训练赛设置" : "新比赛设置"}</h3>
+          <h3>
+            {mode === "dual"
+              ? "训练赛设置"
+              : batFirst
+                ? "正式比赛设置 · 先攻"
+                : "正式比赛设置 · 先防"}
+          </h3>
           <button className={styles.dialogClose} onClick={onCancel} type="button">×</button>
         </header>
 

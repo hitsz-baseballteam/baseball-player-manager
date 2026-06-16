@@ -53,6 +53,13 @@
   color: var(--theme-fg);
 }
 
+.modeSubtitle {
+  margin: -16px 0 0;
+  font-size: 13px;
+  color: var(--theme-muted);
+  text-align: center;
+}
+
 .modeCards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -101,6 +108,18 @@
   justify-content: center;
   padding: 8px 20px 16px;
 }
+
+.btnBack {
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  color: var(--theme-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btnBack:hover { color: var(--theme-fg); }
 
 .btnDanger {
   padding: 6px 16px;

@@ -25,10 +25,12 @@ import {
   type Game,
   type Workspace,
 } from "@/lib/workspace";
+import type { WorkspaceSnapshot } from "@/lib/workspace-client";
 import {
+  createGame,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  submitMutationWithRetry,
 } from "@/lib/workspace-client";
 import styles from "./scoreboard-page-client.module.css";
 
@@ -56,6 +58,7 @@ export function ScoreboardPageClient({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [phase, setPhase] = useState<PhaseState>({ type: "setup" });
+  const [batFirst, setBatFirst] = useState(true); // official mode: true=先攻, false=先防
 
   // Refs for save
   const workspaceRef = useRef(workspace);
@@ -92,11 +95,17 @@ export function ScoreboardPageClient({
     }
   }, [phase]);
 
-  // ── Save handler ──
+  // ── Save handler (adapted to new resource-specific API) ──
 
   const handleSave = useCallback(
-    async (applyMutation: (current: Workspace) => Workspace) => {
-      if (savingRef.current) return;
+    async (
+      applyMutation: (current: Workspace) => Workspace,
+      submit: (nextWorkspace: Workspace, version: number) => Promise<WorkspaceSnapshot>,
+    ) => {
+      if (savingRef.current) {
+        toastRef.current?.showToast("操作已在保存中，请稍后再试。");
+        return;
+      }
       savingRef.current = true;
 
       const optimistic = applyMutation(workspaceRef.current);
@@ -105,7 +114,12 @@ export function ScoreboardPageClient({
       setSaveError(null);
 
       try {
-        const result = await saveWorkspaceSnapshot(optimistic, versionRef.current);
+        const result = await submitMutationWithRetry(
+          workspaceRef.current,
+          versionRef.current,
+          applyMutation,
+          submit,
+        );
         setVersion(result.version);
         setWorkspace(sanitizeWorkspace(result.workspace));
       } catch (error) {
@@ -119,11 +133,14 @@ export function ScoreboardPageClient({
 
         if (reloaded) {
           if (isVersionConflict(error)) {
-            toastRef.current?.showToast("数据已被其他会话更新，已恢复到最新状态。");
+            toastRef.current?.showToast("数据已被其他会话更新，已恢复到最新状态，请重新操作。");
           } else {
-            setSaveError("保存失败，已恢复到最新数据。");
+            console.error("Save failed:", error);
+            setSaveError("保存失败，已恢复到最新数据，请重试。");
           }
         } else {
+          console.error("Save failed and reload failed:", error);
+          toastRef.current?.showToast("保存失败且无法连接服务器，当前显示内容可能未同步。");
           setSaveError("保存失败，请检查网络后刷新页面。");
         }
       } finally {
@@ -142,12 +159,21 @@ export function ScoreboardPageClient({
     teamB?: TeamSetup,
   ) {
     const mode = teamB ? "dual" : "standard";
-    const gameA = createScoreboardGame(setup, workspace.scenarios[0]?.id ?? "", teamA, "top");
-    const gameB = teamB ? createScoreboardGame(setup, workspace.scenarios[0]?.id ?? "", teamB, "bottom") : null;
+    // Game always starts in the top of the 1st inning.
+    // batFirst determines WHO bats in the top half, not which half it is.
+    const gameA = createScoreboardGame(
+      setup,
+      workspace.scenarios[0]?.id ?? "",
+      teamA,
+      "top",  // always top half to start
+    );
+    const gameB = teamB
+      ? createScoreboardGame(setup, workspace.scenarios[0]?.id ?? "", teamB, "bottom")
+      : null;
 
     setPhase({
       type: "recording",
-      mode,
+      mode: mode as "standard" | "dual",
       teamA: gameA,
       teamB: gameB,
     });
@@ -178,23 +204,33 @@ export function ScoreboardPageClient({
   }
 
   function handleFinalize(game: Game) {
-    handleSave((current) => {
-      const next = cloneWorkspace(current);
-      next.games = [...next.games, game];
-      return next;
-    });
-    // Reset
+    handleSave(
+      (current) => {
+        const next = cloneWorkspace(current);
+        next.games = [...next.games, game];
+        return next;
+      },
+      (_nextWorkspace, currentVersion) => createGame(game, currentVersion),
+    );
     setPhase({ type: "setup" });
     clearDraftFromLocalStorage(DRAFT_KEY);
     toastRef.current?.showToast("比赛已保存到数据中心！");
   }
 
   function handleFinalizeDual(gameA: Game, gameB: Game) {
-    handleSave((current) => {
-      const next = cloneWorkspace(current);
-      next.games = [...next.games, gameA, gameB];
-      return next;
-    });
+    // Save first game, then second sequentially
+    handleSave(
+      (current) => {
+        const next = cloneWorkspace(current);
+        next.games = [...next.games, gameA, gameB];
+        return next;
+      },
+      async (_nextWorkspace, currentVersion) => {
+        // Create both games; the second call uses the updated version from the first
+        const r1 = await createGame(gameA, currentVersion);
+        return createGame(gameB, r1.version);
+      },
+    );
     setPhase({ type: "setup" });
     clearDraftFromLocalStorage(DRAFT_KEY);
     toastRef.current?.showToast("两场比赛已保存到数据中心！");
@@ -240,6 +276,8 @@ export function ScoreboardPageClient({
         {phase.type === "setup" && (
           <SetupWrapper
             workspace={workspace}
+            batFirst={batFirst}
+            onSetBatFirst={setBatFirst}
             onStart={handleStartGame}
             onCancel={() => {}}
           />
@@ -247,22 +285,58 @@ export function ScoreboardPageClient({
 
         {/* Recording */}
         {isRecording && (
-          <div className={phase.mode === "dual" ? styles.dualGrid : styles.singleGrid}>
-            <Scorecard
-              game={phase.teamA}
-              workspace={workspace}
-              teamLabel={phase.mode === "dual" ? "A队 ▲" : "我方"}
-              isActive={phase.mode === "standard" || phase.teamA.halfInning === "top"}
-              onUpdate={handleUpdateTeamA}
-            />
-            {phase.teamB && (
+          <div className={styles.singleGrid}>
+            {phase.mode === "dual" ? (
+              /* Dual mode: batting+fielding swap per half-inning */
               <Scorecard
-                game={phase.teamB}
+                battingGame={phase.teamA.halfInning === "top" ? phase.teamA : phase.teamB}
+                fieldingGame={phase.teamA.halfInning === "top" ? phase.teamB : phase.teamA}
                 workspace={workspace}
-                teamLabel="B队 ▼"
-                isActive={phase.teamB.halfInning === "bottom"}
-                onUpdate={handleUpdateTeamB}
+                teamLabel={phase.teamA.halfInning === "top" ? "A队攻 | B队守" : "B队攻 | A队守"}
+                isActive={true}
+                isOpponentBatting={false}
+                onUpdateBatting={(g) => {
+                  if (phase.teamA.halfInning === "top") handleUpdateTeamA(g as ScoreboardGame);
+                  else handleUpdateTeamB(g as ScoreboardGame);
+                }}
+                onUpdateFielding={(g) => {
+                  if (phase.teamA.halfInning === "top") handleUpdateTeamB(g as ScoreboardGame);
+                  else handleUpdateTeamA(g as ScoreboardGame);
+                }}
               />
+            ) : (
+              /* Official mode: determine who's batting based on batFirst */
+              (() => {
+                const isOurBatting =
+                  (batFirst && phase.teamA.halfInning === "top") ||
+                  (!batFirst && phase.teamA.halfInning === "bottom");
+
+                return isOurBatting ? (
+                  /* We are batting → show batting controls, no defense field */
+                  <Scorecard
+                    battingGame={phase.teamA}
+                    fieldingGame={null}
+                    workspace={workspace}
+                    teamLabel="我方"
+                    isActive={true}
+                    isOpponentBatting={false}
+                    onUpdateBatting={handleUpdateTeamA}
+                    onUpdateFielding={handleUpdateTeamA}
+                  />
+                ) : (
+                  /* Opponent batting → show our defense field + pitch counter */
+                  <Scorecard
+                    battingGame={null}
+                    fieldingGame={phase.teamA}
+                    workspace={workspace}
+                    teamLabel="我方"
+                    isActive={true}
+                    isOpponentBatting={true}
+                    onUpdateBatting={handleUpdateTeamA}
+                    onUpdateFielding={handleUpdateTeamA}
+                  />
+                );
+              })()
             )}
           </div>
         )}
@@ -327,34 +401,33 @@ export function ScoreboardPageClient({
 /** Setup wrapper with mode selection */
 function SetupWrapper({
   workspace,
+  batFirst,
+  onSetBatFirst,
   onStart,
   onCancel,
 }: {
   workspace: Workspace;
+  batFirst: boolean;
+  onSetBatFirst: (v: boolean) => void;
   onStart: (setup: GameSetup, teamA: TeamSetup, teamB?: TeamSetup) => void;
   onCancel: () => void;
 }) {
   const [mode, setMode] = useState<"standard" | "dual" | null>(null);
+  const [batFirstChosen, setBatFirstChosen] = useState<boolean | null>(null);
 
   if (!mode) {
     return (
       <div className={styles.modeSelect}>
         <h2 className={styles.modeTitle}>选择比赛模式</h2>
         <div className={styles.modeCards}>
-          <button
-            type="button"
-            className={styles.modeCard}
-            onClick={() => setMode("standard")}
-          >
+          <button type="button" className={styles.modeCard}
+            onClick={() => setMode("standard")}>
             <span className={styles.modeIcon}>⚾</span>
             <span className={styles.modeLabel}>正式比赛</span>
             <span className={styles.modeDesc}>对外比赛，只记录我方数据</span>
           </button>
-          <button
-            type="button"
-            className={styles.modeCard}
-            onClick={() => setMode("dual")}
-          >
+          <button type="button" className={styles.modeCard}
+            onClick={() => setMode("dual")}>
             <span className={styles.modeIcon}>🔄</span>
             <span className={styles.modeLabel}>队内训练赛</span>
             <span className={styles.modeDesc}>红白战，左右双栏记录AB队</span>
@@ -364,12 +437,41 @@ function SetupWrapper({
     );
   }
 
+  // ── Official mode: choose bat-first or field-first ──
+  if (mode === "standard" && batFirstChosen === null) {
+    return (
+      <div className={styles.modeSelect}>
+        <h2 className={styles.modeTitle}>选择先攻/先防</h2>
+        <p className={styles.modeSubtitle}>决定我方在第一局上半还是下半进攻</p>
+        <div className={styles.modeCards}>
+          <button type="button" className={styles.modeCard}
+            onClick={() => { onSetBatFirst(true); setBatFirstChosen(true); }}>
+            <span className={styles.modeIcon}>⚾</span>
+            <span className={styles.modeLabel}>先攻</span>
+            <span className={styles.modeDesc}>上半局我方先进攻<br/>下半局对手进攻</span>
+          </button>
+          <button type="button" className={styles.modeCard}
+            onClick={() => { onSetBatFirst(false); setBatFirstChosen(false); }}>
+            <span className={styles.modeIcon}>🛡️</span>
+            <span className={styles.modeLabel}>先防</span>
+            <span className={styles.modeDesc}>上半局对手先进攻<br/>下半局我方进攻</span>
+          </button>
+        </div>
+        <button type="button" className={styles.btnBack}
+          onClick={() => { setMode(null); setBatFirstChosen(null); }}>
+          ← 返回选择模式
+        </button>
+      </div>
+    );
+  }
+
   return (
     <ScoreboardSetupDialog
       workspace={workspace}
       mode={mode}
+      batFirst={batFirst}
       onStart={onStart}
-      onCancel={() => setMode(null)}
+      onCancel={() => { setMode(null); setBatFirstChosen(null); }}
     />
   );
 }

@@ -41,6 +41,28 @@
   margin-left: 4px;
 }
 
+.totalPitches {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--theme-muted);
+  font-weight: 600;
+}
+.totalPitches strong {
+  color: var(--theme-fg);
+  font-size: 14px;
+}
+
+/* ── Foul count ── */
+
+.foulCount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #8e44ad;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  text-align: center;
+}
+
 /* ── Count row ── */
 
 .countRow {
