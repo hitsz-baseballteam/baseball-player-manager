@@ -126,21 +126,34 @@ This means the repository now has one primary UI mode:
 
 ### 5. Database schema
 
-`supabase/migrations/20260529093022_create_app_workspace.sql` currently defines a single table:
+Current production schema is defined by these migrations:
 
-- `public.app_workspace`
-  - `id uuid primary key`
-  - `slug text unique`
-  - `version integer`
-  - `data jsonb`
-  - timestamps
+- `20260529093022_create_app_workspace.sql`
+- `20260616195000_normalize_workspace_storage.sql`
+- `20260616223000_backfill_normalized_workspace_storage.sql`
+
+The current runtime shape is:
+
+- `public.app_workspace_meta`
+  - workspace slug, version token, active scenario id, preferences, timestamps
+- `public.app_player`
+- `public.app_player_position`
+- `public.app_scenario`
+- `public.app_scenario_defense_assignment`
+- `public.app_scenario_lineup_slot`
+- `public.app_game`
+- `public.app_game_inning`
+- `public.app_game_stat_line`
+- `public.app_milestone`
+- legacy `public.app_workspace`
+  - retained temporarily as rollback / bootstrap source during the cutover window
 
 Observed SQL behavior:
 
 - `pgcrypto` is enabled if needed
-- row level security is enabled on `public.app_workspace`
-- `anon` and `authenticated` roles are revoked from the table
-- a default `slug = 'default'` row is inserted if missing
+- row level security is enabled on all exposed workspace tables
+- `anon` and `authenticated` roles are revoked from the tables used by the app
+- one logical workspace slug, `default`, is still used across the system
 
 ## Dependency / Boundary Notes
 

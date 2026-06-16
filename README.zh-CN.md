@@ -10,6 +10,7 @@
 - 认证方式：共享口令登录，使用签名 `httpOnly` Cookie
 - 持久化模型：一个共享工作区快照存储在 PostgreSQL 中，并通过 `version` 做乐观并发控制
 - 数据库迁移：`supabase/migrations/`
+- 存储模型：归一化 `app_*` 表，`GET /api/workspace` 作为聚合 bootstrap 读取接口
 
 ## 主要功能
 
@@ -89,11 +90,16 @@ npm run auth:env -- "your-local-passcode"
 1. 使用组织维护的共享开发库，并将其连接串配置到 `DATABASE_URL`
 2. 自己创建本地 PostgreSQL 数据库，并手动应用 `supabase/migrations/` 下的迁移
 
-当前 schema 入口文件是：
+对于全新本地库，至少需要应用：
 
 - [supabase/migrations/20260529093022_create_app_workspace.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260529093022_create_app_workspace.sql)
+- [supabase/migrations/20260616195000_normalize_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616195000_normalize_workspace_storage.sql)
 
-目前应用核心依赖一张 `public.app_workspace` 表，以及一个逻辑工作区 `default`。
+如果你是在已有旧库上升级，并且库里已经有 `public.app_workspace`，还需要应用：
+
+- [supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql)
+
+当前运行时已经从归一化分表读取。旧的 `public.app_workspace` 会在切换窗口内保留，用于回滚或 bootstrap。
 
 ### 5. 启动应用
 
@@ -128,7 +134,7 @@ npm run dev
 
 - 业务规则优先放在 `src/lib/`
 - 数据库访问集中在 `src/lib/db.ts` 和 `src/lib/workspace-store.ts`
-- 客户端数据保存统一走 `/api/workspace`
+- 客户端数据保存统一走 `src/lib/workspace-client.ts` 和资源化 `/api/*` 路由
 
 ### 8. 推送前先运行检查
 
@@ -176,13 +182,16 @@ npm run auth:env -- "your-passcode"
 应用通过 `pg` 直接连接 PostgreSQL。数据库迁移位于：
 
 - [supabase/migrations/20260529093022_create_app_workspace.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260529093022_create_app_workspace.sql)
+- [supabase/migrations/20260616195000_normalize_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616195000_normalize_workspace_storage.sql)
+- [supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql)
 
 当前 schema 特点：
 
-- 核心表为 `public.app_workspace`
-- 当前只维护一个逻辑工作区 `default`
-- 工作区数据存储在 `jsonb`
-- 写入依赖 `version` 做乐观并发控制
+- 仍只维护一个逻辑工作区 `default`
+- 聚合元数据位于 `public.app_workspace_meta`
+- 球员、守位、场景、分配、比赛、局数据、统计行、里程碑拆到独立表
+- 旧 `public.app_workspace` 临时保留，作为回滚 / bootstrap 来源
+- 写入依赖 `app_workspace_meta.version` 做乐观并发控制
 
 ## 常用命令
 

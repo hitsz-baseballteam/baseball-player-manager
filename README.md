@@ -10,6 +10,7 @@ Baseball Player Manager is a full-stack Next.js application for running a shared
 - Auth model: shared passcode login with a signed `httpOnly` cookie
 - Persistence model: one shared workspace snapshot stored in PostgreSQL with optimistic concurrency via `version`
 - Database migrations: `supabase/migrations/`
+- Storage model: normalized `app_*` tables with `GET /api/workspace` as the aggregate bootstrap read endpoint
 
 ## Features
 
@@ -87,13 +88,18 @@ You need a PostgreSQL database with the project schema.
 There are two common team workflows:
 
 1. Use a shared development database managed by the organization and set its connection string as `DATABASE_URL`.
-2. Create your own local PostgreSQL database and apply the migration in `supabase/migrations/`.
+2. Create your own local PostgreSQL database and apply the migrations in `supabase/migrations/`.
 
-The current schema entrypoint is:
+For a fresh local database, apply at least:
 
 - [supabase/migrations/20260529093022_create_app_workspace.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260529093022_create_app_workspace.sql)
+- [supabase/migrations/20260616195000_normalize_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616195000_normalize_workspace_storage.sql)
 
-At the moment the app relies on a single `public.app_workspace` table and one logical workspace slug: `default`.
+If you are upgrading an older database that already has `public.app_workspace`, also apply:
+
+- [supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql)
+
+The current runtime reads from normalized tables. The legacy `public.app_workspace` row is retained as a rollback/import source during the cutover window.
 
 ### 5. Start the app
 
@@ -128,7 +134,7 @@ As a rule:
 
 - put business rules in `src/lib/`
 - keep database access in `src/lib/db.ts` and `src/lib/workspace-store.ts`
-- keep client persistence going through `/api/workspace`
+- keep client persistence going through `src/lib/workspace-client.ts` and the resource-oriented `/api/*` routes
 
 ### 8. Run checks before pushing
 
@@ -176,13 +182,16 @@ Notes:
 The app uses PostgreSQL directly through `pg`. Schema changes live in:
 
 - [supabase/migrations/20260529093022_create_app_workspace.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260529093022_create_app_workspace.sql)
+- [supabase/migrations/20260616195000_normalize_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616195000_normalize_workspace_storage.sql)
+- [supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql)
 
 Current schema design:
 
-- One main table: `public.app_workspace`
 - One logical workspace slug: `default`
-- Workspace data stored as `jsonb`
-- Writes protected by version-based optimistic concurrency
+- Aggregate metadata in `public.app_workspace_meta`
+- Resource tables for players, positions, scenarios, assignments, games, innings, stat lines, and milestones
+- Legacy `public.app_workspace` retained temporarily for rollback / bootstrap
+- Writes protected by version-based optimistic concurrency on `app_workspace_meta.version`
 
 ## Scripts
 

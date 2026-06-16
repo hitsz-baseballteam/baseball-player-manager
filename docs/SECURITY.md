@@ -75,9 +75,9 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 
 - **连接池**：`pg.Pool`；Supabase 主机使用 `max = 1`，其他主机使用 `max = 5`；`idleTimeoutMillis = 30000`，`connectionTimeoutMillis = 10000`
 - **TLS**：Supabase 主机启用严格证书校验，并显式信任内置的 `Supabase Root 2021 CA`；其他私有 CA 场景可通过 `DATABASE_CA_CERT` 提供 PEM，不允许 `rejectUnauthorized: false`
-- **Row-Level Security**：迁移中已对 `public.app_workspace` 启用 RLS，但当前应用的访问控制主要依赖服务端 API 与签名 cookie，而不是基于用户身份的 RLS 策略
+- **Row-Level Security**：当前 `app_workspace_meta`、`app_player`、`app_player_position`、`app_scenario`、`app_scenario_defense_assignment`、`app_scenario_lineup_slot`、`app_game`、`app_game_inning`、`app_game_stat_line`、`app_milestone` 以及 legacy `app_workspace` 都启用了 RLS；实际访问控制仍主要依赖服务端 API 与签名 cookie，而不是基于用户身份的 RLS 策略
 - **无 Supabase Auth / Realtime**：仅使用 PostgreSQL 数据库，不使用 Supabase 其他功能
-- **表结构**：单表 `app_workspace`，列 `slug`（TEXT）、`version`（INT）、`data`（JSONB）
+- **表结构**：当前运行时使用归一化 `app_*` 表；legacy `app_workspace(slug, version, data jsonb)` 仍保留作为回滚窗口内的数据源
 
 ## 数据校验
 
@@ -85,8 +85,8 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 
 | 入口 | 净化函数 |
 |---|---|
-| API 输入（PUT workspace） | `sanitizeWorkspace()` |
-| DB 读取（GET workspace） | `sanitizeWorkspace()` |
+| API 输入（workspace 聚合 / 资源写入） | `sanitizeWorkspace()` / `sanitizePlayers()` / `sanitizeScenario()` |
+| DB 读取（GET workspace 聚合） | `sanitizeWorkspace()` |
 | JSON 导入 | `prepareImport()`（内部按导入类型调用 `sanitizeWorkspace()` 或 `sanitizePlayers()` / `sanitizeScenario()`） |
 | 旧版数据迁移 | `migrateLegacyState()` |
 
