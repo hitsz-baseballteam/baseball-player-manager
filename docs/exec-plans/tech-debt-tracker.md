@@ -13,7 +13,9 @@
 
 ## 活跃债务
 
-当前无活跃技术债务。
+| ID | 严重程度 | 描述 | 影响域 | 计划 |
+|---|---|---|---|---|
+| TD-09 | 高 | GitHub Actions CI 在 Node 22 环境下运行 `npm test` 时因测试入口与 loader / module mock 组合不兼容而稳定失败 | CI, 测试, 开发流程 | [20260616-ci-test-compatibility.md](./active/20260616-ci-test-compatibility.md) |
 
 ## 已解决债务
 
