@@ -29,6 +29,100 @@
   border-color: var(--theme-border);
 }
 
+/* ── Leaderboard ── */
+
+.leaderboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  padding: 0 20px 12px;
+}
+
+.leaderCard {
+  padding: 14px 16px;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface);
+  text-align: center;
+  transition: border-color 180ms ease;
+}
+
+.leaderCard:hover {
+  border-color: var(--theme-accent);
+}
+
+.leaderIcon {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.leaderLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.leaderName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--theme-fg);
+}
+
+.leaderStat {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-accent);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+/* ── Section headers ── */
+
+.sectionHeader {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 14px 20px 6px;
+}
+
+.subSectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--theme-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 0 4px;
+}
+
+/* ── Filter Bar ── */
+
+.filterBar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+
+.filterSelect {
+  padding: 6px 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+}
+
 /* ── Table ── */
 
 .tableWrap {
@@ -232,7 +326,7 @@
 }
 
 .gameLog th {
-  text-align: left;
+  text-align: center;
   padding: 8px 10px;
   color: var(--theme-muted);
   font-weight: 600;
@@ -243,11 +337,20 @@
   user-select: none;
 }
 
+.gameLog th:first-child {
+  text-align: left;
+}
+
 .gameLog td {
+  text-align: center;
   padding: 8px 10px;
   color: var(--theme-fg);
   font-variant-numeric: tabular-nums;
   border-bottom: 1px solid var(--theme-surface-alt);
+}
+
+.gameLog td:first-child {
+  text-align: left;
 }
 
 .gameLog tr:last-child td {

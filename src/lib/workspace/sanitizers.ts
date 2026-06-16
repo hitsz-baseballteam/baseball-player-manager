@@ -11,7 +11,9 @@ import {
   MAX_WORKSPACE_GAMES,
   MAX_WORKSPACE_PLAYERS,
   MAX_WORKSPACE_SCENARIOS,
+  MAX_WORKSPACE_MILESTONES,
   type Hand,
+  type Milestone,
   type PitcherRadar,
   type FielderRadar,
   type Player,
@@ -153,6 +155,9 @@ export function sanitizePlayers(players: unknown[]): Player[] {
         status: (player.status as string) in STATUS_LABELS
           ? (player.status as PlayerStatus)
           : "available",
+        ...(player.joinedAt && isIsoDate(player.joinedAt)
+          ? { joinedAt: String(player.joinedAt) }
+          : {}),
         profile: sanitizePlayerProfile(player.profile, positions),
       };
     })
@@ -284,6 +289,9 @@ export function sanitizeWorkspace(value: unknown): Workspace {
     : scenarios[0].id;
 
   const games = sanitizeGames(Array.isArray(source.games) ? source.games : []);
+  const milestones = sanitizeMilestones(
+    Array.isArray(source.milestones) ? source.milestones : [],
+  );
 
   return {
     version: WORKSPACE_SCHEMA_VERSION,
@@ -291,6 +299,7 @@ export function sanitizeWorkspace(value: unknown): Workspace {
     scenarios,
     activeScenarioId,
     games,
+    milestones,
     preferences: {
       helpDismissed: Boolean(source.preferences?.helpDismissed),
     },
@@ -306,11 +315,15 @@ function sanitizeStatLine(value: unknown): PlayerGameStatLine {
     pa: sanitizeGameInt(s?.pa),
     ab: sanitizeGameInt(s?.ab),
     h: sanitizeGameInt(s?.h),
+    doubles: sanitizeGameInt(s?.doubles),
+    triples: sanitizeGameInt(s?.triples),
     hr: sanitizeGameInt(s?.hr),
     rbi: sanitizeGameInt(s?.rbi),
     r: sanitizeGameInt(s?.r),
     sb: sanitizeGameInt(s?.sb),
     bb: sanitizeGameInt(s?.bb),
+    hbp: sanitizeGameInt(s?.hbp),
+    sf: sanitizeGameInt(s?.sf),
     so: sanitizeGameInt(s?.so),
     ip: sanitizeGameInnings(s?.ip),
     er: sanitizeNullableNumber(s?.er, 0, 99),
@@ -320,6 +333,10 @@ function sanitizeStatLine(value: unknown): PlayerGameStatLine {
     po: sanitizeGameInt(s?.po),
     a: sanitizeGameInt(s?.a),
     e: sanitizeGameInt(s?.e),
+    w: sanitizeGameInt(s?.w),
+    l: sanitizeGameInt(s?.l),
+    sv: sanitizeGameInt(s?.sv),
+    np: sanitizeGameInt(s?.np),
   };
 }
 
@@ -359,4 +376,27 @@ export function sanitizeGames(value: unknown): Game[] {
     .slice(0, MAX_WORKSPACE_GAMES)
     .map(sanitizeGame)
     .filter((g): g is Game => g !== null);
+}
+
+export function sanitizeMilestone(value: unknown): Milestone | null {
+  const s = value as Record<string, unknown> | null | undefined;
+  if (!s?.id || !s?.date || !s?.title) return null;
+  return {
+    id: String(s.id),
+    date: String(s.date),
+    title: String(s.title).trim().slice(0, 60),
+    description: String(s.description ?? "").trim().slice(0, 280),
+    mediaUrl:
+      s.mediaUrl && typeof s.mediaUrl === "string"
+        ? s.mediaUrl.trim().slice(0, 500) || undefined
+        : undefined,
+  };
+}
+
+export function sanitizeMilestones(value: unknown): Milestone[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(0, MAX_WORKSPACE_MILESTONES)
+    .map(sanitizeMilestone)
+    .filter((m): m is Milestone => m !== null);
 }

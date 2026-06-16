@@ -19,6 +19,11 @@ type GuideOverlayProps = {
 
 export function GuideOverlay({ isOpen, onDismiss, guideRef, rootRef }: GuideOverlayProps) {
   const [step, setStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const open = useCallback(() => {
     setStep(0);
@@ -60,7 +65,7 @@ export function GuideOverlay({ isOpen, onDismiss, guideRef, rootRef }: GuideOver
     if (e.key === "ArrowLeft") goPrev();
   };
 
-  if (!isOpen || typeof document === "undefined") return null;
+  if (!isOpen || !mounted) return null;
 
   const currentStep = GUIDE_STEPS[step];
 

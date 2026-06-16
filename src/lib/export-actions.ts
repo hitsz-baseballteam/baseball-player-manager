@@ -34,6 +34,7 @@ export function buildWorkspaceExport(workspace: Workspace): WorkspaceExportPaylo
     players: workspace.players,
     scenarios: workspace.scenarios,
     games: workspace.games,
+    milestones: workspace.milestones,
     activeScenarioId: workspace.activeScenarioId,
   };
 }

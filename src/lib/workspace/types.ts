@@ -1,6 +1,6 @@
 // ── Domain types and constants ──
 
-export type PlayerStatus = "available" | "rest" | "injured";
+export type PlayerStatus = "available" | "rest" | "injured" | "graduated";
 export type Hand = "R" | "L" | "S";
 export type PlayerProfileType = "pitcher" | "fielder";
 
@@ -23,6 +23,7 @@ export type Player = {
   bats: Hand;
   positions: PositionCode[];
   status: PlayerStatus;
+  joinedAt?: string;
   profile: PlayerProfile;
 };
 
@@ -58,11 +59,15 @@ export type PlayerGameStatLine = {
   pa: number;
   ab: number;
   h: number;
+  doubles: number;
+  triples: number;
   hr: number;
   rbi: number;
   r: number;
   sb: number;
   bb: number;
+  hbp: number;
+  sf: number;
   so: number;
   ip: number | null;
   er: number | null;
@@ -72,6 +77,18 @@ export type PlayerGameStatLine = {
   po: number;
   a: number;
   e: number;
+  w: number;
+  l: number;
+  sv: number;
+  np: number;
+};
+
+export type Milestone = {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+  mediaUrl?: string;
 };
 
 export type Game = {
@@ -122,6 +139,7 @@ export type Workspace = {
   scenarios: Scenario[];
   activeScenarioId: string;
   games: Game[];
+  milestones: Milestone[];
   preferences: {
     helpDismissed: boolean;
   };
@@ -134,6 +152,7 @@ export type WorkspaceExportPayload = {
   players: Player[];
   scenarios: Scenario[];
   games: Game[];
+  milestones: Milestone[];
   activeScenarioId: string;
 };
 
@@ -173,6 +192,19 @@ export const MAX_WORKSPACE_SCENARIOS = 50;
 export const MAX_WORKSPACE_GAMES = 400;
 export const MAX_GAME_INNINGS = 30;
 export const MAX_GAME_STAT_LINES = 200;
+export const MAX_WORKSPACE_MILESTONES = 200;
+
+export const HALL_OF_FAME_MIN_DAYS = 90;
+export const AWARD_MIN_PA_MULTIPLIER = 1.5;
+
+export const SEASON_AWARD_LABELS: Record<string, string> = {
+  hitKing: "安打王",
+  hrKing: "本垒打王",
+  rbiKing: "打点王",
+  onBaseKing: "上垒王",
+  strikeoutKing: "三振王",
+  winsKing: "多胜王",
+} as const;
 
 export const POSITIONS = [
   { code: "P", label: "投手", x: 50, y: 55 },
@@ -206,6 +238,7 @@ export const STATUS_LABELS: Record<PlayerStatus, string> = {
   available: "可上场",
   rest: "轮休",
   injured: "伤停",
+  graduated: "毕业",
 };
 
 export const PROFILE_TYPE_LABELS: Record<PlayerProfileType, string> = {
