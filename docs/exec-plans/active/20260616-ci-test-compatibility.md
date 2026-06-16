@@ -46,7 +46,7 @@ The ESM setup also defines JSDOM globals with `Object.defineProperty`, because n
 - [x] Ran `npm test`
 - [x] Ran `npm run lint`
 - [x] Ran `npm run build`
-- [ ] Confirmed GitHub Actions runs on `codex/*` branch push
+- [x] Confirmed GitHub Actions runs on `codex/*` branch push
 
 ## Follow-Up
 
