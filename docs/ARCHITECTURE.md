@@ -35,7 +35,7 @@ From `package.json`:
 - `npm run build` → `next build`
 - `npm run start` → `next start`
 - `npm run lint` → `eslint`
-- `npm test` → `node --experimental-test-module-mocks --require ./src/lib/test-setup.cjs --import tsx --test ...`
+- `npm test` → `tsx --experimental-test-module-mocks --import ./src/lib/test-setup.mjs --test ...`
 
 ### Runtime entry points
 
