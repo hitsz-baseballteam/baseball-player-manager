@@ -26,6 +26,8 @@ Error [ERR_METHOD_NOT_IMPLEMENTED]: The resolveSync() method is not implemented
 
 The failure comes from the CJS `--require` path interacting with the ESM loader registered by `tsx`.
 
+During verification, a second CI configuration issue was found: `push.branches: ["*"]` does not match branch names containing `/`, such as the repository's standard `codex/*` agent branches. The workflow now uses `["**"]` so pushed feature branches also trigger CI.
+
 ## Fix
 
 Replace the CJS setup entrypoint with an ESM setup file and let `tsx` own the test runner invocation:
@@ -44,6 +46,7 @@ The ESM setup also defines JSDOM globals with `Object.defineProperty`, because n
 - [x] Ran `npm test`
 - [x] Ran `npm run lint`
 - [x] Ran `npm run build`
+- [ ] Confirmed GitHub Actions runs on `codex/*` branch push
 
 ## Follow-Up
 
