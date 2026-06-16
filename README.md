@@ -235,13 +235,13 @@ npm run start
 
 ## API
 
-Current server endpoints:
+The app now uses:
 
-- `POST /api/logout`
-- `GET /api/workspace`
-- `PUT /api/workspace`
+- `GET /api/workspace` for bootstrap reads
+- resource-specific write routes under `/api/players`, `/api/scenarios`, `/api/games`, `/api/milestones`, and `/api/workspace/*`
+- `POST /api/logout` for session logout
 
-`/api/workspace` is protected by the unlock cookie issued after login.
+See [docs/API.md](/Users/kennywang/app/baseball-player-manager/docs/API.md) for the complete request and response contract.
 
 ## Verification
 
@@ -257,6 +257,8 @@ npm run build
 
 - [AGENTS.md](/Users/kennywang/app/baseball-player-manager/AGENTS.md) - repo map and working rules
 - [docs/ARCHITECTURE.md](/Users/kennywang/app/baseball-player-manager/docs/ARCHITECTURE.md) - current architecture
+- [docs/SCHEMA.md](/Users/kennywang/app/baseball-player-manager/docs/SCHEMA.md) - normalized database schema and storage notes
+- [docs/API.md](/Users/kennywang/app/baseball-player-manager/docs/API.md) - complete HTTP API contract
 - [docs/DESIGN.md](/Users/kennywang/app/baseball-player-manager/docs/DESIGN.md) - visual and interaction guidance
 - [docs/FRONTEND.md](/Users/kennywang/app/baseball-player-manager/docs/FRONTEND.md) - frontend conventions
 - [docs/SECURITY.md](/Users/kennywang/app/baseball-player-manager/docs/SECURITY.md) - auth and security model

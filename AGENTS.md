@@ -18,7 +18,7 @@ npm run lint
 npm run build
 ```
 
-Copy `.env.example` to `.env.local` and set `DATABASE_URL` and `APP_ADMIN_PASSCODE`.
+Copy `.env.example` to `.env.local` and set `DATABASE_URL`, `APP_ADMIN_PASSCODE_HASH`, and `AUTH_SECRET`.
 Database migrations live in `supabase/migrations/`.
 
 ## Key Files
@@ -64,6 +64,8 @@ Plan file naming: `YYYYMMDD-简短描述.md`. Known debt lives in `docs/exec-pla
 ## Existing Docs
 
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) — observed current-state architecture
+- [docs/SCHEMA.md](./docs/SCHEMA.md) — normalized database schema and storage conventions
+- [docs/API.md](./docs/API.md) — complete HTTP API contract
 - [docs/DESIGN.md](./docs/DESIGN.md) — visual and interaction guidance
 - [docs/FRONTEND.md](./docs/FRONTEND.md) — frontend conventions
 - [docs/SECURITY.md](./docs/SECURITY.md) — auth and data protection

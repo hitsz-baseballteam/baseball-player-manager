@@ -235,13 +235,13 @@ npm run start
 
 ## 接口
 
-当前服务端接口：
+当前应用采用：
 
-- `POST /api/logout`
-- `GET /api/workspace`
-- `PUT /api/workspace`
+- `GET /api/workspace` 作为 bootstrap 聚合读取接口
+- `/api/players`、`/api/scenarios`、`/api/games`、`/api/milestones`、`/api/workspace/*` 作为资源化写接口
+- `POST /api/logout` 作为退出登录接口
 
-`/api/workspace` 依赖登录后签发的解锁 Cookie 保护。
+完整请求/响应契约见 [docs/API.md](/Users/kennywang/app/baseball-player-manager/docs/API.md)。
 
 ## 验证
 
@@ -257,6 +257,8 @@ npm run build
 
 - [AGENTS.md](/Users/kennywang/app/baseball-player-manager/AGENTS.md) - 仓库地图与协作规则
 - [docs/ARCHITECTURE.md](/Users/kennywang/app/baseball-player-manager/docs/ARCHITECTURE.md) - 当前架构说明
+- [docs/SCHEMA.md](/Users/kennywang/app/baseball-player-manager/docs/SCHEMA.md) - 归一化数据库 schema 与存储说明
+- [docs/API.md](/Users/kennywang/app/baseball-player-manager/docs/API.md) - 完整 HTTP API 契约
 - [docs/DESIGN.md](/Users/kennywang/app/baseball-player-manager/docs/DESIGN.md) - 视觉与交互规范
 - [docs/FRONTEND.md](/Users/kennywang/app/baseball-player-manager/docs/FRONTEND.md) - 前端约定
 - [docs/SECURITY.md](/Users/kennywang/app/baseball-player-manager/docs/SECURITY.md) - 认证与安全模型
