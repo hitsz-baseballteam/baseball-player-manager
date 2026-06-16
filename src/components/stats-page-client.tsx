@@ -930,6 +930,41 @@ function GlossaryTable({ title, rows }: { title: string; rows: GlossaryRow[] }) 
   );
 }
 
+// ── Two‑col input for game dialog ──
+
+function TwoColField({
+  label,
+  value,
+  onChange,
+  step = "1",
+}: {
+  label: string;
+  value: string | number;
+  onChange: (raw: string) => void;
+  step?: string;
+}) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+      <span style={{
+        fontWeight: 600, color: "var(--theme-muted)", minWidth: 72, textAlign: "right",
+        whiteSpace: "nowrap",
+      }}>{label}</span>
+      <input
+        type="number"
+        min="0"
+        step={step}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          flex: 1, padding: "5px 8px", border: "1px solid var(--theme-border)",
+          borderRadius: 4, background: "var(--theme-surface)", color: "var(--theme-fg)",
+          font: "inherit", fontSize: 12, maxWidth: 100,
+        }}
+      />
+    </label>
+  );
+}
+
 // ── Game Dialog ──
 
 type GameDialogProps = {
@@ -1122,54 +1157,43 @@ function GameDialog({
               {players.filter((p) => game.statLines.some((sl) => sl.playerId === p.id) || game.innings.some((inn) => inn.batters.includes(p.id))).map((p) => {
                 const sl = game.statLines.find((s) => s.playerId === p.id) ?? emptyPlayerGameStatLine(p.id);
                 return (
-                  <div key={p.id} style={{ display: "grid", gap: 8, padding: "10px 12px", background: "var(--theme-surface-alt)", borderRadius: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--theme-fg)" }}>{p.name} #{p.number}</span>
+                  <div key={p.id} style={{ display: "grid", gap: 10, padding: "12px 14px", background: "var(--theme-surface-alt)", borderRadius: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--theme-fg)" }}>{p.name} #{p.number}</span>
+
+                    {/* 打击 */}
                     <div className={styles.dialogSectionHeader}>打击</div>
-                    <div className={styles.dialogRowSmall}>
-                      {(["pa", "ab", "h", "hr", "rbi", "r", "sb", "bb", "so"] as const).map((k) => (
-                        <label key={k} className={styles.dialogField}>
-                          <span>{k.toUpperCase()}</span>
-                          <input type="number" min="0" value={sl[k]} onChange={(e) => updateStatNum(p.id, k, e.target.value)} />
-                        </label>
-                      ))}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" }}>
+                      <TwoColField label="打席 PA" value={sl.pa} onChange={(v) => updateStatNum(p.id, "pa", v)} />
+                      <TwoColField label="打数 AB" value={sl.ab} onChange={(v) => updateStatNum(p.id, "ab", v)} />
+                      <TwoColField label="安打 H" value={sl.h} onChange={(v) => updateStatNum(p.id, "h", v)} />
+                      <TwoColField label="本垒打 HR" value={sl.hr} onChange={(v) => updateStatNum(p.id, "hr", v)} />
+                      <TwoColField label="打点 RBI" value={sl.rbi} onChange={(v) => updateStatNum(p.id, "rbi", v)} />
+                      <TwoColField label="得分 R" value={sl.r} onChange={(v) => updateStatNum(p.id, "r", v)} />
+                      <TwoColField label="盗垒 SB" value={sl.sb} onChange={(v) => updateStatNum(p.id, "sb", v)} />
+                      <TwoColField label="四坏 BB" value={sl.bb} onChange={(v) => updateStatNum(p.id, "bb", v)} />
+                      <TwoColField label="三振 SO" value={sl.so} onChange={(v) => updateStatNum(p.id, "so", v)} />
                     </div>
+
+                    {/* 守备 */}
                     <div className={styles.dialogSectionHeader}>守备</div>
-                    <div className={styles.dialogRow}>
-                      {(["po", "a", "e"] as const).map((k) => (
-                        <label key={k} className={styles.dialogField}>
-                          <span>{k.toUpperCase()}</span>
-                          <input type="number" min="0" value={sl[k]} onChange={(e) => updateStatNum(p.id, k, e.target.value)} />
-                        </label>
-                      ))}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" }}>
+                      <TwoColField label="刺殺 PO" value={sl.po} onChange={(v) => updateStatNum(p.id, "po", v)} />
+                      <TwoColField label="助杀 A" value={sl.a} onChange={(v) => updateStatNum(p.id, "a", v)} />
+                      <TwoColField label="失误 E" value={sl.e} onChange={(v) => updateStatNum(p.id, "e", v)} />
                     </div>
+
+                    {/* 投球 */}
                     <div className={styles.dialogSectionHeader}>投球 (可选)</div>
-                    <div className={styles.dialogRowSmall}>
-                      {(["ip", "er", "soPitching", "bbPitching", "hPitching"] as const).map((k) => (
-                        <label key={k} className={styles.dialogField}>
-                          <span>{k === "ip" ? "IP" : k === "er" ? "ER" : k === "soPitching" ? "SO" : k === "bbPitching" ? "BB" : "H"}</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step={k === "ip" ? "0.1" : "1"}
-                            value={sl[k] ?? ""}
-                            onChange={(e) => updateStatNullable(p.id, k, e.target.value)}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                    <div className={styles.dialogRowSmall}>
-                      {(["w", "l", "sv", "np"] as const).map((k) => (
-                        <label key={k} className={styles.dialogField}>
-                          <span>{k === "w" ? "W" : k === "l" ? "L" : k === "sv" ? "SV" : "NP"}</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={sl[k] ?? ""}
-                            onChange={(e) => updateStatNullable(p.id, k, e.target.value)}
-                          />
-                        </label>
-                      ))}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" }}>
+                      <TwoColField label="局数 IP" value={sl.ip ?? ""} onChange={(v) => updateStatNullable(p.id, "ip", v)} step="0.1" />
+                      <TwoColField label="自责分 ER" value={sl.er ?? ""} onChange={(v) => updateStatNullable(p.id, "er", v)} />
+                      <TwoColField label="夺三振 SO" value={sl.soPitching ?? ""} onChange={(v) => updateStatNullable(p.id, "soPitching", v)} />
+                      <TwoColField label="四坏 BB" value={sl.bbPitching ?? ""} onChange={(v) => updateStatNullable(p.id, "bbPitching", v)} />
+                      <TwoColField label="被安打 H" value={sl.hPitching ?? ""} onChange={(v) => updateStatNullable(p.id, "hPitching", v)} />
+                      <TwoColField label="胜投 W" value={sl.w ?? ""} onChange={(v) => updateStatNullable(p.id, "w", v)} />
+                      <TwoColField label="败投 L" value={sl.l ?? ""} onChange={(v) => updateStatNullable(p.id, "l", v)} />
+                      <TwoColField label="救援 SV" value={sl.sv ?? ""} onChange={(v) => updateStatNullable(p.id, "sv", v)} />
+                      <TwoColField label="投球数 NP" value={sl.np ?? ""} onChange={(v) => updateStatNullable(p.id, "np", v)} />
                     </div>
                   </div>
                 );

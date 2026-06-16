@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 import { GUIDE_STEPS } from "@/lib/workspace";
@@ -19,11 +19,14 @@ type GuideOverlayProps = {
 
 export function GuideOverlay({ isOpen, onDismiss, guideRef, rootRef }: GuideOverlayProps) {
   const [step, setStep] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Defer portal rendering until after hydration (avoids SSR mismatch).
+  // useSyncExternalStore reads the client snapshot synchronously without
+  // triggering the react-hooks lint warnings that useEffect + setState causes.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const open = useCallback(() => {
     setStep(0);

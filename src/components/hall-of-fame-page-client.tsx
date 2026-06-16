@@ -283,12 +283,13 @@ function InducteeCard({ inductee, games }: { inductee: Inductee; games: import("
   const { player, batting, pitching, fielding, seasonBadges } = inductee;
   const [expanded, setExpanded] = useState(false);
 
-  const daysSinceJoined = player.joinedAt
-    ? Math.floor(
-        (Date.now() - new Date(player.joinedAt).getTime()) /
-          (1000 * 60 * 60 * 24),
-      )
-    : null;
+  const daysSinceJoined = useMemo(() => {
+    if (!player.joinedAt) return null;
+    return Math.floor(
+      (Date.now() - new Date(player.joinedAt).getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+  }, [player.joinedAt]);
 
   const personalMilestones = useMemo(
     () => computePlayerMilestones(player.id, games),

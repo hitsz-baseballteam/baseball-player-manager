@@ -18,6 +18,7 @@ import {
 import {
   isVersionConflict,
   loadWorkspaceSnapshot,
+  saveWithRetry,
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-client";
 
@@ -178,39 +179,74 @@ export function SettingsPageClient({
     description: "",
   });
 
-  function handleAddMilestone() {
+  async function handleAddMilestone() {
     if (!milestoneDraft.date || !milestoneDraft.title) return;
     const ms = createMilestone(
       milestoneDraft.date,
       milestoneDraft.title,
       milestoneDraft.description,
     );
+    setIsSaving(true);
+    setSaveError(null);
     const next = cloneWorkspace(workspace);
     next.milestones = [...workspace.milestones, ms];
     setMilestoneDraft({ date: "", title: "", description: "" });
-    saveWorkspaceSnapshot(next, version)
-      .then((result) => {
-        setVersion(result.version);
-        setWorkspace(sanitizeWorkspace(next));
-        toastRef.current?.showToast("里程碑已添加");
-      })
-      .catch(() => {
-        toastRef.current?.showToast("保存失败，请重试");
+    try {
+      const result = await saveWithRetry(next, version, (latest) => {
+        latest.milestones = [...latest.milestones, ms];
+        return latest;
       });
+      setVersion(result.version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      toastRef.current?.showToast("里程碑已添加");
+    } catch (error) {
+      try {
+        const snapshot = await loadWorkspaceSnapshot();
+        setVersion(snapshot.version);
+        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        if (isVersionConflict(error)) {
+          toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
+        } else {
+          setSaveError("保存失败，已恢复到最新数据。");
+        }
+      } catch {
+        toastRef.current?.showToast("保存失败且无法连接服务器。");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function handleDeleteMilestone(id: string) {
+  async function handleDeleteMilestone(id: string) {
+    setIsSaving(true);
+    setSaveError(null);
+    const ms = workspace.milestones.find((m) => m.id === id);
     const next = cloneWorkspace(workspace);
     next.milestones = workspace.milestones.filter((m) => m.id !== id);
-    saveWorkspaceSnapshot(next, version)
-      .then((result) => {
-        setVersion(result.version);
-        setWorkspace(sanitizeWorkspace(next));
-        toastRef.current?.showToast("里程碑已删除");
-      })
-      .catch(() => {
-        toastRef.current?.showToast("删除失败，请重试");
+    try {
+      const result = await saveWithRetry(next, version, (latest) => {
+        latest.milestones = latest.milestones.filter((m: { id: string }) => m.id !== id);
+        return latest;
       });
+      setVersion(result.version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      toastRef.current?.showToast("里程碑已删除");
+    } catch (error) {
+      try {
+        const snapshot = await loadWorkspaceSnapshot();
+        setVersion(snapshot.version);
+        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        if (isVersionConflict(error)) {
+          toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
+        } else {
+          setSaveError("删除失败，已恢复到最新数据。");
+        }
+      } catch {
+        toastRef.current?.showToast("操作失败且无法连接服务器。");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
