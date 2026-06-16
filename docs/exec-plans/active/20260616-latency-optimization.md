@@ -8,13 +8,13 @@
 - **Server Component 无 React `cache()`**：每次页面导航都重新读库
 - **HTTP 层无缓存头**：浏览器不会复用响应
 - **写路径是 wipe + reinsert**：工作区越大写越慢
-- **连接池 `max: 1`**：9 个 `SELECT` 串行化，"并行"只是装饰
+- **连接池 `max: 1`**：在 Supabase Pooler transaction-mode 下保守；9 个 `SELECT` 串行实际是因 `withTransaction` 共享同一 `PoolClient`，与 `max` 无关
 
 ## 现状（代码事实）
 
 ### 读路径
 
-- `src/lib/panel-server.ts::getPanelWorkspaceSnapshot` → `src/lib/workspace-store.ts::getOrCreateWorkspaceSnapshot` → 1 个事务 + 9 个 `SELECT`（代码上是 `Promise.all`，但 `max: 1` 串行执行）
+- `src/lib/panel-server.ts::getPanelWorkspaceSnapshot` → `src/lib/workspace-store.ts::getOrCreateWorkspaceSnapshot` → 1 个事务 + 9 个 `SELECT`（代码上是 `Promise.all`，但**所有查询复用 `withTransaction` 给的同一个 `PoolClient`**；node-postgres 在同一 client 上对查询排队执行，**与 `db.ts:91` 的 pool `max` 无关**）
 - 每次 Server Component 渲染都重新查 DB，无 `import { cache } from "react"`
 - `src/app/api/workspace/route.ts` 的 `GET` 响应无 `Cache-Control` / `ETag` / `Last-Modified`
 - 客户端使用 `useState` 持有 workspace，跨页面导航不共享
@@ -26,13 +26,13 @@
   2. `SELECT ... FOR UPDATE`（锁 meta）
   3. `wipeNormalizedWorkspace`（4 个 `DELETE`）
   4. `writeNormalizedWorkspace`（N 个 `INSERT`，N ≈ 球员 × 1 + 球员 × positions + 方案 × 19 + 比赛 × (1 + 局数 + stat lines) + milestones）
-- 20 球员 + 5 方案 + 50 比赛工作区：约 2000 个 `INSERT`，每次约 5s
+- 20 球员 + 5 方案 + 50 比赛工作区：约 1,000–1,500 个 `INSERT`（按 ~9 innings / ~9 stat lines per game 估算），每次约 3–5s
 
 ### 连接池
 
-- `src/lib/db.ts:99` `max: 1`（Supabase 路径）
-- `src/lib/db.ts:102` `max: 5`（其他 Postgres 路径）
+- `src/lib/db.ts:91` `max: supabaseConnection ? 1 : 5`（三元同表，Supabase 路径 vs 其他）
 - 注释说明：`max: 1` 是为绕开 Supabase PgBouncer transaction-mode 的 prepared statement 冲突
+- **澄清：`max` 控制 pool 大小，与 `selectNormalizedWorkspaceRecord` 内 9 SELECT 串行无关**（后者因共享同一 `PoolClient` 而排队）。`max: 1` 只影响跨请求的并发，不影响单次请求的查询串行
 
 ### 缓存
 
@@ -40,7 +40,6 @@
 - 客户端无 SWR / React Query
 - 无 Next.js `unstable_cache` / `revalidateTag`
 - 无 HTTP `Cache-Control` / `ETag`
-- 无 `src/middleware.ts`
 
 ## 目标结果
 
@@ -50,9 +49,15 @@
 | 初次打开 `/panel` | 0.5–1.2s | **P95 < 400ms** |
 | 写操作（小工作区） | 2–5s | **P95 < 500ms** |
 | 写操作（中工作区 ~20 球员 / 50 比赛） | 3–6s | **P95 < 1s** |
-| 9 个 `SELECT` 串行总耗时 | 50–270ms | **< 50ms**（真并行） |
+| 9 个 `SELECT` 串行总耗时 | 50–270ms | **不在 P0+P1 优化范围**（单 client 串行是设计选择；需架构变更才能并行，见下方"明确放弃的目标"） |
 | 409 冲突触发的客户端 reload | 200–800ms | **0ms**（同事务 snapshot + SWR `mutate`） |
 | 浏览器 10 秒内重复读 | 每次 1 个 RTT | **0 个 RTT**（HTTP 缓存） |
+
+### 不在 P0 + P1 优化范围的目标
+
+| 目标 | 不优化的原因 |
+|---|---|
+| 9 个 SELECT 串行耗时降到 < 50ms | 单 `PoolClient` 上 node-postgres 强制查询排队（与 `max` 无关）。要真并行需架构改动（多 client 共享 MVCC snapshot、或单 SQL JOIN）—— 不在 P0 + P1 范围。**50–270ms 现状可接受**：仍满足"初次打开 /panel P95 < 400ms"的总目标（其它开销 30–50ms，总计 80–320ms） |
 
 ---
 
@@ -77,7 +82,7 @@
 
 **改动范围：**
 - 新增 `src/lib/use-workspace-snapshot.ts`（`useSWR` 包装，`fallbackData` 用 `initialSnapshot`）
-- 修改 `src/components/player-manager-client.tsx`、`roster-page-client.tsx`、`scenarios-page-client.tsx`、`stats-page-client.tsx`、`hall-of-fame-page-client.tsx`
+- 修改 `src/components/player-manager-client.tsx`、`roster-page-client.tsx`、`scenarios-page-client.tsx`、`stats-page-client.tsx`、`hall-of-fame-page-client.tsx`（**注意**：HallOfFame 用 `useMemo` 而非 `useState`、无 mutation callback；接入 SWR 应是只读模式（其他 tab 写入时 live-update）而非全 mutation 客户端）
 - 保留 mutation 流程不变：mutate 成功后用 `mutate("workspace-snapshot", newSnapshot, { revalidate: false })` 同步本地缓存
 
 **验证：**
@@ -120,19 +125,20 @@
 
 ---
 
-#### P0-3. 调查并放宽 `max: 1` 连接池
+#### P0-3. 调查并按连接模式动态决定 `max`
 
-**修改原因：** `src/lib/db.ts:91` 的 `max: supabaseConnection ? 1 : 5` 让代码里的 `Promise.all(9 queries)` 在 Supabase 路径上退化为串行执行
+**修改原因：** `db.ts:91` 的 `max: supabaseConnection ? 1 : 5` 是**保守**的：仅在 Supabase transaction-mode Pooler（端口 6543）下为绕开 prepared-statement 限制才需要 `max: 1`；其他路径（Supabase 直连 5432、session-mode Pooler、非 Supabase Postgres）放宽不会触发该错误。本步骤聚焦"是否对其他路径过度保守"。**澄清：本步骤不会让 9 个 SELECT 真并行**（它们因共享同一 `PoolClient` 而排队，与 `max` 无关；详见"明确放弃的目标"）
 
-**产生的影响：** 9 个 `SELECT` 真并行；读路径延迟从"加和 50–270ms"降到"最慢单条 SQL 耗时"
+**产生的影响：**
+- 间接：放宽 `max` 不影响 `selectNormalizedWorkspaceRecord` 的 9 SELECT 串行
+- 正面：放宽后并发写、并发读请求（不同 tab 同时打开）不互相阻塞；写路径的连接获取更宽容
 
-**副作用：** Supabase transaction-mode Pooler（端口 6543）放宽 `max` 后可能触发 prepared-statement "already exists" 错误
+**副作用：** Supabase transaction-mode Pooler 放宽后可能触发 prepared-statement "already exists" 错误
 
 **目标结果：**
-- `selectNormalizedWorkspaceRecord` 内部 9 个 `SELECT` **真并行**
-- Supabase 直连（端口 5432）时 `max` 放宽到 5–10
-- Supabase transaction-mode Pooler（端口 6543）时维持 `max: 1`，或迁移到 session-mode Pooler
-- 读路径 P95 延迟下降 ≥ 50ms
+- 审计后 `DB_POOL_MAX` env 文档化（`.env.example` 增加）
+- 代码根据连接模式自动选择 `max`：Supabase transaction-mode Pooler 默认 `max: 1`，其他默认 `max: 5–10`
+- 显式记录在什么条件下"9 SELECT 真并行"才有可能（架构改动 → 不在 P0+P1 范围）
 
 **前置调查：**
 - 读取当前 `DATABASE_URL` 解析 hostname / port / query params
@@ -140,13 +146,15 @@
 - 监控 Supabase dashboard "Connection" 指标，确认放宽后无 prepared-statement 错误
 
 **改动范围：**
-- `src/lib/db.ts`：根据 hostname + port 动态决定 `max`，或新增 `DB_POOL_MAX` env 让运维随时调整
+- `src/lib/db.ts`：根据 hostname + port 动态决定 `max`，新增 `DB_POOL_MAX` env 作为手动覆盖
+- `.env.example`：增加 `DB_POOL_MAX` 注释
 - 注释解释每种模式的取舍
 
 **验证：**
 - `npm test` 全绿
-- 实际工作区下读 P95 延迟下降 ≥ 50ms
 - Supabase dashboard 无新 prepared-statement 错误日志
+- 切换到 session-mode Pooler（如果适用）后能正常 `max: 5`
+- 实际读 P95 延迟**不下降也是预期结果**（9 SELECT 仍串行）
 
 **兜底：**
 - 放宽后出现 prepared-statement 错误 → 通过 `DB_POOL_MAX=1` env 立即回退
@@ -270,8 +278,8 @@
 #### P2-2. 写入改 partial resource API（窄写面）
 
 **修改原因：**
-- 当前 `/api/players/{id}` PATCH 接口实际接收的是"全量 workspace + version"，执行的是"全 workspace 替换"——名不副实
-- 真实意图是"更新这一个 player"，但实现走的是 `writeNormalizedWorkspace`
+- 当前 `/api/players/{id}` PATCH 接口接收 `{ version, player }`（**单球员对象**），但底层实现走 `mutateWorkspaceSnapshot` → `writeNormalizedWorkspace` 仍是全 workspace 替换——名不副实
+- 真实意图是"更新这一个 player"，但实现是 wipe + reinsert 整个工作区
 - API 契约与实现不一致，不利于客户端理解和维护
 - 全 workspace 锁放大了 409 冲突概率
 
