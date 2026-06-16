@@ -12,6 +12,7 @@ import {
   type Inductee,
 } from "@/lib/hall-of-fame";
 import { panelNavItems } from "@/lib/routes";
+import { useWorkspaceSnapshot } from "@/lib/workspace-client";
 import {
   sanitizeWorkspace,
   type Workspace,
@@ -41,9 +42,15 @@ export function HallOfFamePageClient({
   initialWorkspace,
   initialVersion,
 }: HallOfFamePageClientProps) {
+  // Read-only page: no mutations, so we just observe the shared
+  // workspace cache and re-derive memoized data when it changes.
+  // `initialVersion` is accepted for API symmetry with the other
+  // client components but is not used for OCC on this page.
+  void initialVersion;
+  const { data: swrWorkspace } = useWorkspaceSnapshot(initialWorkspace);
   const workspace = useMemo(
-    () => sanitizeWorkspace(initialWorkspace),
-    [initialWorkspace],
+    () => sanitizeWorkspace(swrWorkspace ?? initialWorkspace),
+    [swrWorkspace, initialWorkspace],
   );
 
   const inductees = useMemo(
