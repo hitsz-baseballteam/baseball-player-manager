@@ -31,6 +31,124 @@ npm run dev
 
 访问 [http://localhost:3000](http://localhost:3000)。
 
+## 开发者说明
+
+这一节是给组织内开发成员使用的本地开发流程。
+
+### 1. 前置条件
+
+- Node.js 22 或 24
+- npm
+- 通过 GitHub SSH 访问本仓库的权限
+- 一个可用的开发 PostgreSQL 数据库
+
+当前 CI 运行在 Node 22 和 24 上，本地尽量保持一致，可以减少环境偏差。
+
+### 2. 克隆并安装依赖
+
+```bash
+git clone git@github.com:hitsz-baseballteam/baseball-player-manager.git
+cd baseball-player-manager
+npm install
+```
+
+### 3. 准备环境变量
+
+先创建本地环境文件：
+
+```bash
+cp .env.example .env.local
+```
+
+然后填写：
+
+- `DATABASE_URL`
+- `APP_ADMIN_PASSCODE_HASH`
+- `AUTH_SECRET`
+- `DATABASE_CA_CERT` 仅在数据库需要自定义 CA 时填写
+
+使用一个本地开发口令生成认证相关变量：
+
+```bash
+npm run auth:env -- "your-local-passcode"
+```
+
+将输出的 `APP_ADMIN_PASSCODE_HASH` 和 `AUTH_SECRET` 写入 `.env.local`。
+
+注意：
+
+- 运行时不要使用 `APP_ADMIN_PASSCODE`，当前应用要求 `APP_ADMIN_PASSCODE_HASH` 和 `AUTH_SECRET`
+- `.env.local` 不应提交到版本库
+
+### 4. 准备数据库
+
+你需要一个已经具备项目 schema 的 PostgreSQL 数据库。
+
+团队内通常有两种方式：
+
+1. 使用组织维护的共享开发库，并将其连接串配置到 `DATABASE_URL`
+2. 自己创建本地 PostgreSQL 数据库，并手动应用 `supabase/migrations/` 下的迁移
+
+当前 schema 入口文件是：
+
+- [supabase/migrations/20260529093022_create_app_workspace.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260529093022_create_app_workspace.sql)
+
+目前应用核心依赖一张 `public.app_workspace` 表，以及一个逻辑工作区 `default`。
+
+### 5. 启动应用
+
+```bash
+npm run dev
+```
+
+然后访问：
+
+- `http://localhost:3000` 公开主页
+- `http://localhost:3000/panel/login` 管理后台登录页
+
+登录时使用和你生成 `APP_ADMIN_PASSCODE_HASH` 时相同的口令。
+
+### 6. 先了解几个关键本地路由
+
+- `/` 公开球队主页
+- `/panel` 指挥台首页
+- `/panel/roster` 名册管理
+- `/panel/scenarios` 场景与排阵管理
+- `/panel/stats` 统计与比赛数据
+- `/panel/settings` 导入导出、重置与退出登录
+
+### 7. 去哪里修改代码
+
+- `src/app/` 放路由、页面、布局和 API 处理器
+- `src/components/` 放交互式 UI 组件
+- `src/lib/` 放共享业务逻辑、认证、持久化和数据清洗
+- `supabase/migrations/` 放数据库 schema 变更
+
+建议遵守这些边界：
+
+- 业务规则优先放在 `src/lib/`
+- 数据库访问集中在 `src/lib/db.ts` 和 `src/lib/workspace-store.ts`
+- 客户端数据保存统一走 `/api/workspace`
+
+### 8. 推送前先运行检查
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+这些就是当前 CI 强制执行的核心检查。
+
+### 9. 团队协作约定
+
+- 每个改动使用独立功能分支
+- 推送前先在本地完成验证
+- 代码、测试和文档尽量一起提交
+- 如果文档和代码冲突，先以代码为准，再补正文档
+
+中大型改动建议按 `AGENTS.md` 里的仓库约定，在 `docs/` 下补充 exec plan 或 ADR。
+
 ## 环境变量
 
 将 `.env.example` 复制为 `.env.local` 后，配置以下变量：

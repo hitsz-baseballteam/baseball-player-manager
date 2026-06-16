@@ -31,6 +31,124 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## For Developers
+
+This section is the recommended local development workflow for team members.
+
+### 1. Prerequisites
+
+- Node.js 22 or 24
+- npm
+- Access to this repository through GitHub SSH
+- Access to a development PostgreSQL database
+
+CI currently runs on Node 22 and 24, so staying on one of those versions reduces environment drift.
+
+### 2. Clone and install
+
+```bash
+git clone git@github.com:hitsz-baseballteam/baseball-player-manager.git
+cd baseball-player-manager
+npm install
+```
+
+### 3. Prepare environment variables
+
+Create a local env file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then fill in:
+
+- `DATABASE_URL`
+- `APP_ADMIN_PASSCODE_HASH`
+- `AUTH_SECRET`
+- `DATABASE_CA_CERT` only if your database requires a custom CA
+
+Generate the auth values from a local development passcode:
+
+```bash
+npm run auth:env -- "your-local-passcode"
+```
+
+Paste the printed `APP_ADMIN_PASSCODE_HASH` and `AUTH_SECRET` into `.env.local`.
+
+Important:
+
+- Do not use `APP_ADMIN_PASSCODE` at runtime. The app expects `APP_ADMIN_PASSCODE_HASH` and `AUTH_SECRET`.
+- Keep `.env.local` out of version control.
+
+### 4. Prepare the database
+
+You need a PostgreSQL database with the project schema.
+
+There are two common team workflows:
+
+1. Use a shared development database managed by the organization and set its connection string as `DATABASE_URL`.
+2. Create your own local PostgreSQL database and apply the migration in `supabase/migrations/`.
+
+The current schema entrypoint is:
+
+- [supabase/migrations/20260529093022_create_app_workspace.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260529093022_create_app_workspace.sql)
+
+At the moment the app relies on a single `public.app_workspace` table and one logical workspace slug: `default`.
+
+### 5. Start the app
+
+```bash
+npm run dev
+```
+
+Then open:
+
+- `http://localhost:3000` for the public homepage
+- `http://localhost:3000/panel/login` for the protected admin panel
+
+Log in with the same passcode you used when generating `APP_ADMIN_PASSCODE_HASH`.
+
+### 6. Understand the main local routes
+
+- `/` public team homepage
+- `/panel` command desk
+- `/panel/roster` roster management
+- `/panel/scenarios` scenario and lineup management
+- `/panel/stats` statistics and game data
+- `/panel/settings` import/export, reset, and logout
+
+### 7. Where to make changes
+
+- `src/app/` for routes, pages, layouts, and API handlers
+- `src/components/` for interactive UI surfaces
+- `src/lib/` for shared business logic, auth, persistence, and data sanitization
+- `supabase/migrations/` for schema changes
+
+As a rule:
+
+- put business rules in `src/lib/`
+- keep database access in `src/lib/db.ts` and `src/lib/workspace-store.ts`
+- keep client persistence going through `/api/workspace`
+
+### 8. Run checks before pushing
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+These are the same core checks enforced by CI.
+
+### 9. Team workflow expectations
+
+- Create a feature branch for each change
+- Verify your work locally before pushing
+- Keep code, tests, and docs together in the same change
+- If docs and code disagree, trust the code first and then fix the docs
+
+For medium or large changes, write supporting plans or ADRs under `docs/` following the repository conventions in `AGENTS.md`.
+
 ## Environment Variables
 
 Copy `.env.example` to `.env.local` and configure:
