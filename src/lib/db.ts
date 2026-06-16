@@ -39,6 +39,50 @@ function isSupabaseHost(hostname: string) {
   return hostname.endsWith(".supabase.co") || hostname.endsWith(".pooler.supabase.com");
 }
 
+export type PoolMaxInput = {
+  connectionString: string;
+  env?: NodeJS.ProcessEnv;
+};
+
+/**
+ * Determine the right `max` value for the pg pool based on the
+ * connection string and env. See `buildPoolConfig` for context.
+ *
+ * - `DB_POOL_MAX` env override wins
+ * - Supabase transaction-mode Pooler (port 6543, no `pgbouncer=true`) → 1
+ * - Supabase direct (port 5432) or session-mode Pooler (port 6543 with
+ *   `pgbouncer=true`) → 5
+ * - Non-Supabase Postgres → 5
+ * - Malformed URL → 5 (safe default)
+ */
+export function resolvePoolMax(
+  connectionString: string,
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const envMax = env.DB_POOL_MAX?.trim();
+  if (envMax) {
+    const parsed = Number.parseInt(envMax, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  try {
+    const url = new URL(connectionString);
+    if (!isSupabaseHost(url.hostname)) {
+      return 5;
+    }
+    if (url.port === "6543" && url.searchParams.get("pgbouncer") !== "true") {
+      // Transaction-mode Pooler: serialize through one connection
+      return 1;
+    }
+    // Supabase direct (5432) or session-mode Pooler
+    return 5;
+  } catch {
+    return 5;
+  }
+}
+
 function getConfiguredDatabaseCa() {
   const rawValue = process.env.DATABASE_CA_CERT?.trim();
 
@@ -88,7 +132,7 @@ export function buildPoolConfig(connectionString: string): PoolConfig {
   //
   return {
     connectionString: url.toString(),
-    max: supabaseConnection ? 1 : 5,
+    max: resolvePoolMax(connectionString, process.env),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
     allowExitOnIdle: true,

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { revalidateTag, unstable_cache } from "next/cache";
+
 import {
   createDefaultWorkspace,
   DEFAULT_WORKSPACE_SLUG,
@@ -20,6 +22,118 @@ import { getPool } from "@/lib/db";
 import type { PoolClient } from "pg";
 
 type Queryable = Pick<PoolClient, "query">;
+
+const WORKSPACE_CACHE_TAG = "workspace";
+
+/**
+ * Column lists for each table that `writeNormalizedWorkspace` bulk-inserts.
+ * These are the camelCase keys to read from each row object; the actual
+ * SQL parameter type casts are handled inside the INSERT statement.
+ */
+export const UNNEST_TABLE_COLUMNS = {
+  players: [
+    "id",
+    "workspaceId",
+    "sortOrder",
+    "name",
+    "number",
+    "throws",
+    "bats",
+    "status",
+    "joinedOn",
+    "profileType",
+    "age",
+    "heightCm",
+    "weightKg",
+    "fastballTopKmh",
+    "fastballAvgKmh",
+    "armStrengthM",
+    "thirtyMeterSec",
+    "scoutingSummary",
+    "pitcherRadar",
+    "fielderRadar",
+    "pitchTypes",
+  ],
+  positions: ["playerId", "positionCode"],
+  scenarios: [
+    "id",
+    "workspaceId",
+    "sortOrder",
+    "name",
+    "note",
+    "isActive",
+    "createdAt",
+    "updatedAt",
+  ],
+  defenseAssignments: ["scenarioId", "positionCode", "playerId"],
+  lineupSlots: ["scenarioId", "slotIndex", "playerId"],
+  games: [
+    "id",
+    "workspaceId",
+    "sortOrder",
+    "gameDate",
+    "opponent",
+    "gameType",
+    "totalInnings",
+    "note",
+  ],
+  innings: ["gameId", "inningNumber", "hits", "runs", "batters"],
+  statLines: [
+    "gameId",
+    "playerId",
+    "sortOrder",
+    "pa",
+    "ab",
+    "h",
+    "doubles",
+    "triples",
+    "hr",
+    "rbi",
+    "r",
+    "sb",
+    "bb",
+    "hbp",
+    "sf",
+    "so",
+    "ip",
+    "er",
+    "soPitching",
+    "bbPitching",
+    "hPitching",
+    "po",
+    "a",
+    "e",
+    "w",
+    "l",
+    "sv",
+    "np",
+  ],
+  milestones: [
+    "id",
+    "workspaceId",
+    "sortOrder",
+    "date",
+    "title",
+    "description",
+    "mediaUrl",
+  ],
+} as const;
+
+export type UnnestTableName = keyof typeof UNNEST_TABLE_COLUMNS;
+
+/**
+ * Convert an array of row objects into per-column value arrays suitable
+ * for a PostgreSQL `unnest()` batch INSERT. Returns `[]` for an empty
+ * input array (no INSERT needed).
+ */
+export function prepareUnnestArgs<T extends Record<string, unknown>>(
+  rows: T[],
+  tableName: UnnestTableName,
+): unknown[][] {
+  if (rows.length === 0) return [];
+  const columns = UNNEST_TABLE_COLUMNS[tableName];
+  return columns.map((col) => rows.map((row) => row[col]));
+}
 
 type LegacyWorkspaceRow = {
   id: string;
@@ -209,16 +323,67 @@ function normalizePlayerNumbersForStorage(workspace: Workspace): Workspace {
   };
 }
 
-async function withTransaction<T>(work: (client: PoolClient) => Promise<T>) {
-  const client = await getPool().connect();
+/**
+ * Wrap `work` in a read transaction on the given client.
+ *
+ * The client must be checked out from the pool and released by the caller
+ * (see `withTransaction` below). This is the read path — no isolation-level
+ * change, because a fresh `BEGIN` on a single connection already gives us
+ * a consistent snapshot of the data we just read.
+ */
+export async function wrapReadTransaction<T>(
+  client: Queryable,
+  work: () => Promise<T>,
+): Promise<T> {
+  await client.query("begin");
   try {
-    await client.query("begin");
-    const result = await work(client);
+    const result = await work();
     await client.query("commit");
     return result;
   } catch (error) {
     await client.query("rollback");
     throw error;
+  }
+}
+
+/**
+ * Wrap `work` in a write transaction on the given client.
+ *
+ * Sets `REPEATABLE READ` after `BEGIN` so the 9 SELECT reads inside a
+ * single write transaction see a consistent snapshot. Without this, between
+ * our SELECTs another writer could commit and we'd read a mix of v1 and
+ * v2 data.
+ *
+ * 409 convergence is *not* affected by the isolation level — it is
+ * guaranteed by the OCC version check + `SELECT ... FOR UPDATE` in
+ * `replaceWorkspaceSnapshot` / `mutateWorkspaceSnapshot`.
+ */
+export async function wrapWriteTransaction<T>(
+  client: Queryable,
+  work: () => Promise<T>,
+): Promise<T> {
+  await client.query("begin");
+  await client.query("set transaction isolation level repeatable read");
+  try {
+    const result = await work();
+    await client.query("commit");
+    return result;
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  }
+}
+
+type TransactionMode = "read" | "write";
+
+async function withTransaction<T>(
+  work: (client: PoolClient) => Promise<T>,
+  options: { mode?: TransactionMode } = {},
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    const wrap = options.mode === "write" ? wrapWriteTransaction : wrapReadTransaction;
+    return await wrap(client, () => work(client));
   } finally {
     client.release();
   }
@@ -868,7 +1033,7 @@ async function ensureNormalizedWorkspaceRecord(
   return created;
 }
 
-export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
+async function getOrCreateWorkspaceSnapshotImpl(): Promise<WorkspaceSnapshot> {
   return withTransaction(async (client) => {
     const record = await ensureNormalizedWorkspaceRecord(client, DEFAULT_WORKSPACE_SLUG);
     return {
@@ -879,11 +1044,21 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   });
 }
 
+/**
+ * Read the workspace snapshot, cached for 10s in the Next.js cache layer.
+ * Mutations call `revalidateTag("workspace")` to invalidate.
+ */
+export const getOrCreateWorkspaceSnapshot = unstable_cache(
+  getOrCreateWorkspaceSnapshotImpl,
+  ["workspace-snapshot"],
+  { revalidate: 10, tags: ["workspace"] },
+);
+
 export async function replaceWorkspaceSnapshot(params: {
   workspace: Workspace;
   version: number;
 }): Promise<WorkspaceSnapshot | null> {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const record = await ensureNormalizedWorkspaceRecord(client, DEFAULT_WORKSPACE_SLUG);
     const lockResult = await client.query(
       `
@@ -917,14 +1092,19 @@ export async function replaceWorkspaceSnapshot(params: {
       version: nextVersion,
       updatedAt,
     };
-  });
+  }, { mode: "write" });
+
+  if (result) {
+    revalidateTag(WORKSPACE_CACHE_TAG, "max");
+  }
+  return result;
 }
 
 export async function mutateWorkspaceSnapshot(params: {
   version: number;
   mutate: (current: Workspace) => Workspace;
 }): Promise<WorkspaceSnapshot | null> {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const record = await ensureNormalizedWorkspaceRecord(client, DEFAULT_WORKSPACE_SLUG);
     const lockResult = await client.query(
       `
@@ -958,7 +1138,12 @@ export async function mutateWorkspaceSnapshot(params: {
       version: nextVersion,
       updatedAt,
     };
-  });
+  }, { mode: "write" });
+
+  if (result) {
+    revalidateTag(WORKSPACE_CACHE_TAG, "max");
+  }
+  return result;
 }
 
 export async function backfillLegacyWorkspacesToNormalized() {

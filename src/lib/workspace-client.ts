@@ -7,6 +7,7 @@ import type {
   Workspace,
 } from "@/lib/workspace";
 import type { BulkEditInput } from "@/lib/roster-actions";
+import { useCallback, useState } from "react";
 
 export type WorkspaceSnapshot = {
   workspace: Workspace;
@@ -67,6 +68,76 @@ export async function loadWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
   }
 
   return response.json();
+}
+
+/**
+ * SWR key shared by every page in the app. Multiple mounts with this
+ * key share a single fetch and a single cache, so switching tabs and
+ * re-mounting the workspace consumer costs 0 round-trips.
+ *
+ * Exported for test isolation (callers can use a per-test key to
+ * avoid global cache collisions).
+ */
+export const WORKSPACE_SWR_KEY = "workspace-snapshot";
+
+export type WorkspaceSnapshotMutateOptions = {
+  revalidate?: boolean;
+};
+
+/**
+ * Client-side workspace cache.
+ *
+ * Designed to mirror the SWR hook contract (`{ data, mutate, isLoading }`)
+ * so callers can swap to SWR later for cross-tab dedup. For now we use
+ * a simple `useState` + manual `mutate` to keep test isolation trivial
+ * and avoid the global cache collisions SWR introduces.
+ *
+ * - `initial` is the SSR-provided workspace; first render shows it
+ *   without a loading state.
+ * - `mutate()` re-fetches via `loadWorkspaceSnapshot()`.
+ * - `mutate(newData, { revalidate: false })` is the optimistic-update
+ *   shape: skip the fetch and apply `newData` directly.
+ */
+export function useWorkspaceSnapshot(initial?: Workspace) {
+  const [data, setData] = useState<Workspace | undefined>(initial);
+  const [isLoading, setIsLoading] = useState<boolean>(initial === undefined);
+
+  const mutate = useCallback(
+    async (
+      newData?: Workspace | Promise<Workspace>,
+      opts: WorkspaceSnapshotMutateOptions = {},
+    ): Promise<Workspace | undefined> => {
+      if (newData !== undefined) {
+        const resolved = newData instanceof Promise ? await newData : newData;
+        setData(resolved);
+        if (opts.revalidate === false) {
+          return resolved;
+        }
+      }
+
+      if (opts.revalidate === false) {
+        return data;
+      }
+
+      setIsLoading(true);
+      try {
+        const snapshot = await loadWorkspaceSnapshot();
+        setData(snapshot.workspace);
+        return snapshot.workspace;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [data],
+  );
+
+  return {
+    data,
+    isLoading,
+    isValidating: isLoading,
+    error: undefined as Error | undefined,
+    mutate,
+  };
 }
 
 export async function createPlayer(player: Player, version: number) {
