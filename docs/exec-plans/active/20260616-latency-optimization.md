@@ -168,13 +168,14 @@
 
 **修改原因：** `src/lib/workspace-store.ts::writeNormalizedWorkspace` 用 9 个 for-loop 逐行 `INSERT`，每个 RTT 插 1 行；工作区规模线性放大写延迟
 
-**产生的影响：** 写延迟从 2–5s 降到 600ms–1s（小工作区）；RTT 数量从 ~2000 降到 ~9
+**产生的影响：** 写延迟从 3–6s 降到 600ms–1s（小工作区）；RTT 数量从 ~1,200 降到 ~9
 
 **副作用：** `unnest` 类型不匹配需要测试覆盖空数组 / 单行 / 多行 / 字段类型错误
 
+
 **目标结果：**
 - `writeNormalizedWorkspace` 中所有 for-loop `INSERT` 改为单条 `unnest` 批量 `INSERT`
-- 工作区写入 RTT 数量从 ~2000 降到 ~10（每个被改的表 1 个 RTT）
+- 工作区写入 RTT 数量从 ~1,200 降到 ~10（每个被改的表 1 个 RTT）
 - 写延迟从 2–5s 降到 600ms–1s（小工作区）
 
 **改动范围：**
@@ -196,7 +197,9 @@
 
 **产生的影响：** 5–10s 窗口内多次读共享服务端缓存值；mutation 仍即时反映到下次读
 
-**副作用：** 写后必须 `revalidateTag("workspace")` 强制失效，否则 mutation 后 5s 内读到旧数据
+**副作用：**
+- 写后必须 `revalidateTag("workspace")` 强制失效，否则 mutation 后 5s 内读到旧数据
+- Next.js 16 起新推荐 `'use cache'` + `cacheTag()` + `cacheLife()` 替代 `unstable_cache`；本步骤先用 `unstable_cache`（API 路由中仍可用，迁移成本低），后续可在 RSC 路径迁移到新 API
 
 **目标结果：**
 - 同一 5–10 秒窗口内的多次 `loadWorkspaceSnapshot()` 共享同一个服务端缓存值
@@ -207,6 +210,7 @@
 - `src/lib/workspace-store.ts`：`getOrCreateWorkspaceSnapshot` 改用 `unstable_cache(fn, ["workspace"], { revalidate: 10, tags: ["workspace"] })`
 - 写操作（`mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot`）成功后调用 `revalidateTag("workspace")`
 - 客户端无需改动（P0-1 的 SWR 失效由 `mutate` 触发）
+- 注：Next.js 16 导出 `cacheTag` / `cacheLife`（见 `node_modules/next/cache.d.ts`）；RSC 路径后续可改为 `'use cache'` 指令 + `cacheTag('workspace')` + `cacheLife({ revalidate: 10 })`
 
 **验证：**
 - `npm test` 全绿
@@ -217,24 +221,29 @@
 
 #### P1-3. `REPEATABLE READ` 隔离级 + 409 reload 收敛
 
-**修改原因：** 当前 default isolation（READ COMMITTED）下，409 reload 拿到的 snapshot 不一定是写后的最新一致版本，理论上可能"反复 409"
+**修改原因：** 当前 default isolation（READ COMMITTED）下，写事务内的 9 个 `SELECT`（`ensureNormalizedWorkspaceRecord`）每个走独立快照，理论上能读到不一致混合（例如其他事务在我们两次 SELECT 之间提交了一个 player）。`REPEATABLE READ` 让同一事务内所有 SELECT 看到一致快照，防御性硬化
 
-**产生的影响：** 409 reload 拿到的版本号确定收敛到写后版本；客户端 SWR `mutate(key)` 不再单独调 `loadWorkspaceSnapshot`
+**不解决 409 收敛**：409 机制已经由 OCC version check + `FOR UPDATE` 保证（`workspace-store.ts:889-901`）—— 与 isolation level 无关
+
+**产生的影响：**
+- 防御性：单写事务内 9 SELECT 看到一致快照，避免"半个 v1 + 半个 v2" 的诡异中间态
+- 409 收敛行为不变（仍由 OCC version check + `FOR UPDATE` 保证）
+- 客户端 SWR `mutate(key)` 路径不在本步骤改
 
 **副作用：** 写事务持有 snapshot 稍长，理论上锁竞争增加（实际低并发场景无感）
 
 **目标结果：**
-- 写事务使用 `REPEATABLE READ` 隔离级
-- 409 reload 时拿到的 snapshot 一定是一致版本（不会反复 409）
-- 409 reload 通过 SWR `mutate(key)` 触发，不再单独 `loadWorkspaceSnapshot`
+- 写事务（`mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot`）使用 `REPEATABLE READ` 隔离级
+- 验证事务内 9 SELECT 看到一致快照（写一个并发场景测试）
 
 **改动范围：**
-- `src/lib/workspace-store.ts::withTransaction`：写事务（`mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot`）第一个 `BEGIN` 后加 `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`
-- 客户端 `applyWorkspaceMutation` 错误处理中：409 → 触发 SWR `mutate("workspace-snapshot")` 而非手动 `loadWorkspaceSnapshot`
+- `src/lib/workspace-store.ts::withTransaction`：写事务第一个 `BEGIN` 后加 `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`
+- 读事务（`getOrCreateWorkspaceSnapshot`）保持默认 READ COMMITTED（无一致快照需求）
 
 **验证：**
 - `npm test` 全绿
-- 模拟并发写：两个客户端同时改 → 一个成功一个收到 409 → 409 客户端拿到的版本号正好是写后的版本
+- 新增并发写测试：两个客户端同时改 → 一个成功一个收到 409 → 409 客户端拿到的版本号正好是写后的版本（这个行为**不需要 REPEATABLE READ** 就能保证，仅作为 OCC 机制的回归保护）
+- 单事务内 9 SELECT 的一致性测试（如能构造）
 
 ---
 
@@ -247,7 +256,7 @@
 
 **修改原因：**
 - 当前 `mutateWorkspaceSnapshot` 是 wipe + reinsert：编辑一个球员号码会让 N 个 `INSERT` 在事务中执行，N 随工作区规模线性增长
-- 9 个 `SELECT` 读全表 + 4 个 `DELETE` 清空 + ~2000 个 `INSERT` 重建，是反范式的实现
+- 9 个 `SELECT` 读全表 + 4 个 `DELETE` 清空 + ~1,200 个 `INSERT` 重建（按 20 球员 + 5 方案 + 50 比赛 工作区估算），是反范式的实现
 - 违反"操作只应触达被改数据"的最小写入原则
 
 **变动范围：**
@@ -261,7 +270,7 @@
 
 **产生的影响：**
 - 性能：写延迟 2–5s → 50–200ms（看实际变更量；典型"改一个球员号码"应 < 100ms）
-- 写 RTT 数量：~2000 → ~10（每个被改的表 1 个 RTT）
+- 写 RTT 数量：~1,200 → ~10（每个被改的表 1 个 RTT）
 - 网络负载：客户端只发变更，payload 从"全量 workspace"降到"diff payload"
 - 锁粒度：不变（仍是 meta 行锁）
 
