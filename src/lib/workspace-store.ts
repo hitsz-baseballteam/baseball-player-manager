@@ -192,6 +192,23 @@ function hydrate(data: unknown): Workspace {
   return sanitizeWorkspace((migrated ?? data) as Workspace);
 }
 
+function normalizePlayerNumbersForStorage(workspace: Workspace): Workspace {
+  const seen = new Map<string, number>();
+
+  return {
+    ...workspace,
+    players: workspace.players.map((player, index) => {
+      const rawNumber = player.number.trim() || `unknown-${index + 1}`;
+      const nextCount = (seen.get(rawNumber) ?? 0) + 1;
+      seen.set(rawNumber, nextCount);
+
+      return nextCount === 1
+        ? { ...player, number: rawNumber }
+        : { ...player, number: `${rawNumber}-${nextCount}` };
+    }),
+  };
+}
+
 async function withTransaction<T>(work: (client: PoolClient) => Promise<T>) {
   const client = await getPool().connect();
   try {
@@ -581,7 +598,7 @@ async function writeNormalizedWorkspace(params: {
     createdAt,
     updatedAt,
   } = params;
-  const safeWorkspace = sanitizeWorkspace(workspace);
+  const safeWorkspace = normalizePlayerNumbersForStorage(sanitizeWorkspace(workspace));
   const createdAtValue = createdAt ?? new Date().toISOString();
   const updatedAtValue = updatedAt ?? new Date().toISOString();
 

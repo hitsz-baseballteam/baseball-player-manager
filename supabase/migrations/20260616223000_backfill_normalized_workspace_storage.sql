@@ -44,7 +44,12 @@ player_rows as (
   select
     workspace_id,
     player,
-    ordinality - 1 as sort_order
+    ordinality - 1 as sort_order,
+    coalesce(player->>'number', '') as raw_number,
+    row_number() over (
+      partition by workspace_id, coalesce(player->>'number', '')
+      order by ordinality
+    ) as number_rank
   from workspace_rows
   cross join lateral jsonb_array_elements(coalesce(data->'players', '[]'::jsonb))
     with ordinality as players(player, ordinality)
@@ -77,7 +82,11 @@ select
   player->>'id',
   sort_order::integer,
   coalesce(player->>'name', ''),
-  coalesce(player->>'number', ''),
+  case
+    when raw_number = '' then format('unknown-%s', sort_order + 1)
+    when number_rank = 1 then raw_number
+    else format('%s-%s', raw_number, number_rank)
+  end,
   coalesce(player->>'throws', 'R'),
   coalesce(player->>'bats', 'R'),
   coalesce(player->>'status', 'available'),
