@@ -314,7 +314,7 @@
 
 **不采用原因：**
 - 与刚完成的 `docs/exec-plans/completed/20260616-normalize-workspace-storage-cutover.md` 工作方向相反（从 JSONB 单行迁到归一化表）
-- 9 个 `SELECT` 当前是"假串行"（`max: 1` 导致），**P0-3 修复后真并行**，延迟不是瓶颈
+- 9 个 `SELECT` 当前是"串行"（`withTransaction` 共享同一 `PoolClient` 导致），**与 `max` 无关**；P0-3 不会让它并行，50–270ms 现状可接受
 - 即便用 VIEW 把 9 个查询合并成 1 个，也等同于把聚合层下沉到 SQL，未来要拆分更难
 - 单租户场景下"9 个并行查询 + `buildWorkspaceFromRows` 在 JS 里聚合"的成本 < 50ms
 
