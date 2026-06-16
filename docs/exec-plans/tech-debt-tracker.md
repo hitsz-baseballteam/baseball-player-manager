@@ -16,6 +16,7 @@
 | ID | 严重程度 | 描述 | 影响域 | 计划 |
 |---|---|---|---|---|
 | TD-09 | 高 | GitHub Actions CI 在 Node 22 环境下运行 `npm test` 时因测试入口与 loader / module mock 组合不兼容而稳定失败 | CI, 测试, 开发流程 | [20260616-ci-test-compatibility.md](./active/20260616-ci-test-compatibility.md) |
+| TD-10 | 高 | 面板（`/panel/*`）操作存在明显延迟和卡顿：客户端无 SWR、Server Component 无 `cache()`、连接池 `max: 1` 强制 9 个 `SELECT` 串行、写路径 wipe + reinsert 导致 20 球员 / 5 方案 / 50 比赛工作区单次写操作 2–5s | 数据访问, 性能, 用户体验 | [20260616-latency-optimization.md](./active/20260616-latency-optimization.md) |
 
 ## 已解决债务
 
