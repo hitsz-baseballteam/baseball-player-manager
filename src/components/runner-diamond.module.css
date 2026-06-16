@@ -1,0 +1,46 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  background: color-mix(in srgb, var(--theme-accent) 4%, var(--theme-bg));
+  border-radius: 10px;
+  border: 1px solid var(--theme-border);
+}
+
+.svg {
+  width: min(100%, 240px);
+  aspect-ratio: 1;
+}
+
+.baseLine {
+  stroke: var(--theme-border);
+  stroke-width: 1.5;
+}
+
+.runnerNumber {
+  fill: var(--theme-accent);
+  font-size: 3.6px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.runnerName {
+  fill: var(--theme-fg);
+  font-size: 2.8px;
+  font-weight: 600;
+}
+
+.runsBadge {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--theme-muted);
+  padding: 3px 12px;
+  border-radius: 6px;
+  background: var(--theme-surface-alt);
+}
+
+.runsBadge strong {
+  color: var(--theme-accent);
+  font-size: 16px;
+}
