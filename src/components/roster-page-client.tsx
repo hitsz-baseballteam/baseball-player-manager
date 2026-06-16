@@ -29,9 +29,14 @@ import {
   type Workspace,
 } from "@/lib/workspace";
 import {
+  bulkDeletePlayers,
+  bulkUpdatePlayers,
+  createPlayer,
+  deletePlayer as deletePlayerRequest,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  type WorkspaceSnapshot,
+  updatePlayer,
 } from "@/lib/workspace-client";
 import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
@@ -76,6 +81,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
   const commitAndSave = useCallback(
     async (
       mutator: (draft: Workspace) => void,
+      submit: (draft: Workspace, version: number) => Promise<WorkspaceSnapshot>,
       { successMessage, errorFallback }: { successMessage: string; errorFallback: string },
     ) => {
       const draft = cloneWorkspace(workspace);
@@ -83,7 +89,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
       setStatusMessage("正在同步到云端...");
 
       try {
-        const result = await saveWorkspaceSnapshot(draft, version);
+        const result = await submit(draft, version);
         setWorkspace(sanitizeWorkspace(result.workspace));
         setVersion(result.version);
         setStatusMessage(successMessage);
@@ -128,6 +134,15 @@ export function RosterPageClient(props: RosterPageClientProps) {
         (draft) => {
           upsertPlayer(draft, input, existing);
         },
+        (draft, currentVersion) => {
+          const player = draft.players.find((candidate) => candidate.id === (input.id ?? existing?.id));
+          if (!player) {
+            throw new Error("player_missing");
+          }
+          return input.id
+            ? updatePlayer(player, currentVersion)
+            : createPlayer(player, currentVersion);
+        },
         { successMessage: "球员已保存", errorFallback: "保存失败，请稍后重试" },
       );
       setDialog({ type: "closed" });
@@ -149,6 +164,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
         (draft) => {
           applyBulkEdit(draft, ids, input);
         },
+        (_draft, currentVersion) => bulkUpdatePlayers(ids, input, currentVersion),
         {
           successMessage: `已批量修改 ${ids.length} 名球员`,
           errorFallback: "批量编辑失败",
@@ -182,6 +198,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
         (draft) => {
           deletePlayers(draft, [playerId]);
         },
+        (_draft, currentVersion) => deletePlayerRequest(playerId, currentVersion),
         { successMessage: "球员已删除", errorFallback: "删除失败" },
       );
       setSelectedIds((prev) => {
@@ -211,6 +228,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
         (draft) => {
           deletePlayers(draft, ids);
         },
+        (_draft, currentVersion) => bulkDeletePlayers(ids, currentVersion),
         {
           successMessage: `已删除 ${ids.length} 名球员`,
           errorFallback: "批量删除失败",
@@ -246,6 +264,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
             draft.players[index] = nextPlayer;
           }
         },
+        (_draft, currentVersion) => updatePlayer(nextPlayer, currentVersion),
         {
           successMessage: "球员档案已保存",
           errorFallback: "保存失败，请稍后重试",

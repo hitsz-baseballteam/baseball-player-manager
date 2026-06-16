@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import styles from "@/components/hall-of-fame-page-client.module.css";
-import { computeDataMilestones, computePlayerMilestones, getAllTimeKings, getInductees, type AllTimeKing, type DataMilestone, type Inductee, type PlayerMilestone } from "@/lib/hall-of-fame";
+import {
+  computeDataMilestones,
+  computePlayerMilestones,
+  getAllTimeKings,
+  getInductees,
+  type Inductee,
+} from "@/lib/hall-of-fame";
 import { panelNavItems } from "@/lib/routes";
 import {
   sanitizeWorkspace,
@@ -282,14 +288,15 @@ export function HallOfFamePageClient({
 function InducteeCard({ inductee, games }: { inductee: Inductee; games: import("@/lib/workspace").Game[] }) {
   const { player, batting, pitching, fielding, seasonBadges } = inductee;
   const [expanded, setExpanded] = useState(false);
+  const [referenceNow] = useState(() => Date.now());
 
   const daysSinceJoined = useMemo(() => {
     if (!player.joinedAt) return null;
     return Math.floor(
-      (Date.now() - new Date(player.joinedAt).getTime()) /
+      (referenceNow - new Date(player.joinedAt).getTime()) /
         (1000 * 60 * 60 * 24),
     );
-  }, [player.joinedAt]);
+  }, [player.joinedAt, referenceNow]);
 
   const personalMilestones = useMemo(
     () => computePlayerMilestones(player.id, games),

@@ -7,10 +7,6 @@ import { HallOfFamePageClient } from "@/components/hall-of-fame-page-client";
 import type { Workspace } from "@/lib/workspace";
 import { createDefaultWorkspace } from "@/lib/workspace";
 
-function deepClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
 function makeWorkspace(): Workspace {
   const ws = createDefaultWorkspace(true);
   ws.players = ws.players.slice(0, 2);

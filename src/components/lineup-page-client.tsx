@@ -28,9 +28,11 @@ import {
   type Workspace,
 } from "@/lib/workspace";
 import {
+  activateScenario,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  type WorkspaceSnapshot,
+  updateScenarioAssignments,
 } from "@/lib/workspace-client";
 
 const NAV_ITEMS = panelNavItems("战术场景");
@@ -52,12 +54,15 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
   const allWarnings = [...warnings.critical, ...warnings.advisory];
 
   const handleSave = useCallback(
-    async (updated: Workspace) => {
+    async (
+      updated: Workspace,
+      submit: (workspace: Workspace, version: number) => Promise<WorkspaceSnapshot>,
+    ) => {
       setWorkspace(updated);
       setSaveError(null);
       setIsSaving(true);
       try {
-        const result = await saveWorkspaceSnapshot(updated, version);
+        const result = await submit(updated, version);
         setWorkspace(sanitizeWorkspace(result.workspace));
         setVersion(result.version);
       } catch (error) {
@@ -77,42 +82,91 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
   );
 
   function handleAutoAssign() {
-    handleSave(autoAssignActive(workspace));
+    const updated = autoAssignActive(workspace);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
     toastRef.current?.showToast("已自动排阵");
   }
 
   function handleClearAll() {
     if (!window.confirm("确认清空当前方案的守备和打线分配？")) return;
-    handleSave(clearAllAssignments(workspace));
+    const updated = clearAllAssignments(workspace);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
     toastRef.current?.showToast("阵容已清空");
   }
 
   function handleScenarioChange(id: string) {
-    handleSave(setActiveScenarioAction(workspace, id));
+    void handleSave(setActiveScenarioAction(workspace, id), (_next, currentVersion) =>
+      activateScenario(id, currentVersion));
   }
 
   function handleDefenseAssign(position: PositionCode, playerId: string) {
-    handleSave(assignDefensePosition(workspace, position, playerId));
+    const updated = assignDefensePosition(workspace, position, playerId);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleDefenseClear(position: PositionCode) {
-    handleSave(clearDefensePosition(workspace, position));
+    const updated = clearDefensePosition(workspace, position);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleDefenseSwap(fromPos: PositionCode, toPos: PositionCode) {
-    handleSave(swapDefensePositions(workspace, fromPos, toPos));
+    const updated = swapDefensePositions(workspace, fromPos, toPos);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleLineupAssign(index: number, playerId: string) {
-    handleSave(assignLineupSlot(workspace, index, playerId));
+    const updated = assignLineupSlot(workspace, index, playerId);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleLineupClear(index: number) {
-    handleSave(clearLineupSlot(workspace, index));
+    const updated = clearLineupSlot(workspace, index);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleLineupMove(fromIndex: number, toIndex: number) {
-    handleSave(moveLineupSlot(workspace, fromIndex, toIndex));
+    const updated = moveLineupSlot(workspace, fromIndex, toIndex);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   return (

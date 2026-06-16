@@ -54,8 +54,8 @@ From `package.json`:
 | `src/app/{roster,scenarios,stats,settings,players/**}/` | Redirect aliases that permanently forward to their `/panel` equivalents |
 | `src/app/lineup/page.tsx` | Compatibility redirect that forwards `/lineup` to `/panel/scenarios` |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
-| `src/app/api/workspace/route.ts` | Reads and writes the shared workspace snapshot |
-| `src/proxy.ts` | Protects `/panel/*` and `/api/workspace` by validating the signed unlock cookie |
+| `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint |
+| `src/proxy.ts` | Protects `/panel/*` and `/api/workspace/*` by validating the signed unlock cookie |
 | `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components
@@ -75,17 +75,20 @@ From `package.json`:
 Database access is split across:
 
 - `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`, with Supabase-host detection that normalizes `sslmode` handling and enforces strict TLS certificate verification
-- `src/lib/workspace-store.ts` — read/create/update operations for the single shared workspace snapshot
+- `src/lib/workspace-store.ts` — assembles the shared workspace snapshot from normalized tables and applies transactional version-checked writes
 
 Observed behavior:
 
 - the app uses one logical workspace slug: `default`
+- `app_workspace_meta` stores the workspace version/token and top-level preferences
+- players, positions, scenarios, assignments, games, innings, stat lines, and milestones live in dedicated `app_*` tables
 - reads sanitize database data before returning it
 - writes sanitize incoming workspace data before persisting it
 - updates increment a numeric `version`
-- update conflicts return `null` when `WHERE slug = $4 AND version = $5` matches no row
+- update conflicts return `null` when the requested `version` no longer matches the locked workspace-meta row
+- the legacy `public.app_workspace` JSONB table is retained only as a rollback/bootstrap source during the cutover window
 
-On the client side, `src/lib/workspace-client.ts` wraps `/api/workspace` and provides `saveWithRetry()` to reload and retry after a version conflict.
+On the client side, `src/lib/workspace-client.ts` keeps `GET /api/workspace` as the bootstrap read path, while normal writes go through resource-specific routes such as `/api/players`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*`, and `/api/workspace/import|reset|preferences`. Conflict retries are handled by `submitMutationWithRetry()`.
 
 ### 3. Authentication and request protection
 
@@ -96,13 +99,13 @@ Relevant files:
 - `src/lib/auth.ts` — verifies `APP_ADMIN_PASSCODE_HASH`, signs cookies with `AUTH_SECRET`, and enforces absolute session expiry
 - `src/app/panel/login/actions.ts` — verifies the submitted passcode, applies rate limiting, sets the `baseball_manager_unlock` cookie, and redirects
 - `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used by login submissions, logout, and workspace routes
-- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace` requests with `401`
+- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace/*` requests with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
 Observed limits and boundaries:
 
 - login submissions are limited per IP to 5 requests per 60 seconds
-- workspace reads/writes and logout requests also have route-level rate limits
+- workspace reads, workspace resource writes, and logout requests also have route-level rate limits
 - the unlock cookie is `httpOnly`, `sameSite=lax`, `secure` in production, and includes a server-validated absolute expiry
 - `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
 - panel and API responses receive `private, no-store` headers through `next.config.ts`
@@ -146,9 +149,9 @@ These notes are based on current code imports and call sites, not aspirational r
 - `src/app/**` acts as the runtime boundary: pages and API routes call into `src/lib/**`
 - `src/lib/workspace.ts` is intentionally reused across server and client code for shared types and pure logic
 - browser code does not import `pg`; database access stays in `db.ts` / `workspace-store.ts`
-- client persistence goes through `fetch('/api/workspace')` in `workspace-client.ts`
+- client bootstrap reads go through `fetch('/api/workspace')` in `workspace-client.ts`
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
-- React route pages persist through `workspace-client.ts` and the shared `/api/workspace` boundary rather than calling database code directly
+- React route pages persist through `workspace-client.ts` and the resource-oriented `/api/*` boundary rather than calling database code directly
 - homepage direct actions reuse shared pure logic (`lineup-actions.ts`, `export-actions.ts`) instead of selector-based DOM bridge calls
 - `roster-actions.ts` now also owns roster filter helpers used by the roster workbench
 

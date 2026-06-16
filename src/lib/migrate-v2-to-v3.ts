@@ -54,6 +54,10 @@ function gameRecordToStatLine(playerId: string, gr: GameRecord): PlayerGameStatL
     po: 0,
     a: 0,
     e: 0,
+    w: 0,
+    l: 0,
+    sv: 0,
+    np: 0,
   };
 }
 
@@ -92,7 +96,8 @@ export function migrateV2toV3(raw: unknown): Workspace | null {
       }
     }
     // Strip games from profile — sanitizer will rebuild without it
-    const { games: _, ...profileRest } = (profile ?? {}) as Record<string, unknown>;
+    const profileRest = { ...((profile ?? {}) as Record<string, unknown>) };
+    delete profileRest.games;
     return { ...player, profile: profileRest } as Player;
   });
 
@@ -109,6 +114,7 @@ export function migrateV2toV3(raw: unknown): Workspace | null {
     scenarios: scenarios as Workspace["scenarios"],
     activeScenarioId: String(v2.activeScenarioId ?? ""),
     games,
+    milestones: [],
     preferences: {
       helpDismissed: Boolean((v2.preferences as Record<string, boolean> | undefined)?.helpDismissed),
     },

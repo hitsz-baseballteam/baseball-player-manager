@@ -1,16 +1,12 @@
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
 
-import { describe, it } from "node:test";
-import { strict as assert } from "node:assert";
-
 import {
   computeBattingLine,
   computePitchingLine,
   computeFieldingLine,
   deriveSeasons,
   filterGamesBySeason,
-  filterGamesByType,
   qualifiesForRateLeaderboard,
 } from "@/lib/stats";
 import type { Game, PlayerGameStatLine } from "@/lib/workspace";

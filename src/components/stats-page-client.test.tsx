@@ -41,7 +41,7 @@ function makeWorkspace(): Workspace {
 
 // Configurable mock behavior per test — mutated by individual tests before render
 const mockConfig = {
-  saveWithRetry: null as
+  submitMutationWithRetry: null as
     | ((workspace: Workspace, version: number, _mutation: unknown) => Promise<{ workspace: Workspace; version: number; updatedAt: string }>)
     | null,
   loadWorkspaceSnapshot: null as
@@ -50,7 +50,7 @@ const mockConfig = {
   isVersionConflict: null as ((error: unknown) => boolean) | null,
 };
 
-function defaultSaveRetry(workspace: Workspace, version: number) {
+function defaultSubmit(workspace: Workspace, version: number) {
   return Promise.resolve({
     workspace: cloneWorkspace(workspace),
     version: version + 1,
@@ -70,7 +70,7 @@ describe("StatsPageClient save lock & rollback", () => {
   const originalConfirm = window.confirm;
 
   beforeEach(async () => {
-    mockConfig.saveWithRetry = defaultSaveRetry;
+    mockConfig.submitMutationWithRetry = defaultSubmit;
     mockConfig.loadWorkspaceSnapshot = defaultReload;
     mockConfig.isVersionConflict = null;
 
@@ -79,10 +79,24 @@ describe("StatsPageClient save lock & rollback", () => {
 
     mock.module("@/lib/workspace-client", {
       namedExports: {
-        async saveWithRetry(workspace: Workspace, version: number, mutation: unknown) {
-          const fn = mockConfig.saveWithRetry;
-          if (fn) return fn(workspace, version, mutation);
-          return defaultSaveRetry(workspace, version);
+        async submitMutationWithRetry(
+          workspace: Workspace,
+          version: number,
+          applyMutation: (latest: Workspace) => Workspace,
+        ) {
+          const fn = mockConfig.submitMutationWithRetry;
+          const nextWorkspace = applyMutation(cloneWorkspace(workspace));
+          if (fn) return fn(nextWorkspace, version, applyMutation);
+          return defaultSubmit(nextWorkspace, version);
+        },
+        async createGame() {
+          throw new Error("not_implemented");
+        },
+        async updateGame() {
+          throw new Error("not_implemented");
+        },
+        async deleteGame() {
+          throw new Error("not_implemented");
         },
         async loadWorkspaceSnapshot() {
           const fn = mockConfig.loadWorkspaceSnapshot;
@@ -127,7 +141,7 @@ describe("StatsPageClient save lock & rollback", () => {
   });
 
   it("on save failure with reload success: rolls back to server state and shows error", async () => {
-    mockConfig.saveWithRetry = async () => {
+    mockConfig.submitMutationWithRetry = async () => {
       throw new Error("Save failed");
     };
     // Reload returns empty games to verify the rollback replaces optimistic state
@@ -157,7 +171,7 @@ describe("StatsPageClient save lock & rollback", () => {
   });
 
   it("on save failure with reload failure: shows unreachable message", async () => {
-    mockConfig.saveWithRetry = async () => {
+    mockConfig.submitMutationWithRetry = async () => {
       throw new Error("Save failed");
     };
     mockConfig.loadWorkspaceSnapshot = async () => {
@@ -187,7 +201,7 @@ describe("StatsPageClient save lock & rollback", () => {
     });
 
     const saveStarted = new Promise<void>((resolve) => {
-      mockConfig.saveWithRetry = async (workspace: Workspace, version: number) => {
+      mockConfig.submitMutationWithRetry = async (workspace: Workspace, version: number) => {
         resolve();
         await new Promise((r) => setTimeout(r, 5000));
         return {
@@ -214,7 +228,7 @@ describe("StatsPageClient save lock & rollback", () => {
   });
 
   it("on version conflict with reload success: shows conflict message and rolls back", async () => {
-    mockConfig.saveWithRetry = async () => {
+    mockConfig.submitMutationWithRetry = async () => {
       const err = new Error("version_conflict");
       throw err;
     };

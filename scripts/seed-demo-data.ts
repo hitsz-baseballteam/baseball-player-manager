@@ -6,7 +6,7 @@
  */
 
 import { Pool } from "pg";
-import { createDefaultWorkspace, type Workspace } from "../src/lib/workspace";
+import { createDefaultWorkspace } from "../src/lib/workspace";
 
 // Use the same DATABASE_URL as the app
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -42,8 +42,6 @@ async function seed() {
   });
 
   // ── Generate demo games across two seasons ──
-  const playerIds = ws.players.map((p) => p.id);
-
   type StatTemplate = {
     playerId: string;
     pa: number; ab: number; h: number; doubles: number; triples: number;
@@ -287,7 +285,7 @@ async function seed() {
       gameType: g.gameType,
       totalInnings: 9,
       innings: [],
-      statLines: g.statLines.map((sl, idx) => ({
+      statLines: g.statLines.map((sl) => ({
         playerId: sl.playerId,
         pa: sl.pa, ab: sl.ab, h: sl.h,
         doubles: sl.doubles ?? 0, triples: sl.triples ?? 0,
