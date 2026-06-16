@@ -192,95 +192,6 @@
 
 ---
 
-### P2 — 写路径重构（API 契约更精细）
-
-#### P2-1. 写路径改 diff（取消 wipe + reinsert）
-
-**目标结果：**
-- 客户端只发"变更"（`{upsert, delete} × {players, scenarios, games, ...}`）
-- 服务端只动受影响的行，不再 wipe 全表
-- 单次"改一个球员号码"延迟 < 100ms
-
-**改动范围：**
-- 新增 `src/lib/workspace-diff.ts`：纯函数 `diffWorkspace(prev, next): WorkspaceDiff`
-- `src/lib/workspace-store.ts::mutateWorkspaceSnapshot` 改用 diff：
-  - `INSERT ... ON CONFLICT (workspace_id, id) DO UPDATE` 做 upsert
-  - `DELETE ... WHERE id = ANY($1::text[])` 做 delete
-- 客户端 `submitMutationWithRetry` 改为发 diff 而非全量 workspace
-- 兼容：保留全量发送的能力作为 fallback（API dual-mode，feature flag 控制）
-
-**验证：**
-- 现有 240 个测试全绿
-- 新增 diff 单测覆盖：增 / 删 / 改 / 不动 / 嵌套改 / 数组改
-- 端到端：编辑单球员 < 100ms；编辑单 stat line < 100ms
-
-**风险：**
-- 数据一致性最关键的环节 → 改完必须人工验证 demo 数据集完全可恢复
-- 建议：先在分支上开发，feature flag 控制使用 diff 还是全量
-
----
-
-#### P2-2. 真 REST 资源 API（窄写面）
-
-**目标结果：**
-- `PATCH /api/players/{id}` 只 UPDATE 一行，返回新 version + 该 player
-- `PUT /api/scenarios/{id}/assignments` 只更新该 scenario 的 assignments
-- API 契约跟实现一致（不再是"假装 PATCH 实际 PUT 全量"）
-- 减少 409 发生率（窄写面 → 锁粒度更细）
-
-**改动范围：**
-- `src/app/api/players/[playerId]/route.ts::PATCH`：改为单行 UPDATE
-- `src/app/api/scenarios/[scenarioId]/assignments/route.ts::PUT`：改为单 scenario UPDATE
-- 其他 resource route 类比
-- 保留全量 workspace API 作为 backup（`/api/workspace` PUT 仍可工作）
-
-**验证：**
-- `npm test` 全绿
-- 端到端：编辑一个球员 → 数据库实际只动 1 行（用 Supabase 日志或 pgaudit 验证）
-
----
-
-### P3 — 架构升级（可选，独立决策）
-
-#### P3-1. 迁移到 Neon + `@neondatabase/serverless` HTTP driver
-
-**目标结果：**
-- Vercel function 冷启省 200–400ms（HTTP 协议 + 池化）
-- 不再有 Supabase transaction-mode Pooler 的 `max: 1` 限制
-- 标准 PostgreSQL 兼容，迁移零代码改动（除 db.ts）
-
-**改动范围：**
-- `src/lib/db.ts`：用 `@neondatabase/serverless` 替换 `pg.Pool`
-- CI / Vercel env 注入新 `DATABASE_URL`
-- 三个 SQL 迁移文件继续在 Neon 上跑（标准 PG 完全兼容）
-
-**验证：**
-- `npm test` 全绿
-- Vercel 部署后冷启延迟下降（Vercel Analytics 验证）
-- 数据完整性：现有 demo 数据完整迁移
-
-**前置条件：**
-- 必须先完成 P0-3 确认当前 `DATABASE_URL` 模式，否则无法判断能否直接切换
-
----
-
-#### P3-2. 冷热数据分离
-
-**目标结果：**
-- 慢变数据（球员档案、历史比赛）走长缓存（`revalidate: 300`）
-- 热数据（活动方案、待保存的草稿）走 SWR 短 TTL
-- 大数据量下（500 球员 / 500 比赛）初次加载 < 200ms
-
-**改动范围：**
-- 拆 `getOrCreateWorkspaceSnapshot` 为 `getStaticWorkspacePart`（球员 / 历史比赛）和 `getActiveScenarioPart`（活动方案）
-- 客户端按需订阅
-
-**验证：**
-- 大数据集下首屏 < 200ms
-- 写操作不影响慢变数据缓存
-
----
-
 ## 风险与回滚
 
 | 风险 | 触发条件 | 缓解 / 回滚 |
@@ -289,16 +200,16 @@
 | `cache()` 在并发下泄漏快照 | 写后立刻读 | 写操作后用 `revalidateTag` 强制失效 |
 | 放宽 `max` 导致 prepared-statement 错 | Supabase dashboard 报错 | `DB_POOL_MAX=1` env 立即回退 |
 | `unnest` 类型不匹配 | 数组为空 / 字段类型错误 | 强类型 + 单元测试覆盖空数组 / 单行 / 多行 |
-| diff 写路径数据不一致 | 嵌套对象 / 数组部分更新 | 保留全量路径作为 fallback；feature flag 控制 |
-| Neon 迁移数据丢失 | 切换 DATABASE_URL 瞬间 | 迁移前 `pg_dump` 全量备份；保留旧 env 24h |
 
 ## 不在范围
 
-- 不改数据库 schema（除非 diff 写路径需要新列）
+- 不改数据库 schema
 - 不改 UI 设计
 - 不改认证 / 权限模型
-- 不引入 Redis / 外部缓存（除非 P3 阶段有强需求）
-- 不动 `globals.css` / CSS module（除非性能相关）
+- 不引入 Redis / 外部缓存
+- 不动 `globals.css` / CSS module
+- 不换数据库供应商
+- 不改 API 端点契约（resource 级别的 PATCH/PUT 拆分留作未来工作）
 
 ## 验证流程（每项完成后必做）
 
@@ -307,7 +218,7 @@
 3. `npm run build`
 4. 浏览器 Network 面板：观察 `/api/workspace` 请求次数与延迟
 5. 实际操作场景：编辑球员、拖守位、切 tab
-6. （如适用）Supabase / Neon dashboard 错误日志
+6. Supabase dashboard 错误日志
 
 ## 完成判据（整体）
 
@@ -319,7 +230,7 @@
   - 写操作 P95 < 500ms（小工作区）
   - 写操作 P95 < 1s（中工作区 ~20 球员 / 50 比赛）
 - `npm run lint` + `npm test` + `npm run build` 全绿
-- Supabase / Neon dashboard 无新错误日志
+- Supabase dashboard 无新错误日志
 
 ## 完成后
 
