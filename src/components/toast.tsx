@@ -45,6 +45,7 @@ export function ToastProvider({ children, toastRef }: {
       {mounted
         ? createPortal(
             <div id="toast" className={visible ? "omp-toast show" : "omp-toast"} role="status" aria-live="polite">
+              {message}
             </div>,
             document.body,
           )

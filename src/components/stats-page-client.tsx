@@ -25,9 +25,13 @@ import {
   type Workspace,
 } from "@/lib/workspace";
 import {
+  createGame,
+  deleteGame,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWithRetry,
+  submitMutationWithRetry,
+  type WorkspaceSnapshot,
+  updateGame,
 } from "@/lib/workspace-client";
 import { panelNavItems } from "@/lib/routes";
 
@@ -116,7 +120,10 @@ export function StatsPageClient({
   // applyMutation is the pure function to apply to the latest workspace.
   // It is used both for optimistic local update and conflict retry.
   const handleSave = useCallback(
-    async (applyMutation: (current: Workspace) => Workspace) => {
+    async (
+      applyMutation: (current: Workspace) => Workspace,
+      submit: (nextWorkspace: Workspace, version: number) => Promise<WorkspaceSnapshot>,
+    ) => {
       // Prevent concurrent saves within the same session
       if (savingRef.current) {
         toastRef.current?.showToast("操作已在保存中，请稍后再试。");
@@ -130,7 +137,12 @@ export function StatsPageClient({
       setSaveError(null);
 
       try {
-        const result = await saveWithRetry(optimistic, versionRef.current, applyMutation);
+        const result = await submitMutationWithRetry(
+          workspaceRef.current,
+          versionRef.current,
+          applyMutation,
+          submit,
+        );
         setVersion(result.version);
         setWorkspace(sanitizeWorkspace(result.workspace));
       } catch (error) {
@@ -306,7 +318,7 @@ export function StatsPageClient({
       const next = cloneWorkspace(current);
       next.games = [...current.games, game];
       return next;
-    });
+    }, (_nextWorkspace, currentVersion) => createGame(game, currentVersion));
     setDialog({ type: "closed" });
   }
 
@@ -315,7 +327,7 @@ export function StatsPageClient({
       const next = cloneWorkspace(current);
       next.games = current.games.map((g) => (g.id === game.id ? game : g));
       return next;
-    });
+    }, (_nextWorkspace, currentVersion) => updateGame(game, currentVersion));
     setDialog({ type: "closed" });
   }
 
@@ -325,7 +337,7 @@ export function StatsPageClient({
       const next = cloneWorkspace(current);
       next.games = current.games.filter((g) => g.id !== gameId);
       return next;
-    });
+    }, (_nextWorkspace, currentVersion) => deleteGame(gameId, currentVersion));
   }
 
   return (

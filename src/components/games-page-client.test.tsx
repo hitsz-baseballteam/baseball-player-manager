@@ -117,27 +117,53 @@ function workspaceWithPlayer(playerId: string) {
 describe("GamesPageClient", () => {
   const playerId = "test-p-001";
   const savedWorkspaces: Workspace[] = [];
+  let latestWorkspace = cloneWorkspace(baseWorkspace);
   const originalConfirm = window.confirm;
 
   beforeEach(async () => {
     savedWorkspaces.length = 0;
+    latestWorkspace = cloneWorkspace(baseWorkspace);
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
     window.confirm = (() => true) as typeof window.confirm;
 
     mock.module("@/lib/workspace-client", {
       namedExports: {
-        async saveWorkspaceSnapshot(workspace: Workspace, version: number) {
-          savedWorkspaces.push(cloneWorkspace(workspace));
+        async createGame(game: Game, version: number) {
+          latestWorkspace = cloneWorkspace(latestWorkspace);
+          latestWorkspace.games = [...latestWorkspace.games, cloneWorkspace(game)];
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
           return {
-            workspace: cloneWorkspace(workspace),
+            workspace: cloneWorkspace(latestWorkspace),
+            version: version + 1,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        async updateGame(game: Game, version: number) {
+          latestWorkspace = cloneWorkspace(latestWorkspace);
+          latestWorkspace.games = latestWorkspace.games.map((item) =>
+            item.id === game.id ? cloneWorkspace(game) : item,
+          );
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
+          return {
+            workspace: cloneWorkspace(latestWorkspace),
+            version: version + 1,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        async deleteGame(gameId: string, version: number) {
+          latestWorkspace = cloneWorkspace(latestWorkspace);
+          latestWorkspace.games = latestWorkspace.games.filter((game) => game.id !== gameId);
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
+          return {
+            workspace: cloneWorkspace(latestWorkspace),
             version: version + 1,
             updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
           };
         },
         async loadWorkspaceSnapshot() {
           return {
-            workspace: cloneWorkspace(baseWorkspace),
+            workspace: cloneWorkspace(latestWorkspace),
             version: 99,
             updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
           };
@@ -163,6 +189,7 @@ describe("GamesPageClient", () => {
   it("renders the games page with tab switch, summary, and game list", async () => {
     const user = userEvent.setup();
     const workspace = workspaceWithPlayer(playerId);
+    latestWorkspace = cloneWorkspace(workspace);
 
     render(
       <GamesPageClient
@@ -196,6 +223,7 @@ describe("GamesPageClient", () => {
   it("adds and deletes records while persisting the updated workspace", async () => {
     const user = userEvent.setup();
     const workspace = workspaceWithPlayer(playerId);
+    latestWorkspace = cloneWorkspace(workspace);
 
     render(
       <GamesPageClient
@@ -226,6 +254,7 @@ describe("GamesPageClient", () => {
   it("rejects invalid baseball inning notation before saving", async () => {
     const user = userEvent.setup();
     const workspace = workspaceWithPlayer(playerId);
+    latestWorkspace = cloneWorkspace(workspace);
 
     render(
       <GamesPageClient
@@ -249,6 +278,7 @@ describe("GamesPageClient", () => {
   it("edits an existing record and persists the saved changes", async () => {
     const user = userEvent.setup();
     const workspace = workspaceWithPlayer(playerId);
+    latestWorkspace = cloneWorkspace(workspace);
 
     render(
       <GamesPageClient

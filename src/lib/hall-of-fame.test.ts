@@ -168,7 +168,6 @@ describe("computeSeasonBadges", () => {
 
   it("awards hit king badge when player leads in hits", () => {
     const p1 = player({ id: "p1", name: "Leader" });
-    const p2 = player({ id: "p2", name: "Other" });
     const games = [
       game({ id: "g1", date: "2026-06-01", statLines: [
         statLine("p1", { h: 3, ab: 4 }),
@@ -184,7 +183,6 @@ describe("computeSeasonBadges", () => {
 
   it("awards hr king badge when player leads in HR", () => {
     const p1 = player({ id: "p1" });
-    const p2 = player({ id: "p2" });
     const games = [
       game({ id: "g1", date: "2026-06-01", statLines: [
         statLine("p1", { h: 2, hr: 3, ab: 4 }),

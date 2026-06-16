@@ -7,26 +7,25 @@ import styles from "@/components/settings-page-client.module.css";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import {
   cloneWorkspace,
-  createDefaultWorkspace,
   createMilestone,
   sanitizeWorkspace,
   timestampFilePart,
-  type Milestone,
   type PendingImport,
   type Workspace,
 } from "@/lib/workspace";
 import {
+  createWorkspaceMilestone,
+  deleteWorkspaceMilestone,
+  importWorkspaceSnapshot,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWithRetry,
-  saveWorkspaceSnapshot,
+  resetWorkspace,
 } from "@/lib/workspace-client";
 
 import {
   applyScenarioImport,
   applyWorkspaceImport,
   buildCsvExport,
-  buildScenarioExport,
   buildWorkspaceExport,
   parseImportPayload,
 } from "@/lib/export-actions";
@@ -38,6 +37,20 @@ type SettingsPageClientProps = {
   initialWorkspace: Workspace;
   initialVersion: number;
 };
+
+function downloadText(fileName: string, content: string, mime: string): void {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJson(fileName: string, payload: unknown): void {
+  downloadText(fileName, JSON.stringify(payload, null, 2), "application/json");
+}
 
 export function SettingsPageClient({
   initialWorkspace,
@@ -54,20 +67,6 @@ export function SettingsPageClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importPayload, setImportPayload] = useState<PendingImport | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-
-  function downloadText(fileName: string, content: string, mime: string): void {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function downloadJson(fileName: string, payload: unknown): void {
-    downloadText(fileName, JSON.stringify(payload, null, 2), "application/json");
-  }
 
   const handleExportJson = useCallback(() => {
     const ts = timestampFilePart();
@@ -116,17 +115,10 @@ export function SettingsPageClient({
     setImportPayload(null);
     setImportError(null);
     try {
-      const result = await saveWorkspaceSnapshot(next, version);
-      if ("version" in result) {
-        setVersion(result.version);
-        setWorkspace(sanitizeWorkspace(next));
-        toastRef.current?.showToast("导入成功");
-      } else if (isVersionConflict(result)) {
-        const snapshot = await loadWorkspaceSnapshot();
-        setVersion(snapshot.version);
-        setWorkspace(sanitizeWorkspace(snapshot.workspace));
-        toastRef.current?.showToast("工作区已被他人更新，已自动刷新。");
-      }
+      const result = await importWorkspaceSnapshot(next, version);
+      setVersion(result.version);
+      setWorkspace(sanitizeWorkspace(result.workspace));
+      toastRef.current?.showToast("导入成功");
     } catch {
       setImportError("保存失败，请重试。");
     }
@@ -137,12 +129,11 @@ export function SettingsPageClient({
       return;
     }
 
-    const nextWorkspace = createDefaultWorkspace(workspace.preferences.helpDismissed);
     setIsSaving(true);
     setSaveError(null);
 
     try {
-      const result = await saveWorkspaceSnapshot(nextWorkspace, version);
+      const result = await resetWorkspace(workspace.preferences.helpDismissed, version);
       setWorkspace(sanitizeWorkspace(result.workspace));
       setVersion(result.version);
       toastRef.current?.showToast("已重置为示例数据");
@@ -188,14 +179,9 @@ export function SettingsPageClient({
     );
     setIsSaving(true);
     setSaveError(null);
-    const next = cloneWorkspace(workspace);
-    next.milestones = [...workspace.milestones, ms];
     setMilestoneDraft({ date: "", title: "", description: "" });
     try {
-      const result = await saveWithRetry(next, version, (latest) => {
-        latest.milestones = [...latest.milestones, ms];
-        return latest;
-      });
+      const result = await createWorkspaceMilestone(ms, version);
       setVersion(result.version);
       setWorkspace(sanitizeWorkspace(result.workspace));
       toastRef.current?.showToast("里程碑已添加");
@@ -220,14 +206,8 @@ export function SettingsPageClient({
   async function handleDeleteMilestone(id: string) {
     setIsSaving(true);
     setSaveError(null);
-    const ms = workspace.milestones.find((m) => m.id === id);
-    const next = cloneWorkspace(workspace);
-    next.milestones = workspace.milestones.filter((m) => m.id !== id);
     try {
-      const result = await saveWithRetry(next, version, (latest) => {
-        latest.milestones = latest.milestones.filter((m: { id: string }) => m.id !== id);
-        return latest;
-      });
+      const result = await deleteWorkspaceMilestone(id, version);
       setVersion(result.version);
       setWorkspace(sanitizeWorkspace(result.workspace));
       toastRef.current?.showToast("里程碑已删除");

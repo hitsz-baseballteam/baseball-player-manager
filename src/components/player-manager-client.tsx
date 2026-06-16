@@ -26,9 +26,13 @@ import {
   type Workspace,
 } from "@/lib/workspace";
 import {
+  activateScenario,
+  createScenario,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWithRetry,
+  submitMutationWithRetry,
+  type WorkspaceSnapshot,
+  updateScenarioAssignments,
 } from "@/lib/workspace-client";
 import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
@@ -80,6 +84,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
 
   const applyWorkspaceMutation = useCallback(async (
     applyMutation: (current: Workspace) => Workspace,
+    submit: (nextWorkspace: Workspace, version: number) => Promise<WorkspaceSnapshot>,
     messages: { success: string; failure: string },
   ) => {
     const optimistic = applyMutation(workspace);
@@ -87,7 +92,12 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
     setSaveStatus("正在同步到云端...");
 
     try {
-      const result = await saveWithRetry(optimistic, remoteVersion, applyMutation);
+      const result = await submitMutationWithRetry(
+        workspace,
+        remoteVersion,
+        applyMutation,
+        submit,
+      );
       setWorkspace(sanitizeWorkspace(result.workspace));
       setRemoteVersion(result.version);
       setSaveStatus(messages.success);
@@ -110,6 +120,15 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
   const handleAutoAssign = useCallback(() => {
     void applyWorkspaceMutation(
       (current) => autoAssignActive(current),
+      (nextWorkspace, currentVersion) => {
+        const scenario = getActiveScenario(nextWorkspace);
+        return updateScenarioAssignments(
+          scenario.id,
+          scenario.assignments,
+          currentVersion,
+          scenario.updatedAt,
+        );
+      },
       { success: "已自动排阵", failure: "自动排阵失败，请稍后重试" },
     );
   }, [applyWorkspaceMutation]);
@@ -122,6 +141,13 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
         const createdId = updated.scenarios.at(-1)?.id;
         return createdId ? setActiveScenarioAction(updated, createdId) : updated;
       },
+      (nextWorkspace, currentVersion) => {
+        const scenario = nextWorkspace.scenarios.at(-1);
+        if (!scenario) {
+          throw new Error("scenario_missing");
+        }
+        return createScenario(scenario, currentVersion, true);
+      },
       { success: "已创建新方案", failure: "新建方案失败，请稍后重试" },
     );
   }, [applyWorkspaceMutation]);
@@ -132,6 +158,13 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
         const updated = copyScenarioAction(current, current.activeScenarioId);
         const copiedId = updated.scenarios.at(-1)?.id;
         return copiedId ? setActiveScenarioAction(updated, copiedId) : updated;
+      },
+      (nextWorkspace, currentVersion) => {
+        const scenario = nextWorkspace.scenarios.at(-1);
+        if (!scenario) {
+          throw new Error("scenario_missing");
+        }
+        return createScenario(scenario, currentVersion, true);
       },
       { success: "已复制当前方案", failure: "复制方案失败，请稍后重试" },
     );
@@ -144,6 +177,15 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
 
     void applyWorkspaceMutation(
       (current) => clearAllAssignments(current),
+      (nextWorkspace, currentVersion) => {
+        const scenario = getActiveScenario(nextWorkspace);
+        return updateScenarioAssignments(
+          scenario.id,
+          scenario.assignments,
+          currentVersion,
+          scenario.updatedAt,
+        );
+      },
       { success: "已清空当前阵容", failure: "清空阵容失败，请稍后重试" },
     );
   }, [applyWorkspaceMutation]);
@@ -151,6 +193,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
   const handleScenarioChange = useCallback((scenarioId: string) => {
     void applyWorkspaceMutation(
       (current) => setActiveScenarioAction(current, scenarioId),
+      (_nextWorkspace, currentVersion) => activateScenario(scenarioId, currentVersion),
       { success: "已切换当前方案", failure: "切换方案失败，请稍后重试" },
     );
   }, [applyWorkspaceMutation]);

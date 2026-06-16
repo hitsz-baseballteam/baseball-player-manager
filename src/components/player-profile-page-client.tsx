@@ -13,7 +13,7 @@ import {
 import {
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  updatePlayer,
 } from "@/lib/workspace-client";
 import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
@@ -54,7 +54,7 @@ export function PlayerProfilePageClient(
     setStatusMessage("正在同步球员档案...");
 
     try {
-      const result = await saveWorkspaceSnapshot(nextWorkspace, version);
+      const result = await updatePlayer(nextPlayer, version);
       setWorkspace(sanitizeWorkspace(result.workspace));
       setVersion(result.version);
       setStatusMessage("球员档案已同步到云端");

@@ -492,9 +492,7 @@ export function PlayerProfileEditor(props: PlayerProfileEditorProps) {
                     value={current.joinedAt?.slice(0, 10) ?? ""}
                     onChange={(event) =>
                       updateDraft({
-                        joinedAt: event.target.value
-                          ? new Date(event.target.value).toISOString()
-                          : undefined,
+                        joinedAt: event.target.value || undefined,
                       })
                     }
                   />

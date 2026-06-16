@@ -34,9 +34,14 @@ import {
   type Workspace,
 } from "@/lib/workspace";
 import {
+  activateScenario,
+  createScenario,
+  deleteScenario,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  type WorkspaceSnapshot,
+  updateScenario,
+  updateScenarioAssignments,
 } from "@/lib/workspace-client";
 
 const NAV_ITEMS = panelNavItems("战术场景");
@@ -72,12 +77,15 @@ export function ScenariosPageClient({
   const allWarnings = [...warnings.critical, ...warnings.advisory];
 
   const handleSave = useCallback(
-    async (updated: Workspace) => {
+    async (
+      updated: Workspace,
+      submit: (workspace: Workspace, version: number) => Promise<WorkspaceSnapshot>,
+    ) => {
       setWorkspace(updated);
       setSaveError(null);
       setIsSaving(true);
       try {
-        const result = await saveWorkspaceSnapshot(updated, version);
+        const result = await submit(updated, version);
         setWorkspace(sanitizeWorkspace(result.workspace));
         setVersion(result.version);
       } catch (error) {
@@ -100,30 +108,39 @@ export function ScenariosPageClient({
   // ── Scenario CRUD ──
   // ── Scenario CRUD ──
   function handleScenarioChange(id: string) {
-    handleSave(setActiveScenarioAction(workspace, id));
+    const updated = setActiveScenarioAction(workspace, id);
+    void handleSave(updated, (_next, currentVersion) => activateScenario(id, currentVersion));
   }
 
   function handleCreate(name: string, note: string) {
-    handleSave(createScenarioAction(workspace, name, note));
+    const updated = createScenarioAction(workspace, name, note);
+    const scenario = updated.scenarios.at(-1);
+    if (!scenario) return;
+    void handleSave(updated, (_next, currentVersion) => createScenario(scenario, currentVersion));
     setDialog({ type: "closed" });
     toastRef.current?.showToast("新方案已创建");
   }
 
   function handleRename(id: string, name: string, note: string) {
-    handleSave(renameScenarioAction(workspace, id, name, note));
+    const updated = renameScenarioAction(workspace, id, name, note);
+    void handleSave(updated, (_next, currentVersion) => updateScenario(id, name, note, currentVersion));
     setDialog({ type: "closed" });
     toastRef.current?.showToast("方案已更新");
   }
 
   function handleCopy(id: string) {
-    handleSave(copyScenarioAction(workspace, id));
+    const updated = copyScenarioAction(workspace, id);
+    const scenario = updated.scenarios.at(-1);
+    if (!scenario) return;
+    void handleSave(updated, (_next, currentVersion) => createScenario(scenario, currentVersion));
     toastRef.current?.showToast("方案已复制");
   }
 
   function handleDelete(id: string) {
     if (!window.confirm("确认删除此方案？")) return;
     try {
-      handleSave(deleteScenarioAction(workspace, id));
+      const updated = deleteScenarioAction(workspace, id);
+      void handleSave(updated, (_next, currentVersion) => deleteScenario(id, currentVersion));
       toastRef.current?.showToast("方案已删除");
     } catch {
       toastRef.current?.showToast("无法删除最后一个方案");
@@ -132,38 +149,86 @@ export function ScenariosPageClient({
 
   // ── Lineup actions ──
   function handleAutoAssign() {
-    handleSave(autoAssignActive(workspace));
+    const updated = autoAssignActive(workspace);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
     toastRef.current?.showToast("已自动排阵");
   }
 
   function handleClearAll() {
     if (!window.confirm("确认清空当前方案的守备和打线分配？")) return;
-    handleSave(clearAllAssignments(workspace));
+    const updated = clearAllAssignments(workspace);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
     toastRef.current?.showToast("阵容已清空");
   }
 
   function handleDefenseAssign(position: PositionCode, playerId: string) {
-    handleSave(assignDefensePosition(workspace, position, playerId));
+    const updated = assignDefensePosition(workspace, position, playerId);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleDefenseClear(position: PositionCode) {
-    handleSave(clearDefensePosition(workspace, position));
+    const updated = clearDefensePosition(workspace, position);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleDefenseSwap(fromPos: PositionCode, toPos: PositionCode) {
-    handleSave(swapDefensePositions(workspace, fromPos, toPos));
+    const updated = swapDefensePositions(workspace, fromPos, toPos);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleLineupAssign(index: number, playerId: string) {
-    handleSave(assignLineupSlot(workspace, index, playerId));
+    const updated = assignLineupSlot(workspace, index, playerId);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleLineupClear(index: number) {
-    handleSave(clearLineupSlot(workspace, index));
+    const updated = clearLineupSlot(workspace, index);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   function handleLineupMove(fromIndex: number, toIndex: number) {
-    handleSave(moveLineupSlot(workspace, fromIndex, toIndex));
+    const updated = moveLineupSlot(workspace, fromIndex, toIndex);
+    const scenario = getActiveScenario(updated);
+    void handleSave(
+      updated,
+      (_next, currentVersion) =>
+        updateScenarioAssignments(scenario.id, scenario.assignments, currentVersion, scenario.updatedAt),
+    );
   }
 
   return (

@@ -4,7 +4,7 @@ import { afterEach, describe, it, mock } from "node:test";
 import { createDefaultWorkspace } from "@/lib/workspace";
 import {
   VersionConflictError,
-  saveWithRetry,
+  submitMutationWithRetry,
 } from "@/lib/workspace-client";
 
 describe("workspace client", () => {
@@ -12,96 +12,101 @@ describe("workspace client", () => {
     mock.restoreAll();
   });
 
-  it("saveWithRetry sends the initial workspace on the first attempt", async () => {
+  it("submitMutationWithRetry submits the initial mutation on the first attempt", async () => {
     const initialWorkspace = createDefaultWorkspace(false);
-    let requestBody: { workspace: unknown; version: number } | null = null;
+    const submitted: Array<{ workspace: unknown; version: number }> = [];
 
-    mock.method(globalThis, "fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
-      requestBody = JSON.parse(String(init?.body ?? "")) as {
-        workspace: unknown;
-        version: number;
-      };
-      return new Response(
-        JSON.stringify({
-          workspace: initialWorkspace,
-          version: 2,
+    const result = await submitMutationWithRetry(
+      initialWorkspace,
+      1,
+      (latest) => {
+        const next = structuredClone(latest);
+        next.preferences.helpDismissed = true;
+        return next;
+      },
+      async (workspace, version) => {
+        submitted.push({ workspace, version });
+        return {
+          workspace,
+          version: version + 1,
           updatedAt: "2026-06-03T09:00:00.000Z",
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    });
+        };
+      },
+    );
 
-    const result = await saveWithRetry(initialWorkspace, 1, (latest) => latest);
-
-    assert.ok(requestBody, "requestBody should be set by mock fetch");
-    const body = requestBody as { workspace: unknown; version: number };
-    assert.equal(body.version, 1);
-    assert.deepEqual(body.workspace, initialWorkspace);
+    assert.equal(submitted.length, 1);
+    assert.equal(submitted[0]?.version, 1);
+    assert.equal(
+      (submitted[0]?.workspace as typeof initialWorkspace).preferences.helpDismissed,
+      true,
+    );
     assert.equal(result.version, 2);
   });
 
-  it("saveWithRetry reloads latest workspace and retries after version conflict", async () => {
+  it("submitMutationWithRetry reloads latest workspace and retries after version conflict", async () => {
     const initialWorkspace = createDefaultWorkspace(false);
     const latestWorkspace = createDefaultWorkspace(false);
     latestWorkspace.players[0].name = "最新球员";
 
-    const putBodies: Array<{ workspace: unknown; version: number }> = [];
-    let callCount = 0;
+    const submitted: Array<{ workspace: typeof initialWorkspace; version: number }> = [];
+    let submitCount = 0;
 
-    mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-      callCount += 1;
-      const url = String(input);
-
-      if (callCount === 1) {
-        putBodies.push(JSON.parse(String(init?.body ?? "")) as { workspace: unknown; version: number });
-        return new Response(JSON.stringify({ error: "version_conflict" }), { status: 409 });
-      }
-
-      if (callCount === 2) {
-        assert.equal(url, "/api/workspace");
-        return new Response(
-          JSON.stringify({
-            workspace: latestWorkspace,
-            version: 7,
-            updatedAt: "2026-06-03T09:10:00.000Z",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
-
-      putBodies.push(JSON.parse(String(init?.body ?? "")) as { workspace: unknown; version: number });
+    mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+      assert.equal(String(input), "/api/workspace");
       return new Response(
         JSON.stringify({
           workspace: latestWorkspace,
-          version: 8,
-          updatedAt: "2026-06-03T09:11:00.000Z",
+          version: 7,
+          updatedAt: "2026-06-03T09:10:00.000Z",
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     });
 
-    const result = await saveWithRetry(initialWorkspace, 1, (latest) => {
-      const next = structuredClone(latest);
-      next.preferences.helpDismissed = true;
-      return next;
-    });
+    const result = await submitMutationWithRetry(
+      initialWorkspace,
+      1,
+      (latest) => {
+        const next = structuredClone(latest);
+        next.preferences.helpDismissed = true;
+        return next;
+      },
+      async (workspace, version) => {
+        submitCount += 1;
+        submitted.push({ workspace, version });
+        if (submitCount === 1) {
+          throw new VersionConflictError();
+        }
 
-    assert.equal(putBodies.length, 2);
-    assert.deepEqual(putBodies[0].workspace, initialWorkspace);
-    assert.equal(putBodies[0].version, 1);
-    assert.equal(putBodies[1].version, 7);
+        return {
+          workspace,
+          version: version + 1,
+          updatedAt: "2026-06-03T09:11:00.000Z",
+        };
+      },
+    );
+
+    assert.equal(submitted.length, 2);
+    assert.equal(submitted[0]?.version, 1);
+    assert.equal(submitted[1]?.version, 7);
+    assert.equal(submitted[1]?.workspace.players[0]?.name, "最新球员");
     assert.equal(result.version, 8);
   });
 
-  it("treats 409 responses as VersionConflictError", async () => {
+  it("throws VersionConflictError after exhausting retries", async () => {
     const initialWorkspace = createDefaultWorkspace(false);
 
-    mock.method(globalThis, "fetch", async () => {
-      return new Response(JSON.stringify({ error: "version_conflict" }), { status: 409 });
-    });
-
     await assert.rejects(
-      () => saveWithRetry(initialWorkspace, 1, (latest) => latest, 0),
+      () =>
+        submitMutationWithRetry(
+          initialWorkspace,
+          1,
+          (latest) => latest,
+          async () => {
+            throw new VersionConflictError();
+          },
+          0,
+        ),
       VersionConflictError,
     );
   });

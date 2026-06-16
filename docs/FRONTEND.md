@@ -102,9 +102,9 @@ Client page component
   └── 本地 workspace state + 交互
        ↓
 workspace-client.ts
-  └── GET/PUT /api/workspace
+  └── GET /api/workspace + resource-specific write APIs
        ↓
-API route + optimistic concurrency
+API routes + optimistic concurrency
 ```
 
 ### 原则
@@ -149,7 +149,12 @@ API route + optimistic concurrency
 | `/players/[playerId]` `/players/[playerId]/games` | Redirect | 永久重定向到对应 `/panel/*` 页面 |
 | `/lineup` | Redirect | 兼容入口，重定向到 `/panel/scenarios` |
 | `/api/logout` | API (POST) | 清除 cookie |
-| `/api/workspace` | API (GET/PUT) | 工作区读写 |
+| `/api/workspace` | API (GET) | 工作区 bootstrap 读取 |
+| `/api/players` `/api/players/*` | API | 球员创建、更新、删除、批量操作 |
+| `/api/scenarios` `/api/scenarios/*` | API | 场景创建、重命名、删除、激活、分配更新 |
+| `/api/games` `/api/games/*` | API | 比赛创建、更新、删除 |
+| `/api/milestones` `/api/milestones/*` | API | 里程碑创建、更新、删除 |
+| `/api/workspace/import` `/api/workspace/reset` `/api/workspace/preferences` | API | 导入、重置、偏好设置 |
 
 ## 数据流边界
 

@@ -15,9 +15,12 @@ import {
   type Workspace,
 } from "@/lib/workspace";
 import {
+  createGame as createGameRequest,
+  deleteGame as deleteGameRequest,
   isVersionConflict,
   loadWorkspaceSnapshot,
-  saveWorkspaceSnapshot,
+  type WorkspaceSnapshot,
+  updateGame as updateGameRequest,
 } from "@/lib/workspace-client";
 import { panelNavItems } from "@/lib/routes";
 
@@ -140,6 +143,7 @@ export function GamesPageClient({
 
   async function commitGames(
     updater: (games: Game[]) => Game[],
+    submit: (version: number) => Promise<WorkspaceSnapshot>,
     successMessage: string,
   ): Promise<boolean> {
     const draft = cloneWorkspace(workspace);
@@ -148,7 +152,7 @@ export function GamesPageClient({
     setSaving(true);
     setStatusMessage("正在同步到云端...");
     try {
-      const result = await saveWorkspaceSnapshot(draft, version);
+      const result = await submit(version);
       setWorkspace(sanitizeWorkspace(result.workspace));
       setVersion(result.version);
       setStatusMessage(successMessage);
@@ -175,6 +179,7 @@ export function GamesPageClient({
   async function handleAdd(game: Game) {
     const ok = await commitGames(
       (games) => [...games, game],
+      (currentVersion) => createGameRequest(game, currentVersion),
       "比赛数据已更新",
     );
     if (ok) setDialog({ type: "closed" });
@@ -183,6 +188,7 @@ export function GamesPageClient({
   async function handleEdit(updated: Game) {
     const ok = await commitGames(
       (games) => games.map((g) => (g.id === updated.id ? updated : g)),
+      (currentVersion) => updateGameRequest(updated, currentVersion),
       "比赛数据已更新",
     );
     if (ok) setDialog({ type: "closed" });
@@ -192,6 +198,7 @@ export function GamesPageClient({
     if (!window.confirm("确认删除此场比赛记录？")) return;
     await commitGames(
       (games) => games.filter((g) => g.id !== gameId),
+      (currentVersion) => deleteGameRequest(gameId, currentVersion),
       "比赛数据已更新",
     );
   }

@@ -15,11 +15,13 @@ function cloneWorkspace<T>(value: T): T {
 describe("PlayerManagerClient", () => {
   const pushes: string[] = [];
   const savedWorkspaces: Workspace[] = [];
+  let latestWorkspace = cloneWorkspace(baseWorkspace);
   const originalConfirm = window.confirm;
 
   beforeEach(async () => {
     pushes.length = 0;
     savedWorkspaces.length = 0;
+    latestWorkspace = cloneWorkspace(baseWorkspace);
     localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
 
@@ -39,20 +41,65 @@ describe("PlayerManagerClient", () => {
 
     mock.module("@/lib/workspace-client", {
       namedExports: {
-        async saveWithRetry(
-          initialWorkspace: Workspace,
+        async submitMutationWithRetry(
+          currentWorkspace: Workspace,
+          version: number,
+          applyMutation: (latest: Workspace) => Workspace,
+        ) {
+          latestWorkspace = applyMutation(cloneWorkspace(currentWorkspace));
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
+          return {
+            workspace: cloneWorkspace(latestWorkspace),
+            version: version + 1,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        async createScenario(
+          scenario: Workspace["scenarios"][number],
+          version: number,
+          activate = false,
+        ) {
+          latestWorkspace = cloneWorkspace(latestWorkspace);
+          latestWorkspace.scenarios.push(cloneWorkspace(scenario));
+          if (activate) {
+            latestWorkspace.activeScenarioId = scenario.id;
+          }
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
+          return {
+            workspace: cloneWorkspace(latestWorkspace),
+            version: version + 1,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        async activateScenario(scenarioId: string, version: number) {
+          latestWorkspace = cloneWorkspace(latestWorkspace);
+          latestWorkspace.activeScenarioId = scenarioId;
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
+          return {
+            workspace: cloneWorkspace(latestWorkspace),
+            version: version + 1,
+            updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
+          };
+        },
+        async updateScenarioAssignments(
+          scenarioId: string,
+          assignments: Workspace["scenarios"][number]["assignments"],
           version: number,
         ) {
-          savedWorkspaces.push(cloneWorkspace(initialWorkspace));
+          latestWorkspace = cloneWorkspace(latestWorkspace);
+          latestWorkspace.scenarios = latestWorkspace.scenarios.map((scenario) =>
+            scenario.id === scenarioId ? { ...scenario, assignments: cloneWorkspace(assignments) } : scenario,
+          );
+          savedWorkspaces.push(cloneWorkspace(latestWorkspace));
           return {
-            workspace: cloneWorkspace(initialWorkspace),
+            workspace: cloneWorkspace(latestWorkspace),
             version: version + 1,
             updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
           };
         },
         async loadWorkspaceSnapshot() {
           return {
-            workspace: cloneWorkspace(baseWorkspace),
+            workspace: cloneWorkspace(latestWorkspace),
             version: 99,
             updatedAt: new Date("2026-06-05T10:00:00.000Z").toISOString(),
           };
