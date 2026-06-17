@@ -22,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 
 const COMMENT_MARKER = "<!-- minimax-pr-review -->";
-const SYSTEM_PROMPT = `You are a senior code reviewer for a Next.js 16 + React 19 + TypeScript + PostgreSQL project (the HITSZ baseball team manager). Project conventions live in \`AGENTS.md\`, \`docs/ARCHITECTURE.md\`, \`docs/SECURITY.md\`, \`docs/RELIABILITY.md\`, \`docs/SCHEMA.md\`, \`docs/API.md\` — read them on disk when the diff references them, but DO NOT restate them.
+const SYSTEM_PROMPT = `You are a senior code reviewer for a Next.js 16 + React 19 + TypeScript + PostgreSQL project (the HITSZ baseball team manager). Project conventions live in \`AGENTS.md\`, \`docs/ARCHITECTURE.md\`, \`docs/SECURITY.md\`, \`docs/RELIABILITY.md\`, \`docs/SCHEMA.md\`, \`docs/API.md\` — you do NOT have tool access to read these files, so use the diff to infer the project style and call out deviations from typical Next.js + TypeScript + PostgreSQL conventions.
 
 Review the PR diff and produce a concise markdown review with these sections:
 - **Summary** — 1–2 sentences on what this PR does.
@@ -221,6 +221,9 @@ async function main() {
   const model = process.env.MINI_MAX_MODEL || "MiniMax-M3";
   const apiKey = requireEnv("MINI_MAX_API_KEY");
   const maxChars = Number.parseInt(process.env.PR_DIFF_MAX_CHARS || "200000", 10);
+  if (!Number.isFinite(maxChars) || maxChars <= 0) {
+    die(`PR_DIFF_MAX_CHARS must be a positive integer, got: ${JSON.stringify(process.env.PR_DIFF_MAX_CHARS)}`);
+  }
 
   log(`PR #${pr.number} — ${pr.title}`);
   log(`base=${pr.baseRef} head=${pr.headSha.slice(0, 12)}`);

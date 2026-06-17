@@ -41,8 +41,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
-          # Don't fail the run for fork PRs — they may not have secrets.
-          # (No `persist-credentials: false` here, but we never push.)
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
