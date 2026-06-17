@@ -13,7 +13,14 @@ export async function GET(request: Request) {
   }
 
   const snapshot = await getOrCreateWorkspaceSnapshot();
-  return NextResponse.json(snapshot);
+  // Short browser cache: 10s fresh + 30s SWR. Combined with
+  // `unstable_cache` server-side (10s revalidate, tag "workspace"),
+  // repeated reads within the window skip both the DB and the network.
+  return NextResponse.json(snapshot, {
+    headers: {
+      "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
+    },
+  });
 }
 
 export async function PUT(request: Request) {
