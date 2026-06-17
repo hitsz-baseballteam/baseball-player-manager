@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-15.
+This document describes the repository as currently observed on 2026-06-17 (after TD-10 latency optimization close-out).
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -108,7 +108,7 @@ Observed limits and boundaries:
 - workspace reads, workspace resource writes, and logout requests also have route-level rate limits
 - the unlock cookie is `httpOnly`, `sameSite=lax`, `secure` in production, and includes a server-validated absolute expiry
 - `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
-- panel and API responses receive `private, no-store` headers through `next.config.ts`
+- panel and API responses receive `private, no-store` headers through `next.config.ts`; the `/api/workspace` endpoint overrides this with `private, max-age=10, stale-while-revalidate=30` for short-window browser caching. See the data flow section below.
 
 ### 4. React page-shell architecture
 
@@ -167,6 +167,62 @@ These notes are based on current code imports and call sites, not aspirational r
 - React route pages persist through `workspace-client.ts` and the resource-oriented `/api/*` boundary rather than calling database code directly
 - homepage direct actions reuse shared pure logic (`lineup-actions.ts`, `export-actions.ts`) instead of selector-based DOM bridge calls
 - `roster-actions.ts` now also owns roster filter helpers used by the roster workbench
+
+## Data Flow and Caching Layers
+
+The panel reads/writes traverse four layered caches. Each layer invalidates the next on writes; reads are checked from the outermost layer first.
+
+```
+                                    +------------------------+
+   Browser tab / F5                 |  Browser HTTP cache    |  (Cache-Control: private,
+                                    |                        |   max-age=10, SWR=30)
+                                    +-----------+------------+
+                                                | miss
+                                                v
+                                    +------------------------+
+   useWorkspaceSnapshot(initial)    |  React state in client |  (cross-page in-app,
+                                    |  (workspace-client.ts) |   fallbackData=initial)
+                                    +-----------+------------+
+                                                | miss (F5 / new tab)
+                                                v
+   GET /panel/*  Server Component   +------------------------+
+   → getPanelWorkspaceSnapshot      |  React cache()         |  (same-request dedup
+                                    |  (panel-server.ts)     |   across Server Components)
+                                    +-----------+------------+
+                                                | miss (cross-request)
+                                                v
+   getOrCreateWorkspaceSnapshot     +------------------------+
+   (workspace-store.ts)             |  unstable_cache        |  (10s revalidate, tag
+                                    |                        |   "workspace"; per-process)
+                                    +-----------+------------+
+                                                | miss
+                                                v
+                                    +------------------------+
+                                    |  PostgreSQL            |
+                                    |  (9 SELECTs in one     |
+                                    |   withTransaction;     |
+                                    |   writes use unnest)   |
+                                    +------------------------+
+```
+
+- **Client cache** (`useWorkspaceSnapshot` in `src/lib/workspace-client.ts`): React state mirror with `{ data, mutate, isLoading }`. First render uses SSR-injected `initialWorkspace` as `fallbackData`, so no client fetch on first paint. Mutations call `mutate(newData, { revalidate: false })` to optimistically update.
+- **React `cache()`** (`src/lib/panel-server.ts`): deduplicates multiple Server Component calls to `getPanelWorkspaceSnapshot` within a single Next.js render. Cross-request ineffective.
+- **Next.js `unstable_cache`** (`src/lib/workspace-store.ts::getOrCreateWorkspaceSnapshot`): 10s revalidate + tag `"workspace"`. Survives across requests but is per-process.
+- **Browser HTTP cache**: enabled only on `/api/workspace` via `Cache-Control: private, max-age=10, stale-while-revalidate=30`. Other `/api/*` endpoints inherit no Cache-Control from `next.config.ts` and are not browser-cached.
+
+### Write invalidation
+
+Every write path through `mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot` calls `revalidateTag("workspace", "max")` after commit, which forces the `unstable_cache` layer to drop its entry on next read. The client cache is updated via the mutation `mutate()` callback. Browser cache is allowed to age out within 10s — operations that read immediately after a write go through the client or server caches, not the browser cache.
+
+### Why two cache layers (`cache()` + `unstable_cache`)
+
+- `cache()` is free and dedupes within a request. Without it, every Server Component in a render path re-queries the DB (9 SELECTs each).
+- `unstable_cache` survives across requests within the 10s window, so a 5-tab open user navigating the panel doesn't re-query the DB. Without it, every navigation hits the DB.
+- Both are required; either alone leaves the other gap.
+
+### Connection-pool and serial-query reality
+
+`src/lib/db.ts` configures `max: 1` for Supabase hosts (avoids PgBouncer transaction-mode prepared-statement conflicts) and `max: 5` for other hosts (overridable via `DB_POOL_MAX` env). This `max` controls cross-request concurrency; it does **not** make the 9 SELECTs in `getOrCreateWorkspaceSnapshot` parallel. Those SELECTs run on a single `PoolClient` shared by `withTransaction`, and node-postgres serializes queries on the same client. The current 50–270ms cost is accepted; making them parallel requires a structural change (multiple clients sharing a snapshot, or a single JOIN query) that is out of scope for P0+P1.
 
 ## Tooling and Enforcement
 
