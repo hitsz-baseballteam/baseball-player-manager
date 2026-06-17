@@ -1,0 +1,65 @@
+name: Auto PR Review (MiniMax M3)
+
+# Triggers on every PR that targets `main`. Re-runs on synchronize (force-push,
+# new commits) and reopened, but cancels any in-flight review for the same PR
+# so the latest diff is what gets posted.
+on:
+  pull_request:
+    branches: [main]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: pr-review-m3-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# Read the PR head to compute the diff; write PR comments.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: minimax-m3 review
+    # Skip PRs from forks: the default GITHUB_TOKEN is read-only for fork PRs,
+    # so we can't post a review comment there. The user can re-trigger from a
+    # branch on the upstream repo if they want a review.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Override these in the repo if you self-host the API.
+      MINI_MAX_BASE_URL: https://api.minimaxi.com/v1
+      MINI_MAX_MODEL: MiniMax-M3
+      # MINI_MAX_API_KEY is injected from the repo secret (see README step).
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Don't fail the run for fork PRs — they may not have secrets.
+          # (No `persist-credentials: false` here, but we never push.)
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run M3 PR review
+        env:
+          MINI_MAX_API_KEY: ${{ secrets.MINI_MAX_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_REPO: ${{ github.repository }}
+          PR_DIFF_MAX_CHARS: "200000"
+        run: node .github/scripts/pr-review.mjs
