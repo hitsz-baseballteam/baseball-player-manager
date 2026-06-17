@@ -164,7 +164,7 @@
 
 ### P1 — 写路径性能提升（行为不变，只优化 IO）
 
-#### P1-1. 批量 INSERT（`unnest`）
+#### P1-1. 批量 INSERT（`unnest`）— ⚠️ 状态：部分完成，待收尾
 
 **修改原因：** `src/lib/workspace-store.ts::writeNormalizedWorkspace` 用 9 个 for-loop 逐行 `INSERT`，每个 RTT 插 1 行；工作区规模线性放大写延迟
 
@@ -172,22 +172,27 @@
 
 **副作用：** `unnest` 类型不匹配需要测试覆盖空数组 / 单行 / 多行 / 字段类型错误
 
+**当前状态（2026-06-17 复核）：**
+- ✅ `prepareUnnestArgs(rows, tableName)` utility 已实现（`src/lib/workspace-store.ts:129`），覆盖 `players` / `positions` / `milestones` 三种行类型 + 5 个单元测试（`workspace-store.test.ts`）
+- ❌ `writeNormalizedWorkspace` 仍然用 9 个 for-loop 逐行 INSERT（`workspace-store.ts:796-970`），`prepareUnnestArgs` 在生产代码路径上 0 内部调用方
+- 实际写延迟：小型工作区（12 球员）实测 20–25ms（已满足 P95 < 500ms 目标），中型工作区（~20 球员 / 50 比赛）目标 P95 < 1s 未验证
 
 **目标结果：**
 - `writeNormalizedWorkspace` 中所有 for-loop `INSERT` 改为单条 `unnest` 批量 `INSERT`
 - 工作区写入 RTT 数量从 ~1,200 降到 ~10（每个被改的表 1 个 RTT）
 - 写延迟从 2–5s 降到 600ms–1s（小工作区）
 
-**改动范围：**
+**改动范围（收尾时）：**
 - `src/lib/workspace-store.ts::writeNormalizedWorkspace`
 - 5 处 for-loop：players / positions / scenarios / defense / lineup / games / innings / stat_lines / milestones
 - 每个循环改为 `INSERT ... SELECT * FROM unnest($1::uuid[], $2::text[], $3::int[], ...)`
-- 新增 `src/lib/workspace-store.test.ts` 单元测试覆盖空数组 / 单行 / 多行 / 类型不匹配
+- 已有的 `prepareUnnestArgs` utility + 5 unit test 直接复用，只需新增 `writeNormalizedWorkspace` 的集成测试
 
 **验证：**
 - `npm test` 全绿
 - 端到端：编辑一个球员，写操作耗时下降 ≥ 50%
 - 写入后 `getOrCreateWorkspaceSnapshot` 返回结果与改动前**字段级一致**（用现有快照测试覆盖）
+- 中型工作区（~20 球员 / 50 比赛）写操作 P95 < 1s（需 `scripts/seed-demo-data.ts` 生成）
 
 ---
 
