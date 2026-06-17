@@ -59,7 +59,9 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    const privateHeaders = [
+    // Panel pages are session-dependent (per-user) and must not be
+    // cached by browsers or CDN.
+    const panelPrivateHeaders = [
       {
         key: "Content-Security-Policy",
         value: CONTENT_SECURITY_POLICY,
@@ -90,18 +92,32 @@ const nextConfig: NextConfig = {
       },
     ];
 
+    // API endpoints get the security headers but NOT the no-store
+    // Cache-Control by default — individual route handlers are
+    // responsible for their own Cache-Control policy. This is
+    // important because `next.config.ts` headers take precedence
+    // over route handler `headers` overrides, so any API endpoint
+    // that wants a non-default Cache-Control (e.g. `/api/workspace`
+    // with the P1-2 short-window cache) must either omit
+    // `Cache-Control` here or be excluded from this default.
+    const apiSecurityHeaders = panelPrivateHeaders.filter(
+      (header) =>
+        header.key !== "Cache-Control" &&
+        header.key !== "Cloudflare-CDN-Cache-Control",
+    );
+
     return [
       {
         source: "/:path*",
-        headers: privateHeaders.filter((header) => header.key !== "Cache-Control" && header.key !== "Cloudflare-CDN-Cache-Control"),
+        headers: apiSecurityHeaders,
       },
       {
         source: "/panel/:path*",
-        headers: privateHeaders,
+        headers: panelPrivateHeaders,
       },
       {
         source: "/api/:path*",
-        headers: privateHeaders,
+        headers: apiSecurityHeaders,
       },
     ];
   },
