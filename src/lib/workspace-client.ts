@@ -7,7 +7,7 @@ import type {
   Workspace,
 } from "@/lib/workspace";
 import type { BulkEditInput } from "@/lib/roster-actions";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type WorkspaceSnapshot = {
   workspace: Workspace;
@@ -120,6 +120,9 @@ export function useWorkspaceSnapshot(
   const [data, setData] = useState<Workspace | undefined>(initial);
   const [version, setVersion] = useState<number>(initialVersion);
   const [isLoading, setIsLoading] = useState<boolean>(initial === undefined);
+  const [error, setError] = useState<Error | undefined>(undefined);
+  const dataRef = useRef<Workspace | undefined>(initial);
+  const versionRef = useRef<number>(initialVersion);
 
   const mutate = useCallback(
     async (
@@ -129,37 +132,80 @@ export function useWorkspaceSnapshot(
       if (newData !== undefined) {
         const resolved = newData instanceof Promise ? await newData : newData;
         setData(resolved);
+        dataRef.current = resolved;
+        setError(undefined);
         if (opts.version !== undefined) {
           setVersion(opts.version);
+          versionRef.current = opts.version;
         }
         if (opts.revalidate === false) {
-          return { workspace: resolved, version: opts.version ?? version };
+          return {
+            workspace: resolved,
+            version: opts.version ?? versionRef.current,
+          };
         }
       }
 
       if (opts.revalidate === false) {
-        return data ? { workspace: data, version } : undefined;
+        const currentData = dataRef.current;
+        return currentData
+          ? { workspace: currentData, version: versionRef.current }
+          : undefined;
       }
 
       setIsLoading(true);
+      setError(undefined);
       try {
         const snapshot = await loadWorkspaceSnapshot();
         setData(snapshot.workspace);
+        dataRef.current = snapshot.workspace;
         setVersion(snapshot.version);
+        versionRef.current = snapshot.version;
         return { workspace: snapshot.workspace, version: snapshot.version };
+      } catch (caughtError) {
+        const nextError =
+          caughtError instanceof Error
+            ? caughtError
+            : new Error("Failed to load workspace");
+        setError(nextError);
+        throw nextError;
       } finally {
         setIsLoading(false);
       }
     },
-    [data, version],
+    [],
   );
+
+  useEffect(() => {
+    dataRef.current = data;
+    versionRef.current = version;
+  }, [data, version]);
+
+  useEffect(() => {
+    if (initial !== undefined || data !== undefined) {
+      return;
+    }
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+
+      void mutate().catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data, initial, mutate]);
 
   return {
     data,
     version,
     isLoading,
     isValidating: isLoading,
-    error: undefined as Error | undefined,
+    error,
     mutate,
   };
 }

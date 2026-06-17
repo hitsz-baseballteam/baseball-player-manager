@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 
 import { createPasscodeHash, createUnlockCookieValue } from "@/lib/auth";
 import { PANEL_ROUTES } from "@/lib/routes";
-import { proxy } from "@/proxy";
+import { config, PROTECTED_API_MATCHERS, proxy } from "@/proxy";
 
 describe("proxy", () => {
   beforeEach(() => {
@@ -33,6 +33,18 @@ describe("proxy", () => {
     assert.equal(response.status, 401);
   });
 
+  it("returns 401 for unauthenticated resource mutation api requests", () => {
+    const playerResponse = proxy(new NextRequest("http://localhost/api/players"));
+    const scenarioResponse = proxy(new NextRequest("http://localhost/api/scenarios/s-1"));
+    const gameResponse = proxy(new NextRequest("http://localhost/api/games/g-1"));
+    const milestoneResponse = proxy(new NextRequest("http://localhost/api/milestones/m-1"));
+
+    assert.equal(playerResponse.status, 401);
+    assert.equal(scenarioResponse.status, 401);
+    assert.equal(gameResponse.status, 401);
+    assert.equal(milestoneResponse.status, 401);
+  });
+
   it("allows authenticated panel and workspace requests", () => {
     const cookie = `${"baseball_manager_unlock"}=${createUnlockCookieValue()}`;
     const panelResponse = proxy(
@@ -48,5 +60,16 @@ describe("proxy", () => {
 
     assert.equal(panelResponse.status, 200);
     assert.equal(apiResponse.status, 200);
+  });
+
+  it("registers all private mutation route matchers", () => {
+    assert.deepEqual(PROTECTED_API_MATCHERS, [
+      "/api/workspace/:path*",
+      "/api/players/:path*",
+      "/api/scenarios/:path*",
+      "/api/games/:path*",
+      "/api/milestones/:path*",
+    ]);
+    assert.deepEqual(config.matcher, ["/panel/:path*", ...PROTECTED_API_MATCHERS]);
   });
 });

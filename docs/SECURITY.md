@@ -6,7 +6,7 @@
 
 - **方法**：共享口令哈希 + 独立 `AUTH_SECRET` 签名 cookie
 - **公开边界**：`/` 为公开球队主页，不读取或渲染私有 Workspace 数据
-- **受保护边界**：`/panel/*` 与 `/api/workspace/*`
+- **受保护边界**：`/panel/*` 与私有 workspace API（`/api/workspace/*`、`/api/players/*`、`/api/scenarios/*`、`/api/games/*`、`/api/milestones/*`）
 - **无用户系统**：单一管理员 passcode，无多用户、无 RBAC
 - **无外部认证提供商**：不使用 Supabase Auth、OAuth、JWT
 
@@ -37,10 +37,10 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 
 ### API 鉴权
 
-`src/proxy.ts` 作为 Next.js 请求代理保护控制台和 Workspace API：
+`src/proxy.ts` 作为 Next.js 请求代理保护控制台和私有 workspace API：
 
 ```
-每个请求到 /panel/* 或 /api/workspace/*
+每个请求到 /panel/* 或私有 workspace API
   → 读取 cookie "baseball_manager_unlock"
   → isUnlockCookieValid(cookie)
   → 页面无效：302 到 /panel/login?next=原路径
@@ -73,7 +73,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 
 ## 数据库安全
 
-- **连接池**：`pg.Pool`；Supabase 主机使用 `max = 1`，其他主机使用 `max = 5`；`idleTimeoutMillis = 30000`，`connectionTimeoutMillis = 10000`
+- **连接池**：`pg.Pool`；默认由连接模式决定 `max`（Supabase transaction-mode pooler 默认 `1`，其他连接默认 `5`，也可用 `DB_POOL_MAX` 覆盖）；`idleTimeoutMillis = 30000`，`connectionTimeoutMillis = 10000`
 - **TLS**：Supabase 主机启用严格证书校验，并显式信任内置的 `Supabase Root 2021 CA`；其他私有 CA 场景可通过 `DATABASE_CA_CERT` 提供 PEM，不允许 `rejectUnauthorized: false`
 - **Row-Level Security**：当前 `app_workspace_meta`、`app_player`、`app_player_position`、`app_scenario`、`app_scenario_defense_assignment`、`app_scenario_lineup_slot`、`app_game`、`app_game_inning`、`app_game_stat_line`、`app_milestone` 以及 legacy `app_workspace` 都启用了 RLS；实际访问控制仍主要依赖服务端 API 与签名 cookie，而不是基于用户身份的 RLS 策略
 - **无 Supabase Auth / Realtime**：仅使用 PostgreSQL 数据库，不使用 Supabase 其他功能
@@ -96,4 +96,4 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 - 登录入口已有内存级速率限制：按 IP 5 次 / 60 秒；Workspace 读写和登出也有限流；如需跨实例一致限制，仍需在反向代理或外部网关补充
 - 当前没有单独的 CSRF token 机制；防护主要依赖 `sameSite=lax` cookie 与 JSON API 形态
 - 已通过 `next.config.ts` 增加 CSP、`X-Frame-Options`、`X-Content-Type-Options`、`Referrer-Policy` 和 `Permissions-Policy`；其中 `script-src` 当前放行 `'unsafe-inline'` 以兼容 Next App Router 的 hydration bootstrap
-- `next.config.ts` 对 `/panel/*` 与 `/api/*` 设置 `private, no-store`，Cloudflare 不应为这些路径配置覆盖源站的公共缓存规则
+- `/panel/*` 默认返回 `private, no-store`；`GET /api/workspace` 也显式返回 `private, no-store` 与 `Cloudflare-CDN-Cache-Control: no-store`，避免认证后私有数据被浏览器或 CDN 复用

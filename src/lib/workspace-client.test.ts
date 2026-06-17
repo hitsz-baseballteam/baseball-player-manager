@@ -160,6 +160,7 @@ describe("useWorkspaceSnapshot", () => {
       await result.current.mutate();
     });
 
+    assert.ok(result.current.data);
     assert.equal(result.current.data.preferences.helpDismissed, true);
   });
 
@@ -186,6 +187,7 @@ describe("useWorkspaceSnapshot", () => {
       await result.current.mutate(optimistic, { revalidate: false });
     });
 
+    assert.ok(result.current.data);
     assert.equal(result.current.data.preferences.helpDismissed, true);
   });
 
@@ -195,5 +197,33 @@ describe("useWorkspaceSnapshot", () => {
     const { result } = renderHook(() => useWorkspaceSnapshot());
 
     assert.equal(result.current.isLoading, true);
+  });
+
+  it("auto-loads the workspace when fallbackData is not provided", async () => {
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+    const loaded = createDefaultWorkspace(false);
+    loaded.preferences.helpDismissed = true;
+
+    mock.method(globalThis, "fetch", async () => {
+      return new Response(
+        JSON.stringify({
+          workspace: loaded,
+          version: 3,
+          updatedAt: "2026-06-17T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    const { result } = renderHook(() => useWorkspaceSnapshot());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    assert.deepEqual(result.current.data, loaded);
+    assert.equal(result.current.version, 3);
+    assert.equal(result.current.isLoading, false);
+    assert.equal(result.current.error, undefined);
   });
 });

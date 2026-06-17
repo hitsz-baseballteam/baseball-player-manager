@@ -59,7 +59,7 @@ Not every task needs a plan file. Match the approach to the change size:
 - **Medium (1-3 days / multi-step / cross-session)**: create a Markdown file in `docs/exec-plans/active/`. Move to `docs/exec-plans/completed/` when done.
 - **Large (> 3 days / architecture-affecting)**: write an ADR in `docs/design-docs/` first, then an exec plan.
 
-Plan file naming: `YYYYMMDD-简短描述.md`. Known debt lives in `docs/exec-plans/tech-debt-tracker.md`.
+Plan file naming: `YYYYMMDD-简短描述.md`. Known debt lives in `docs/exec-plans/tech-debt-tracker.md`. Superseded or no-longer-actionable plans belong in `docs/exec-plans/archive/`.
 
 ## Existing Docs
 
@@ -70,8 +70,8 @@ Plan file naming: `YYYYMMDD-简短描述.md`. Known debt lives in `docs/exec-pla
 - [docs/FRONTEND.md](./docs/FRONTEND.md) — frontend conventions
 - [docs/SECURITY.md](./docs/SECURITY.md) — auth and data protection
 - [docs/RELIABILITY.md](./docs/RELIABILITY.md) — concurrency and failure modes
-- [docs/QUALITY_SCORE.md](./docs/QUALITY_SCORE.md) — quality assessment
 - [docs/PRODUCT_SENSE.md](./docs/PRODUCT_SENSE.md) — product principles and priorities
+- [docs/archive/README.md](./docs/archive/README.md) — archived reviews, superseded plans, and one-off QA artifacts
 - [docs/references/](./docs/references/) — external references (`-llms.txt` suffix)
 
 ## Working Rules

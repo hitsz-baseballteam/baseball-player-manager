@@ -13,12 +13,14 @@ export async function GET(request: Request) {
   }
 
   const snapshot = await getOrCreateWorkspaceSnapshot();
-  // Short browser cache: 10s fresh + 30s SWR. Combined with
-  // `unstable_cache` server-side (10s revalidate, tag "workspace"),
-  // repeated reads within the window skip both the DB and the network.
+  // Keep browser and CDN caches disabled for this authenticated endpoint.
+  // We still get the performance benefit from the server-side Next cache in
+  // `getOrCreateWorkspaceSnapshot`, but avoid serving stale private data
+  // after logout or session expiry.
   return NextResponse.json(snapshot, {
     headers: {
-      "Cache-Control": "private, max-age=10, stale-while-revalidate=30",
+      "Cache-Control": "private, no-store, max-age=0",
+      "Cloudflare-CDN-Cache-Control": "no-store",
     },
   });
 }

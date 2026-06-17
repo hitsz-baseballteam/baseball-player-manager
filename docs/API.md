@@ -15,16 +15,12 @@ This document describes the current HTTP API exposed by the Next.js app.
 The app uses a shared-passcode session backed by a signed `httpOnly` cookie.
 
 - Protected UI: `/panel/*`
-- Proxy-enforced API matcher today: `/api/workspace/:path*`
+- Protected API routes: `/api/workspace/:path*`, `/api/players/:path*`, `/api/scenarios/:path*`, `/api/games/:path*`, `/api/milestones/:path*`
 
 Current code evidence:
 
-- `src/proxy.ts` explicitly matches `/panel/:path*` and `/api/workspace/:path*`
+- `src/proxy.ts` explicitly matches `/panel/:path*` plus every private workspace API namespace above
 - browser clients call mutation routes with `credentials: "same-origin"`
-
-Operational note:
-
-- Resource mutation routes under `/api/players`, `/api/scenarios`, `/api/games`, and `/api/milestones` are private app endpoints used by the authenticated panel, but the repo-local proxy matcher is currently narrower than “all `/api/*`”.
 
 ## Shared Response Shape
 

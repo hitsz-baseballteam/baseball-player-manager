@@ -4,6 +4,14 @@ import type { NextRequest } from "next/server";
 import { readUnlockSession, UNLOCK_COOKIE_NAME } from "@/lib/auth";
 import { PANEL_ROUTES } from "@/lib/routes";
 
+export const PROTECTED_API_MATCHERS = [
+  "/api/workspace/:path*",
+  "/api/players/:path*",
+  "/api/scenarios/:path*",
+  "/api/games/:path*",
+  "/api/milestones/:path*",
+] as const;
+
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const unlockCookie = request.cookies.get(UNLOCK_COOKIE_NAME)?.value;
@@ -29,5 +37,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/panel/:path*", "/api/workspace/:path*"],
+  matcher: [
+    "/panel/:path*",
+    "/api/workspace/:path*",
+    "/api/players/:path*",
+    "/api/scenarios/:path*",
+    "/api/games/:path*",
+    "/api/milestones/:path*",
+  ],
 };

@@ -1,12 +1,14 @@
 # 性能优化 — 前后端调用链路延迟与卡顿
 
+> 2026-06-17 状态：此文档现在主要用于记录 **TD-10 的剩余收尾项**。P0-2 / P0-3 / P1-2 / P1-3 已落地；P0-1 以“SSR 初始数据 + 页面内本地 snapshot 状态”形式部分达成，但**并未引入真正的 SWR 全局缓存**。**当前唯一仍活跃的执行项是 P1-1：`writeNormalizedWorkspace` 改为批量 INSERT**。下文保留了历史分析和实施记录，但凡与当前代码不一致时，以仓库代码与 `docs/ARCHITECTURE.md` / `docs/RELIABILITY.md` 为准。
+
 ## 背景
 
 面板（`/panel/*`）操作存在明显延迟和卡顿，教练日常使用体感较差。根因不在 UI 层，而在数据访问层和缓存策略：
 
-- **客户端无 SWR / React Query**：每次 mutation 后手动 `loadWorkspaceSnapshot` 整库重读
-- **Server Component 无 React `cache()`**：每次页面导航都重新读库
-- **HTTP 层无缓存头**：浏览器不会复用响应
+- **历史问题：客户端无共享 workspace cache**：当前通过 `useWorkspaceSnapshot()` 缓解，首屏 SSR 注入，缺省时自动拉取；但它是页面内本地状态封装，不是 SWR/React Query 这类全局共享缓存
+- **历史问题：Server Component 无 React `cache()`**：已落地，同请求内不再重复读库
+- **历史问题：HTTP 层无缓存策略**：当前私有 `/api/workspace` 已明确 `no-store`，性能收益来自服务端 `unstable_cache`
 - **写路径是 wipe + reinsert**：工作区越大写越慢
 - **连接池 `max: 1`**：在 Supabase Pooler transaction-mode 下保守；9 个 `SELECT` 串行实际是因 `withTransaction` 共享同一 `PoolClient`，与 `max` 无关
 
@@ -15,9 +17,9 @@
 ### 读路径
 
 - `src/lib/panel-server.ts::getPanelWorkspaceSnapshot` → `src/lib/workspace-store.ts::getOrCreateWorkspaceSnapshot` → 1 个事务 + 9 个 `SELECT`（代码上是 `Promise.all`，但**所有查询复用 `withTransaction` 给的同一个 `PoolClient`**；node-postgres 在同一 client 上对查询排队执行，**与 `db.ts:91` 的 pool `max` 无关**）
-- 每次 Server Component 渲染都重新查 DB，无 `import { cache } from "react"`
-- `src/app/api/workspace/route.ts` 的 `GET` 响应无 `Cache-Control` / `ETag` / `Last-Modified`
-- 客户端使用 `useState` 持有 workspace，跨页面导航不共享
+- Server Component 读路径已加 `cache()`，同请求内重复调用会去重
+- `src/app/api/workspace/route.ts` 的 `GET` 明确返回 `Cache-Control: private, no-store, max-age=0`
+- 客户端通过 `useWorkspaceSnapshot()` 维护页面内 workspace 读取与手动 `mutate()`；当前没有跨页面挂载共享的全局客户端缓存
 
 ### 写路径
 
@@ -36,22 +38,22 @@
 
 ### 缓存
 
-- Server Component 无 React `cache()`
-- 客户端无 SWR / React Query
-- 无 Next.js `unstable_cache` / `revalidateTag`
-- 无 HTTP `Cache-Control` / `ETag`
+- Server Component 已有 React `cache()`
+- 客户端已接入 `useWorkspaceSnapshot()`
+- 服务端已使用 Next.js `unstable_cache` / `revalidateTag`
+- `/api/workspace` 已显式 `no-store`；不依赖浏览器 HTTP 缓存
 
 ## 目标结果
 
 | 指标 | 现状（估） | 目标结果 |
 |---|---|---|
-| 切 tab / 重进页面 | 数百 ms 重新打 DB | **0 次 `/api/workspace` 请求**（SWR 命中） |
+| 切 tab / 重进页面 | 数百 ms 重新打 DB | **0 次额外 `/api/workspace` 请求**（依赖 SSR 初始数据 + 页面内本地 snapshot 状态，而非 SWR 命中） |
 | 初次打开 `/panel` | 0.5–1.2s | **P95 < 400ms** |
 | 写操作（小工作区） | 2–5s | **P95 < 500ms** |
 | 写操作（中工作区 ~20 球员 / 50 比赛） | 3–6s | **P95 < 1s** |
 | 9 个 `SELECT` 串行总耗时 | 50–270ms | **不在 P0+P1 优化范围**（单 client 串行是设计选择；需架构变更才能并行，见下方"明确放弃的目标"） |
-| 409 冲突触发的客户端 reload | 200–800ms | **0ms**（同事务 snapshot + SWR `mutate`） |
-| 浏览器 10 秒内重复读 | 每次 1 个 RTT | **0 个 RTT**（HTTP 缓存） |
+| 409 冲突触发的客户端 reload | 200–800ms | **0ms**（同事务 snapshot + `useWorkspaceSnapshot().mutate`） |
+| 10 秒窗口内重复服务端读 | 每次 1 次 DB 读取 | **0 次 DB 读取**（命中 `unstable_cache`） |
 
 ### 不在 P0 + P1 优化范围的目标
 
@@ -65,50 +67,50 @@
 
 ### P0 — 关键路径优化（每项独立可发布，零行为变更）
 
-#### P0-1. 客户端加 SWR 缓存
+#### P0-1. 客户端 workspace snapshot 缓存
 
-**修改原因：** 客户端无 SWR / 缓存，切 tab / 重复进页面都重新打 DB；当前 `useState` 持有 workspace 跨页面不共享
+**修改原因：** 客户端没有全局共享缓存，切 tab / 重复进页面容易重新打 DB；当前页面内状态足以消掉大部分重复请求，但仍不等于 SWR
 
 **变动范围：** 见下方"目标结果 / 改动范围"
 
 **产生的影响：** 切 tab / 重进页面用户感知延迟从"数百 ms 重新打 DB"降到"瞬间"
 
-**副作用：** SWR 是新依赖；`fallbackData` 必须保留否则首屏等待；SWR 行为异常时回退到 `useState + useEffect`
+**副作用：** 当前实现没有引入外部缓存库；跨页面挂载仍不共享缓存，如果后续真的要上 SWR/React Query，需要重新评估一致性与失效策略
 
 **目标结果：**
-- 切 tab / 浏览器返回 / 5 秒内重复进入同一页面 → **0 次** `/api/workspace` 请求
-- 同一页面多个组件同时挂载时 → **1 次**请求（dedupe）
+- 切 tab / 浏览器返回 / 5 秒内重复进入同一页面 → **0 次额外** `/api/workspace` 请求（前提是页面拿到 SSR 初始 snapshot）
+- 同一页面组件缺省挂载且没有初始数据时 → **1 次**请求
 - 现有 `useState(sanitizeWorkspace(initialWorkspace))` 全部替换为 `useWorkspaceSnapshot(initial)`
 
 **改动范围：**
-- 新增 `src/lib/use-workspace-snapshot.ts`（`useSWR` 包装，`fallbackData` 用 `initialSnapshot`）
-- 修改 `src/components/player-manager-client.tsx`、`roster-page-client.tsx`、`scenarios-page-client.tsx`、`stats-page-client.tsx`、`hall-of-fame-page-client.tsx`（**注意**：HallOfFame 用 `useMemo` 而非 `useState`、无 mutation callback；接入 SWR 应是只读模式（其他 tab 写入时 live-update）而非全 mutation 客户端）
-- 保留 mutation 流程不变：mutate 成功后用 `mutate("workspace-snapshot", newSnapshot, { revalidate: false })` 同步本地缓存
+- 新增并落地 `src/lib/workspace-client.ts::useWorkspaceSnapshot()`
+- 页面组件改用 `useWorkspaceSnapshot(initial)` 获取初始 snapshot 与本地 `mutate`
+- 保留 mutation 流程不变：mutation 成功后调用 hook 返回的 `mutate` 同步页面内 snapshot
 
 **验证：**
 - `npm test` 全绿
 - `npm run build` 成功
-- 浏览器 Network 面板：切 tab 不再产生 `/api/workspace` 请求
-- 同一页面挂载两次 → 只 1 个请求
-- 409 冲突后 SWR 自动重新验证拿最新数据
+- 浏览器 Network 面板：切 tab 不再产生额外 `/api/workspace` 请求
+- 缺省挂载且无初始 snapshot 时 → 只 1 个请求
+- 409 冲突后本地 `mutate()` 重新验证拿最新数据
 
 **兜底：**
-- `fallbackData` 用 `initialWorkspace` / `initialVersion`，首次请求失败也不阻塞 UI
-- SWR 默认静默重试，无需额外错误处理
+- 初始数据继续来自 SSR snapshot，首次请求失败也不阻塞 UI
+- 如后续引入 SWR/React Query，再单独定义 retry / revalidation 策略
 
 ---
 
 #### P0-2. Server Component `cache()` + 客户端请求去重
 
-**修改原因：** Server Component 无 `import { cache } from "react"`、API 无 `Cache-Control` 头，单次页面渲染中多个 Server Component 调用都打 DB；浏览器 10s 内重复读不命中本地缓存
+**修改原因：** Server Component 无 `import { cache } from "react"`，单次页面渲染中多个 Server Component 调用都打 DB；跨请求读也缺少服务端短窗口缓存
 
-**产生的影响：** 单次 RSC 渲染中 9 个 SELECT 合并为 1 次；浏览器 10s 内重复读命中 `from disk cache`
+**产生的影响：** 单次 RSC 渲染中 9 个 SELECT 合并为 1 次；10 秒窗口内重复服务端读命中 `unstable_cache`
 
 **副作用：** Next.js React `cache()` 跨请求失效（不替代 P1-2 的服务端短缓存）
 
 **目标结果：**
 - 单次 Next.js 渲染中，多个 Server Component 调用 `getOrCreateWorkspaceSnapshot()` → **1 次** DB 调用
-- `GET /api/workspace` 响应头 `Cache-Control: private, max-age=10, stale-while-revalidate=30`，浏览器端命中短缓存
+- `GET /api/workspace` 响应头已回到 `private, no-store, max-age=0`；短窗口性能收益由服务端 `unstable_cache` 提供，而不是浏览器缓存
 
 **改动范围：**
 - `src/lib/workspace-store.ts`：在 `getOrCreateWorkspaceSnapshot` 外层包 `import { cache } from "react"`
@@ -117,7 +119,7 @@
 
 **验证：**
 - `npm test` 全绿
-- 浏览器 dev tools：10 秒内重复 `GET /api/workspace` 显示 `200 (from disk cache)` 或 `from memory cache`
+- 服务端 debug / dev log：10 秒窗口内重复读命中 `unstable_cache`，不再重新触发底层 DB 事务
 - 单页 RSC 渲染中 `getOrCreateWorkspaceSnapshot` 只触发 1 个事务（debug 日志验证）
 
 **注意：**
@@ -175,7 +177,7 @@
 **当前状态（2026-06-17 复核）：**
 - ✅ `prepareUnnestArgs(rows, tableName)` utility 已实现（`src/lib/workspace-store.ts:129`），覆盖 `players` / `positions` / `milestones` 三种行类型 + 5 个单元测试（`workspace-store.test.ts`）
 - ❌ `writeNormalizedWorkspace` 仍然用 9 个 for-loop 逐行 INSERT（`workspace-store.ts:796-970`），`prepareUnnestArgs` 在生产代码路径上 0 内部调用方
-- 实际写延迟：小型工作区（12 球员）实测 20–25ms（已满足 P95 < 500ms 目标），中型工作区（~20 球员 / 50 比赛）目标 P95 < 1s 未验证
+- 实际写延迟：小型工作区（12 球员）实测 20–25ms，但这是当前逐行 INSERT 路径在小数据集下的结果；中型工作区（~20 球员 / 50 比赛）目标 P95 < 1s 未验证
 
 **目标结果：**
 - `writeNormalizedWorkspace` 中所有 for-loop `INSERT` 改为单条 `unnest` 批量 `INSERT`

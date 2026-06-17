@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-17 (after TD-10 latency optimization close-out).
+This document describes the repository as currently observed on 2026-06-17 (after the latest TD-10 latency optimization pass).
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -22,7 +22,7 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 | `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and cross-page client helpers |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
-| `docs/` | Architecture, design docs, quality notes, and references |
+| `docs/` | Architecture, product/engineering docs, references, and archives |
 | `.github/workflows/` | CI workflow for lint, test, and build |
 
 ## Entry Points
@@ -55,7 +55,7 @@ From `package.json`:
 | `src/app/lineup/page.tsx` | Compatibility redirect that forwards `/lineup` to `/panel/scenarios` |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint |
-| `src/proxy.ts` | Protects `/panel/*` and `/api/workspace/*` by validating the signed unlock cookie |
+| `src/proxy.ts` | Protects `/panel/*` plus private workspace API namespaces by validating the signed unlock cookie |
 | `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components
@@ -99,7 +99,7 @@ Relevant files:
 - `src/lib/auth.ts` — verifies `APP_ADMIN_PASSCODE_HASH`, signs cookies with `AUTH_SECRET`, and enforces absolute session expiry
 - `src/app/panel/login/actions.ts` — verifies the submitted passcode, applies rate limiting, sets the `baseball_manager_unlock` cookie, and redirects
 - `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used by login submissions, logout, and workspace routes
-- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace/*` requests with `401`
+- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated private API requests under `/api/workspace`, `/api/players`, `/api/scenarios`, `/api/games`, and `/api/milestones` with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
 Observed limits and boundaries:
@@ -108,7 +108,7 @@ Observed limits and boundaries:
 - workspace reads, workspace resource writes, and logout requests also have route-level rate limits
 - the unlock cookie is `httpOnly`, `sameSite=lax`, `secure` in production, and includes a server-validated absolute expiry
 - `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
-- panel and API responses receive `private, no-store` headers through `next.config.ts`; the `/api/workspace` endpoint overrides this with `private, max-age=10, stale-while-revalidate=30` for short-window browser caching. See the data flow section below.
+- panel responses receive `private, no-store` headers through `next.config.ts`; `/api/workspace` also explicitly returns `private, no-store` plus `Cloudflare-CDN-Cache-Control: no-store`. Read performance now relies on the server-side cache layers, not browser HTTP caching. See the data flow section below.
 
 ### 4. React page-shell architecture
 
@@ -174,14 +174,14 @@ The panel reads/writes traverse four layered caches. Each layer invalidates the 
 
 ```
                                     +------------------------+
-   Browser tab / F5                 |  Browser HTTP cache    |  (Cache-Control: private,
-                                    |                        |   max-age=10, SWR=30)
+   Browser tab / F5                 |  Browser HTTP cache    |  (disabled for
+                                    |                        |   /api/workspace)
                                     +-----------+------------+
                                                 | miss
                                                 v
                                     +------------------------+
-   useWorkspaceSnapshot(initial)    |  React state in client |  (cross-page in-app,
-                                    |  (workspace-client.ts) |   fallbackData=initial)
+   useWorkspaceSnapshot(initial)    |  React state in client |  (fallbackData for SSR,
+                                    |  (workspace-client.ts) |   auto-load if omitted)
                                     +-----------+------------+
                                                 | miss (F5 / new tab)
                                                 v
@@ -212,11 +212,11 @@ The panel reads/writes traverse four layered caches. Each layer invalidates the 
 - **Client cache** (`useWorkspaceSnapshot` in `src/lib/workspace-client.ts`): React state mirror with `{ data, mutate, isLoading }`. First render uses SSR-injected `initialWorkspace` as `fallbackData`, so no client fetch on first paint. Mutations call `mutate(newData, { revalidate: false })` to optimistically update.
 - **React `cache()`** (`src/lib/panel-server.ts`): deduplicates multiple Server Component calls to `getPanelWorkspaceSnapshot` within a single Next.js render. Cross-request ineffective.
 - **Next.js `unstable_cache`** (`src/lib/workspace-store.ts::getOrCreateWorkspaceSnapshot`): 10s revalidate + tag `"workspace"`. Survives across requests but is per-process.
-- **Browser HTTP cache**: enabled only on `/api/workspace` via `Cache-Control: private, max-age=10, stale-while-revalidate=30`. Other `/api/*` endpoints inherit no Cache-Control from `next.config.ts` and are not browser-cached.
+- **Browser HTTP cache**: intentionally disabled for `/api/workspace` via `Cache-Control: private, no-store, max-age=0` and `Cloudflare-CDN-Cache-Control: no-store`. Other private `/api/*` endpoints also avoid browser caching.
 
 ### Write invalidation
 
-Every write path through `mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot` calls `revalidateTag("workspace", "max")` after commit, which forces the `unstable_cache` layer to drop its entry on next read. The client cache is updated via the mutation `mutate()` callback. Browser cache is allowed to age out within 10s — operations that read immediately after a write go through the client or server caches, not the browser cache.
+Every write path through `mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot` calls `revalidateTag("workspace", "max")` after commit, which forces the `unstable_cache` layer to drop its entry on next read. The client cache is updated via the mutation `mutate()` callback. There is no browser cache window for private workspace reads anymore.
 
 ### Why two cache layers (`cache()` + `unstable_cache`)
 

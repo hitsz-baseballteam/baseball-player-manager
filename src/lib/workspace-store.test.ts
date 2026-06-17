@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { createDefaultWorkspace } from "@/lib/workspace";
-import { getOrCreateWorkspaceSnapshot } from "@/lib/workspace-store";
+import {
+  buildWorkspaceWriteRows,
+  getOrCreateWorkspaceSnapshot,
+} from "@/lib/workspace-store";
 
 // ---------------------------------------------------------------------------
 // P1-1 — unnest batch INSERT helper
@@ -51,7 +54,7 @@ describe("prepareUnnestArgs", () => {
 
     assert.ok(Array.isArray(result));
     if (positions.length > 0) {
-      assert.ok(result[0]?.length, positions.length);
+      assert.equal(result[0]?.length, positions.length);
     }
   });
 
@@ -65,6 +68,99 @@ describe("prepareUnnestArgs", () => {
     if (workspace.milestones.length > 0) {
       assert.ok(result.length > 0);
     }
+  });
+});
+
+describe("buildWorkspaceWriteRows", () => {
+  it("flattens a workspace into per-table batch rows", () => {
+    const workspace = createDefaultWorkspace(false);
+    const firstPlayerId = workspace.players[0]?.id ?? "player-1";
+
+    workspace.games = [
+      {
+        id: "game-1",
+        date: "2026-06-17",
+        opponent: "Sharks",
+        gameType: "official",
+        totalInnings: 7,
+        note: "Batch insert smoke test",
+        innings: [{ inning: 1, hits: 1, runs: 0, batters: [firstPlayerId] }],
+        statLines: [
+          {
+            playerId: firstPlayerId,
+            pa: 1,
+            ab: 1,
+            h: 1,
+            doubles: 0,
+            triples: 0,
+            hr: 0,
+            rbi: 0,
+            r: 1,
+            sb: 0,
+            bb: 0,
+            hbp: 0,
+            sf: 0,
+            so: 0,
+            ip: null,
+            er: null,
+            soPitching: null,
+            bbPitching: null,
+            hPitching: null,
+            po: 0,
+            a: 0,
+            e: 0,
+            w: 0,
+            l: 0,
+            sv: 0,
+            np: 0,
+          },
+        ],
+      },
+    ];
+    workspace.milestones = [
+      {
+        id: "ms-1",
+        date: "2026-06-18",
+        title: "First win",
+        description: "Captured after the opener",
+        mediaUrl: "https://example.com/photo.jpg",
+      },
+    ];
+
+    const rows = buildWorkspaceWriteRows("ws-1", workspace);
+
+    assert.equal(rows.players.length, workspace.players.length);
+    assert.equal(
+      rows.positions.length,
+      workspace.players.reduce((count, player) => count + player.positions.length, 0),
+    );
+    assert.equal(rows.scenarios.length, workspace.scenarios.length);
+    assert.equal(
+      rows.defenseAssignments.length,
+      workspace.scenarios.reduce(
+        (count, scenario) => count + Object.keys(scenario.assignments.defense).length,
+        0,
+      ),
+    );
+    assert.equal(
+      rows.lineupSlots.length,
+      workspace.scenarios.reduce((count, scenario) => count + scenario.assignments.lineup.length, 0),
+    );
+    assert.equal(rows.games.length, 1);
+    assert.equal(rows.innings.length, 1);
+    assert.equal(rows.statLines.length, 1);
+    assert.equal(rows.milestones.length, 1);
+    assert.deepEqual(rows.innings[0]?.batters, [firstPlayerId]);
+    assert.equal(rows.players[0]?.workspaceId, "ws-1");
+    assert.equal(rows.games[0]?.note, "Batch insert smoke test");
+  });
+
+  it("keeps scenario batch columns aligned with the actual table shape", async () => {
+    const { prepareUnnestArgs } = await import("@/lib/workspace-store");
+    const workspace = createDefaultWorkspace(false);
+    const rows = buildWorkspaceWriteRows("ws-1", workspace);
+
+    assert.equal(prepareUnnestArgs(rows.scenarios, "scenarios").length, 7);
   });
 });
 
@@ -131,8 +227,7 @@ describe("write transaction isolation", () => {
   });
 
   it("read transactions do NOT set REPEATABLE READ", async () => {
-    const { wrapWriteTransaction, wrapReadTransaction } =
-      await import("@/lib/workspace-store");
+    const { wrapReadTransaction } = await import("@/lib/workspace-store");
 
     const recordedStatements: string[] = [];
     const mockClient = {

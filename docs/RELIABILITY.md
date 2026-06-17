@@ -108,16 +108,16 @@ HTTP 状态码（当前代码显式返回的部分）：
 | 客户端切 tab（5 个 panel 页面） | 0 RTT | 浏览器实测：0 `/api/workspace` 请求 | 客户端 `useWorkspaceSnapshot` + SSR 注入初始数据 |
 | 服务端页面渲染冷（`/panel` 首次） | 200–290ms | dev log | 含 React `cache()` 同请求去重 + DB 查询 |
 | 服务端页面渲染热（10s 内重访） | 21–32ms | dev log: `next.js: <2ms, app: 19–32ms` | 命中 `unstable_cache` |
-| 单球员 `PATCH /api/players/:id` 写 | 20–25ms（热） | dev log: `app: 19–22ms` | 12 球员工作区下 `unnest` 批量 INSERT 1 个 RTT |
+| 单球员 `PATCH /api/players/:id` 写 | 20–25ms（热） | dev log: `app: 19–22ms` | 12 球员工作区下的小数据集结果；当时生产写路径仍是逐行 INSERT，不能外推出中等规模表现 |
 | 首次写（Turbopack 冷编译） | 628ms | dev log: `next.js: 606ms` | 框架编译成本，不是应用代码 |
 | 409 版本冲突 | 5–13ms | dev log: `app: 5ms` | 单纯版本检查 + `FOR UPDATE` |
-| `Cache-Control` 头（`/api/workspace`） | `private, max-age=10, stale-while-revalidate=30` | `curl -I` | 浏览器 10s 内重复读可命中本地缓存 |
+| `Cache-Control` 头（`/api/workspace`） | `private, no-store, max-age=0` | `curl -I` | 浏览器与 CDN 不缓存私有 workspace 响应；性能依赖服务端 `unstable_cache` |
 
 ### 已知不在范围内的优化
 
 - 9 个 SELECT 串行化（~50–270ms）需要架构改动（多 client 共享 MVCC snapshot 或单 SQL JOIN）才能并行；当前 `max: 1/5` 池大小与之无关（串行因共享 `PoolClient` 而排队）
-- 中等规模（~20 球员 / 50 比赛）工作区写延迟：当前测试集无法验证，估测 `unnest` 路径下应 < 500ms
-- 浏览器 HTTP 缓存的命中率：实测需要反复硬刷新浏览器；以上数字通过 `curl` 头校验
+- 中等规模（~20 球员 / 50 比赛）工作区写延迟：当前测试集无法验证，且批量 `unnest` 写入尚未接入 `writeNormalizedWorkspace()` 主路径
+- 浏览器 HTTP 缓存不在当前策略内：`/api/workspace` 明确 `no-store`，以上热读收益来自服务端 `unstable_cache`
 
 ### 验证方法
 
@@ -131,4 +131,4 @@ time curl -X PATCH -H "Cookie: baseball_manager_unlock=$COOKIE" \
   -d '{"player":...,"version":N}' http://127.0.0.1:3210/api/players/p-01
 ```
 
-更详细的背景见 `docs/exec-plans/completed/20260616-latency-optimization.md`。
+更详细的背景见 `docs/exec-plans/active/20260616-latency-optimization.md`。

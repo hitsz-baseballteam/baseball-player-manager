@@ -107,7 +107,7 @@ describe("PlayerManagerClient", () => {
         isVersionConflict() {
           return false;
         },
-        useWorkspaceSnapshot(initial) {
+        useWorkspaceSnapshot(initial?: Workspace) {
           // The component uses this hook as a side cache; the real
           // source of truth is `useState` above. Returning the initial
           // workspace as `data` (with a no-op `mutate`) keeps the

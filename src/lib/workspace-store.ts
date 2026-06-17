@@ -61,7 +61,6 @@ export const UNNEST_TABLE_COLUMNS = {
     "sortOrder",
     "name",
     "note",
-    "isActive",
     "createdAt",
     "updatedAt",
   ],
@@ -321,6 +320,300 @@ function normalizePlayerNumbersForStorage(workspace: Workspace): Workspace {
         : { ...player, number: `${rawNumber}-${nextCount}` };
     }),
   };
+}
+
+type PlayerInsertRow = {
+  id: string;
+  workspaceId: string;
+  sortOrder: number;
+  name: string;
+  number: string;
+  throws: Player["throws"];
+  bats: Player["bats"];
+  status: Player["status"];
+  joinedOn: string | null;
+  profileType: Player["profile"]["profileType"];
+  age: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  fastballTopKmh: number | null;
+  fastballAvgKmh: number | null;
+  armStrengthM: number | null;
+  thirtyMeterSec: number | null;
+  scoutingSummary: string;
+  pitcherRadar: string;
+  fielderRadar: string;
+  pitchTypes: string[];
+};
+
+type PositionInsertRow = {
+  playerId: string;
+  positionCode: Player["positions"][number];
+};
+
+type ScenarioInsertRow = {
+  id: string;
+  workspaceId: string;
+  sortOrder: number;
+  name: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type DefenseAssignmentInsertRow = {
+  scenarioId: string;
+  positionCode: Player["positions"][number];
+  playerId: string | null;
+};
+
+type LineupSlotInsertRow = {
+  scenarioId: string;
+  slotIndex: number;
+  playerId: string | null;
+};
+
+type GameInsertRow = {
+  id: string;
+  workspaceId: string;
+  sortOrder: number;
+  gameDate: string | null;
+  opponent: string;
+  gameType: Game["gameType"];
+  totalInnings: number;
+  note: string | null;
+};
+
+type InningInsertRow = {
+  gameId: string;
+  inningNumber: number;
+  hits: number;
+  runs: number;
+  batters: string[];
+};
+
+type StatLineInsertRow = {
+  gameId: string;
+  playerId: string;
+  sortOrder: number;
+  pa: number;
+  ab: number;
+  h: number;
+  doubles: number;
+  triples: number;
+  hr: number;
+  rbi: number;
+  r: number;
+  sb: number;
+  bb: number;
+  hbp: number;
+  sf: number;
+  so: number;
+  ip: number | null;
+  er: number | null;
+  soPitching: number | null;
+  bbPitching: number | null;
+  hPitching: number | null;
+  po: number;
+  a: number;
+  e: number;
+  w: number;
+  l: number;
+  sv: number;
+  np: number;
+};
+
+type MilestoneInsertRow = {
+  id: string;
+  workspaceId: string;
+  sortOrder: number;
+  date: string | null;
+  title: string;
+  description: string;
+  mediaUrl: string | null;
+};
+
+type WorkspaceWriteRows = {
+  players: PlayerInsertRow[];
+  positions: PositionInsertRow[];
+  scenarios: ScenarioInsertRow[];
+  defenseAssignments: DefenseAssignmentInsertRow[];
+  lineupSlots: LineupSlotInsertRow[];
+  games: GameInsertRow[];
+  innings: InningInsertRow[];
+  statLines: StatLineInsertRow[];
+  milestones: MilestoneInsertRow[];
+};
+
+export function buildWorkspaceWriteRows(
+  workspaceId: string,
+  workspace: Workspace,
+): WorkspaceWriteRows {
+  const players: PlayerInsertRow[] = [];
+  const positions: PositionInsertRow[] = [];
+  const scenarios: ScenarioInsertRow[] = [];
+  const defenseAssignments: DefenseAssignmentInsertRow[] = [];
+  const lineupSlots: LineupSlotInsertRow[] = [];
+  const games: GameInsertRow[] = [];
+  const innings: InningInsertRow[] = [];
+  const statLines: StatLineInsertRow[] = [];
+  const milestones: MilestoneInsertRow[] = [];
+
+  for (const [index, player] of workspace.players.entries()) {
+    players.push({
+      id: player.id,
+      workspaceId,
+      sortOrder: index,
+      name: player.name,
+      number: player.number,
+      throws: player.throws,
+      bats: player.bats,
+      status: player.status,
+      joinedOn: normalizeDateOnly(player.joinedAt),
+      profileType: player.profile.profileType,
+      age: player.profile.age,
+      heightCm: player.profile.heightCm,
+      weightKg: player.profile.weightKg,
+      fastballTopKmh: player.profile.fastballTopKmh,
+      fastballAvgKmh: player.profile.fastballAvgKmh,
+      armStrengthM: player.profile.armStrengthM,
+      thirtyMeterSec: player.profile.thirtyMeterSec,
+      scoutingSummary: player.profile.scoutingSummary,
+      pitcherRadar: JSON.stringify(player.profile.radar.pitcher),
+      fielderRadar: JSON.stringify(player.profile.radar.fielder),
+      pitchTypes: player.profile.pitchTypes ?? [],
+    });
+
+    for (const position of player.positions) {
+      positions.push({
+        playerId: player.id,
+        positionCode: position,
+      });
+    }
+  }
+
+  for (const [index, scenario] of workspace.scenarios.entries()) {
+    scenarios.push({
+      id: scenario.id,
+      workspaceId,
+      sortOrder: index,
+      name: scenario.name,
+      note: scenario.note,
+      createdAt: scenario.createdAt,
+      updatedAt: scenario.updatedAt,
+    });
+
+    for (const [positionCode, playerId] of Object.entries(scenario.assignments.defense)) {
+      defenseAssignments.push({
+        scenarioId: scenario.id,
+        positionCode: positionCode as Player["positions"][number],
+        playerId,
+      });
+    }
+
+    for (const [slotIndex, playerId] of scenario.assignments.lineup.entries()) {
+      lineupSlots.push({
+        scenarioId: scenario.id,
+        slotIndex,
+        playerId,
+      });
+    }
+  }
+
+  for (const [index, game] of workspace.games.entries()) {
+    games.push({
+      id: game.id,
+      workspaceId,
+      sortOrder: index,
+      gameDate: normalizeDateOnly(game.date),
+      opponent: game.opponent,
+      gameType: game.gameType,
+      totalInnings: game.totalInnings,
+      note: game.note ?? null,
+    });
+
+    for (const inning of game.innings) {
+      innings.push({
+        gameId: game.id,
+        inningNumber: inning.inning,
+        hits: inning.hits,
+        runs: inning.runs,
+        batters: inning.batters,
+      });
+    }
+
+    for (const [statIndex, statLine] of game.statLines.entries()) {
+      statLines.push({
+        gameId: game.id,
+        playerId: statLine.playerId,
+        sortOrder: statIndex,
+        pa: statLine.pa,
+        ab: statLine.ab,
+        h: statLine.h,
+        doubles: statLine.doubles,
+        triples: statLine.triples,
+        hr: statLine.hr,
+        rbi: statLine.rbi,
+        r: statLine.r,
+        sb: statLine.sb,
+        bb: statLine.bb,
+        hbp: statLine.hbp,
+        sf: statLine.sf,
+        so: statLine.so,
+        ip: statLine.ip,
+        er: statLine.er,
+        soPitching: statLine.soPitching,
+        bbPitching: statLine.bbPitching,
+        hPitching: statLine.hPitching,
+        po: statLine.po,
+        a: statLine.a,
+        e: statLine.e,
+        w: statLine.w,
+        l: statLine.l,
+        sv: statLine.sv,
+        np: statLine.np,
+      });
+    }
+  }
+
+  for (const [index, milestone] of workspace.milestones.entries()) {
+    milestones.push({
+      id: milestone.id,
+      workspaceId,
+      sortOrder: index,
+      date: normalizeDateOnly(milestone.date),
+      title: milestone.title,
+      description: milestone.description,
+      mediaUrl: milestone.mediaUrl ?? null,
+    });
+  }
+
+  return {
+    players,
+    positions,
+    scenarios,
+    defenseAssignments,
+    lineupSlots,
+    games,
+    innings,
+    statLines,
+    milestones,
+  };
+}
+
+async function insertRowsWithUnnest<T extends Record<string, unknown>>(
+  client: Queryable,
+  tableName: UnnestTableName,
+  sql: string,
+  rows: T[],
+  leadingArgs: unknown[] = [],
+) {
+  const args = prepareUnnestArgs(rows, tableName);
+  if (args.length === 0) {
+    return;
+  }
+
+  await client.query(sql, [...leadingArgs, ...args]);
 }
 
 /**
@@ -792,200 +1085,282 @@ async function writeNormalizedWorkspace(params: {
   );
 
   await wipeNormalizedWorkspace(client, workspaceId);
+  const rows = buildWorkspaceWriteRows(workspaceId, safeWorkspace);
 
-  for (const [index, player] of safeWorkspace.players.entries()) {
-    await client.query(
-      `
-        insert into public.app_player (
-          workspace_id, id, sort_order, name, number, throws, bats, status, joined_on,
-          profile_type, age, height_cm, weight_kg, fastball_top_kmh, fastball_avg_kmh,
-          arm_strength_m, thirty_meter_sec, scouting_summary, pitcher_radar, fielder_radar,
-          pitch_types
-        )
-        values (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, $12, $13,
-          $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb, $21::text[]
-        )
-      `,
-      [
-        workspaceId,
-        player.id,
-        index,
-        player.name,
-        player.number,
-        player.throws,
-        player.bats,
-        player.status,
-        normalizeDateOnly(player.joinedAt),
-        player.profile.profileType,
-        player.profile.age,
-        player.profile.heightCm,
-        player.profile.weightKg,
-        player.profile.fastballTopKmh,
-        player.profile.fastballAvgKmh,
-        player.profile.armStrengthM,
-        player.profile.thirtyMeterSec,
-        player.profile.scoutingSummary,
-        JSON.stringify(player.profile.radar.pitcher),
-        JSON.stringify(player.profile.radar.fielder),
-        player.profile.pitchTypes,
-      ],
-    );
+  await insertRowsWithUnnest(
+    client,
+    "players",
+    `
+      insert into public.app_player (
+        id, workspace_id, sort_order, name, number, throws, bats, status, joined_on,
+        profile_type, age, height_cm, weight_kg, fastball_top_kmh, fastball_avg_kmh,
+        arm_strength_m, thirty_meter_sec, scouting_summary, pitcher_radar, fielder_radar,
+        pitch_types
+      )
+      select *
+      from unnest(
+        $1::text[],
+        $2::uuid[],
+        $3::integer[],
+        $4::text[],
+        $5::text[],
+        $6::text[],
+        $7::text[],
+        $8::text[],
+        $9::date[],
+        $10::text[],
+        $11::integer[],
+        $12::integer[],
+        $13::integer[],
+        $14::numeric[],
+        $15::numeric[],
+        $16::numeric[],
+        $17::numeric[],
+        $18::text[],
+        $19::jsonb[],
+        $20::jsonb[],
+        $21::text[][]
+      ) as rows(
+        id,
+        workspace_id,
+        sort_order,
+        name,
+        number,
+        throws,
+        bats,
+        status,
+        joined_on,
+        profile_type,
+        age,
+        height_cm,
+        weight_kg,
+        fastball_top_kmh,
+        fastball_avg_kmh,
+        arm_strength_m,
+        thirty_meter_sec,
+        scouting_summary,
+        pitcher_radar,
+        fielder_radar,
+        pitch_types
+      )
+    `,
+    rows.players,
+  );
 
-    for (const position of player.positions) {
-      await client.query(
-        `
-          insert into public.app_player_position (workspace_id, player_id, position_code)
-          values ($1, $2, $3)
-        `,
-        [workspaceId, player.id, position],
-      );
-    }
-  }
+  await insertRowsWithUnnest(
+    client,
+    "positions",
+    `
+      insert into public.app_player_position (workspace_id, player_id, position_code)
+      select $1::uuid, rows.player_id, rows.position_code
+      from unnest($2::text[], $3::text[]) as rows(player_id, position_code)
+    `,
+    rows.positions,
+    [workspaceId],
+  );
 
-  for (const [index, scenario] of safeWorkspace.scenarios.entries()) {
-    await client.query(
-      `
-        insert into public.app_scenario (
-          workspace_id, id, sort_order, name, note, created_at, updated_at
-        )
-        values ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz)
-      `,
-      [
-        workspaceId,
-        scenario.id,
-        index,
-        scenario.name,
-        scenario.note,
-        scenario.createdAt,
-        scenario.updatedAt,
-      ],
-    );
+  await insertRowsWithUnnest(
+    client,
+    "scenarios",
+    `
+      insert into public.app_scenario (
+        id, workspace_id, sort_order, name, note, created_at, updated_at
+      )
+      select *
+      from unnest(
+        $1::text[],
+        $2::uuid[],
+        $3::integer[],
+        $4::text[],
+        $5::text[],
+        $6::timestamptz[],
+        $7::timestamptz[]
+      ) as rows(id, workspace_id, sort_order, name, note, created_at, updated_at)
+    `,
+    rows.scenarios,
+  );
 
-    for (const [positionCode, playerId] of Object.entries(scenario.assignments.defense)) {
-      await client.query(
-        `
-          insert into public.app_scenario_defense_assignment (
-            workspace_id, scenario_id, position_code, player_id
-          )
-          values ($1, $2, $3, $4)
-        `,
-        [workspaceId, scenario.id, positionCode, playerId],
-      );
-    }
+  await insertRowsWithUnnest(
+    client,
+    "defenseAssignments",
+    `
+      insert into public.app_scenario_defense_assignment (
+        workspace_id, scenario_id, position_code, player_id
+      )
+      select $1::uuid, rows.scenario_id, rows.position_code, rows.player_id
+      from unnest($2::text[], $3::text[], $4::text[]) as rows(
+        scenario_id,
+        position_code,
+        player_id
+      )
+    `,
+    rows.defenseAssignments,
+    [workspaceId],
+  );
 
-    for (const [slotIndex, playerId] of scenario.assignments.lineup.entries()) {
-      await client.query(
-        `
-          insert into public.app_scenario_lineup_slot (
-            workspace_id, scenario_id, slot_index, player_id
-          )
-          values ($1, $2, $3, $4)
-        `,
-        [workspaceId, scenario.id, slotIndex, playerId],
-      );
-    }
-  }
+  await insertRowsWithUnnest(
+    client,
+    "lineupSlots",
+    `
+      insert into public.app_scenario_lineup_slot (
+        workspace_id, scenario_id, slot_index, player_id
+      )
+      select $1::uuid, rows.scenario_id, rows.slot_index, rows.player_id
+      from unnest($2::text[], $3::smallint[], $4::text[]) as rows(
+        scenario_id,
+        slot_index,
+        player_id
+      )
+    `,
+    rows.lineupSlots,
+    [workspaceId],
+  );
 
-  for (const [index, game] of safeWorkspace.games.entries()) {
-    await client.query(
-      `
-        insert into public.app_game (
-          workspace_id, id, sort_order, game_date, opponent, game_type, total_innings, note
-        )
-        values ($1, $2, $3, $4::date, $5, $6, $7, $8)
-      `,
-      [
-        workspaceId,
-        game.id,
-        index,
-        normalizeDateOnly(game.date),
-        game.opponent,
-        game.gameType,
-        game.totalInnings,
-        game.note ?? null,
-      ],
-    );
+  await insertRowsWithUnnest(
+    client,
+    "games",
+    `
+      insert into public.app_game (
+        id, workspace_id, sort_order, game_date, opponent, game_type, total_innings, note
+      )
+      select *
+      from unnest(
+        $1::text[],
+        $2::uuid[],
+        $3::integer[],
+        $4::date[],
+        $5::text[],
+        $6::text[],
+        $7::integer[],
+        $8::text[]
+      ) as rows(
+        id,
+        workspace_id,
+        sort_order,
+        game_date,
+        opponent,
+        game_type,
+        total_innings,
+        note
+      )
+    `,
+    rows.games,
+  );
 
-    for (const inning of game.innings) {
-      await client.query(
-        `
-          insert into public.app_game_inning (
-            workspace_id, game_id, inning_number, hits, runs, batters
-          )
-          values ($1, $2, $3, $4, $5, $6::text[])
-        `,
-        [workspaceId, game.id, inning.inning, inning.hits, inning.runs, inning.batters],
-      );
-    }
+  await insertRowsWithUnnest(
+    client,
+    "innings",
+    `
+      insert into public.app_game_inning (
+        workspace_id, game_id, inning_number, hits, runs, batters
+      )
+      select $1::uuid, rows.game_id, rows.inning_number, rows.hits, rows.runs, rows.batters
+      from unnest(
+        $2::text[],
+        $3::integer[],
+        $4::integer[],
+        $5::integer[],
+        $6::text[][]
+      ) as rows(game_id, inning_number, hits, runs, batters)
+    `,
+    rows.innings,
+    [workspaceId],
+  );
 
-    for (const [statIndex, statLine] of game.statLines.entries()) {
-      await client.query(
-        `
-          insert into public.app_game_stat_line (
-            workspace_id, game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi,
-            r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e,
-            w, l, sv, np
-          )
-          values (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-            $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
-          )
-        `,
-        [
-          workspaceId,
-          game.id,
-          statLine.playerId,
-          statIndex,
-          statLine.pa,
-          statLine.ab,
-          statLine.h,
-          statLine.doubles,
-          statLine.triples,
-          statLine.hr,
-          statLine.rbi,
-          statLine.r,
-          statLine.sb,
-          statLine.bb,
-          statLine.hbp,
-          statLine.sf,
-          statLine.so,
-          statLine.ip,
-          statLine.er,
-          statLine.soPitching,
-          statLine.bbPitching,
-          statLine.hPitching,
-          statLine.po,
-          statLine.a,
-          statLine.e,
-          statLine.w,
-          statLine.l,
-          statLine.sv,
-          statLine.np,
-        ],
-      );
-    }
-  }
+  await insertRowsWithUnnest(
+    client,
+    "statLines",
+    `
+      insert into public.app_game_stat_line (
+        workspace_id, game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi,
+        r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e,
+        w, l, sv, np
+      )
+      select $1::uuid, *
+      from unnest(
+        $2::text[],
+        $3::text[],
+        $4::integer[],
+        $5::integer[],
+        $6::integer[],
+        $7::integer[],
+        $8::integer[],
+        $9::integer[],
+        $10::integer[],
+        $11::integer[],
+        $12::integer[],
+        $13::integer[],
+        $14::integer[],
+        $15::integer[],
+        $16::integer[],
+        $17::integer[],
+        $18::numeric[],
+        $19::integer[],
+        $20::integer[],
+        $21::integer[],
+        $22::integer[],
+        $23::integer[],
+        $24::integer[],
+        $25::integer[],
+        $26::integer[],
+        $27::integer[],
+        $28::integer[],
+        $29::integer[]
+      ) as rows(
+        game_id,
+        player_id,
+        sort_order,
+        pa,
+        ab,
+        h,
+        doubles,
+        triples,
+        hr,
+        rbi,
+        r,
+        sb,
+        bb,
+        hbp,
+        sf,
+        so,
+        ip,
+        er,
+        so_pitching,
+        bb_pitching,
+        h_pitching,
+        po,
+        a,
+        e,
+        w,
+        l,
+        sv,
+        np
+      )
+    `,
+    rows.statLines,
+    [workspaceId],
+  );
 
-  for (const [index, milestone] of safeWorkspace.milestones.entries()) {
-    await client.query(
-      `
-        insert into public.app_milestone (
-          workspace_id, id, sort_order, milestone_date, title, description, media_url
-        )
-        values ($1, $2, $3, $4::date, $5, $6, $7)
-      `,
-      [
-        workspaceId,
-        milestone.id,
-        index,
-        normalizeDateOnly(milestone.date),
-        milestone.title,
-        milestone.description,
-        milestone.mediaUrl ?? null,
-      ],
-    );
-  }
+  await insertRowsWithUnnest(
+    client,
+    "milestones",
+    `
+      insert into public.app_milestone (
+        id, workspace_id, sort_order, milestone_date, title, description, media_url
+      )
+      select *
+      from unnest(
+        $1::text[],
+        $2::uuid[],
+        $3::integer[],
+        $4::date[],
+        $5::text[],
+        $6::text[],
+        $7::text[]
+      ) as rows(id, workspace_id, sort_order, milestone_date, title, description, media_url)
+    `,
+    rows.milestones,
+  );
 }
 
 async function ensureNormalizedWorkspaceRecord(
