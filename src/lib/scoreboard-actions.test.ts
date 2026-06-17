@@ -56,7 +56,7 @@ function emptySL(playerId: string): LiveStatLine {
     bb: 0, hbp: 0, sf: 0, so: 0,
     ipOuts: 0, er: 0,
     soPitching: 0, bbPitching: 0, hPitching: 0,
-    po: 0, a: 0, e: 0,
+    po: 0, a: 0, e: 0, pb: 0,
     w: 0, l: 0, sv: 0, np: 0,
   };
 }

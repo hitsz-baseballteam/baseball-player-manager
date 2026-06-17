@@ -97,6 +97,10 @@ function getButtonStyle(result: PAResult): string {
     case "FC":
     case "SB":
     case "CS":
+    case "WP":
+    case "PB":
+      return styles.btnOther;
+    default:
       return styles.btnOther;
   }
 }

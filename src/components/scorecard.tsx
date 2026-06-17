@@ -96,6 +96,10 @@ export function Scorecard({
   const pendingFCResultRef = useRef<PAResult | null>(null);
   const pendingFCFielderRef = useRef<PositionCode | null>(null);
 
+  function resetCount() {
+    setBalls(0); setStrikes(0); setFouls(0);
+  }
+
   // Auto-trigger on full count (via effect to avoid setState during render).
   // We use refs to keep the effect deps stable while still accessing latest values.
   const fieldingRef = useRef(fieldingGame);
@@ -588,10 +592,6 @@ export function Scorecard({
   }
 
   // ── Controls ──
-
-  function resetCount() {
-    setBalls(0); setStrikes(0); setFouls(0);
-  }
 
   function handleBall() { if (balls < 4) { setBalls(b => b + 1); setTotalPitches(t => t + 1); } }
   function handleStrike() { if (strikes < 3) { setStrikes(s => s + 1); setTotalPitches(t => t + 1); } }
