@@ -31,6 +31,7 @@ import {
   isVersionConflict,
   loadWorkspaceSnapshot,
   submitMutationWithRetry,
+  useWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updateScenarioAssignments,
 } from "@/lib/workspace-client";
@@ -66,6 +67,14 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
 
   const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(props.initialWorkspace));
   const [remoteVersion, setRemoteVersion] = useState(props.initialVersion);
+  // Shared workspace cache hook — `mutate` syncs the cache so any
+  // future cross-component / cross-tab dedup can subscribe to it.
+  // The current component still reads from useState above; we call
+  // `refreshWorkspace` after each save to keep both stores in sync.
+  const { mutate: refreshWorkspace } = useWorkspaceSnapshot(
+    props.initialWorkspace,
+    props.initialVersion,
+  );
   const [saveStatus, setSaveStatus] = useState("云端工作区已准备");
   const [helpOpen, setHelpOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(
@@ -89,6 +98,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
   ) => {
     const optimistic = applyMutation(workspace);
     setWorkspace(optimistic);
+    void refreshWorkspace(optimistic, { revalidate: false });
     setSaveStatus("正在同步到云端...");
 
     try {
@@ -99,6 +109,10 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
         submit,
       );
       setWorkspace(sanitizeWorkspace(result.workspace));
+      void refreshWorkspace(sanitizeWorkspace(result.workspace), {
+        revalidate: false,
+        version: result.version,
+      });
       setRemoteVersion(result.version);
       setSaveStatus(messages.success);
       toastRef.current?.showToast(messages.success);
@@ -106,6 +120,10 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
       if (isVersionConflict(error)) {
         const latest = await loadWorkspaceSnapshot();
         setWorkspace(sanitizeWorkspace(latest.workspace));
+        void refreshWorkspace(sanitizeWorkspace(latest.workspace), {
+          revalidate: false,
+          version: latest.version,
+        });
         setRemoteVersion(latest.version);
         setSaveStatus("工作区已被其他会话更新，已刷新最新数据");
         toastRef.current?.showToast("工作区已被其他会话更新，已刷新最新数据");
@@ -115,7 +133,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
         toastRef.current?.showToast(messages.failure);
       }
     }
-  }, [workspace, remoteVersion]);
+  }, [workspace, remoteVersion, refreshWorkspace]);
 
   const handleAutoAssign = useCallback(() => {
     void applyWorkspaceMutation(

@@ -39,6 +39,7 @@ import {
   deleteScenario,
   isVersionConflict,
   loadWorkspaceSnapshot,
+  useWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updateScenario,
   updateScenarioAssignments,
@@ -64,6 +65,14 @@ export function ScenariosPageClient({
 }: ScenariosPageClientProps) {
   const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
   const [version, setVersion] = useState(initialVersion);
+  // Shared workspace cache hook — `mutate` syncs the cache so any
+  // future cross-component / cross-tab dedup can subscribe to it.
+  // The current component still reads from useState above; we call
+  // `refreshWorkspace` after each save to keep both stores in sync.
+  const { mutate: refreshWorkspace } = useWorkspaceSnapshot(
+    initialWorkspace,
+    initialVersion,
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<ScenarioDialogState>({ type: "closed" });
@@ -82,16 +91,25 @@ export function ScenariosPageClient({
       submit: (workspace: Workspace, version: number) => Promise<WorkspaceSnapshot>,
     ) => {
       setWorkspace(updated);
+      void refreshWorkspace(updated, { revalidate: false });
       setSaveError(null);
       setIsSaving(true);
       try {
         const result = await submit(updated, version);
         setWorkspace(sanitizeWorkspace(result.workspace));
+        void refreshWorkspace(sanitizeWorkspace(result.workspace), {
+          revalidate: false,
+          version: result.version,
+        });
         setVersion(result.version);
       } catch (error) {
         if (isVersionConflict(error)) {
           const fresh = await loadWorkspaceSnapshot();
           setWorkspace(sanitizeWorkspace(fresh.workspace));
+          void refreshWorkspace(sanitizeWorkspace(fresh.workspace), {
+            revalidate: false,
+            version: fresh.version,
+          });
           setVersion(fresh.version);
           toastRef.current?.showToast("工作区已被更新，已刷新到最新版本");
         } else {
@@ -101,7 +119,7 @@ export function ScenariosPageClient({
         setIsSaving(false);
       }
     },
-    [version],
+    [version, refreshWorkspace],
   );
 
 

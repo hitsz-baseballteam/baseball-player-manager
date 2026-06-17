@@ -108,6 +108,16 @@ describe("StatsPageClient save lock & rollback", () => {
           if (fn) return fn(error);
           return false;
         },
+        useWorkspaceSnapshot(initial) {
+          return {
+            data: initial,
+            version: 1,
+            isLoading: false,
+            isValidating: false,
+            error: undefined,
+            mutate: async () => undefined,
+          };
+        },
       },
     });
 

@@ -107,6 +107,20 @@ describe("PlayerManagerClient", () => {
         isVersionConflict() {
           return false;
         },
+        useWorkspaceSnapshot(initial) {
+          // The component uses this hook as a side cache; the real
+          // source of truth is `useState` above. Returning the initial
+          // workspace as `data` (with a no-op `mutate`) keeps the
+          // existing test assertions valid.
+          return {
+            data: initial,
+            version: 1,
+            isLoading: false,
+            isValidating: false,
+            error: undefined,
+            mutate: async () => undefined,
+          };
+        },
       },
     });
 

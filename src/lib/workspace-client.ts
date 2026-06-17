@@ -98,41 +98,65 @@ export type WorkspaceSnapshotMutateOptions = {
  * - `mutate(newData, { revalidate: false })` is the optimistic-update
  *   shape: skip the fetch and apply `newData` directly.
  */
-export function useWorkspaceSnapshot(initial?: Workspace) {
+export type WorkspaceSnapshotMutateResult = {
+  workspace: Workspace;
+  version: number;
+};
+
+export function useWorkspaceSnapshot(
+  initial?: Workspace,
+  initialVersion: number = 0,
+): {
+  data: Workspace | undefined;
+  version: number;
+  isLoading: boolean;
+  isValidating: boolean;
+  error: Error | undefined;
+  mutate: (
+    newData?: Workspace | Promise<Workspace>,
+    opts?: WorkspaceSnapshotMutateOptions & { version?: number },
+  ) => Promise<WorkspaceSnapshotMutateResult | undefined>;
+} {
   const [data, setData] = useState<Workspace | undefined>(initial);
+  const [version, setVersion] = useState<number>(initialVersion);
   const [isLoading, setIsLoading] = useState<boolean>(initial === undefined);
 
   const mutate = useCallback(
     async (
       newData?: Workspace | Promise<Workspace>,
-      opts: WorkspaceSnapshotMutateOptions = {},
-    ): Promise<Workspace | undefined> => {
+      opts: WorkspaceSnapshotMutateOptions & { version?: number } = {},
+    ): Promise<WorkspaceSnapshotMutateResult | undefined> => {
       if (newData !== undefined) {
         const resolved = newData instanceof Promise ? await newData : newData;
         setData(resolved);
+        if (opts.version !== undefined) {
+          setVersion(opts.version);
+        }
         if (opts.revalidate === false) {
-          return resolved;
+          return { workspace: resolved, version: opts.version ?? version };
         }
       }
 
       if (opts.revalidate === false) {
-        return data;
+        return data ? { workspace: data, version } : undefined;
       }
 
       setIsLoading(true);
       try {
         const snapshot = await loadWorkspaceSnapshot();
         setData(snapshot.workspace);
-        return snapshot.workspace;
+        setVersion(snapshot.version);
+        return { workspace: snapshot.workspace, version: snapshot.version };
       } finally {
         setIsLoading(false);
       }
     },
-    [data],
+    [data, version],
   );
 
   return {
     data,
+    version,
     isLoading,
     isValidating: isLoading,
     error: undefined as Error | undefined,

@@ -35,6 +35,7 @@ import {
   deletePlayer as deletePlayerRequest,
   isVersionConflict,
   loadWorkspaceSnapshot,
+  useWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updatePlayer,
 } from "@/lib/workspace-client";
@@ -59,6 +60,14 @@ export function RosterPageClient(props: RosterPageClientProps) {
     sanitizeWorkspace(props.initialWorkspace),
   );
   const [version, setVersion] = useState(props.initialVersion);
+  // Shared workspace cache hook — `mutate` syncs the cache so any
+  // future cross-component / cross-tab dedup can subscribe to it.
+  // The current component still reads from useState above; we call
+  // `refreshWorkspace` after each save to keep both stores in sync.
+  const { mutate: refreshWorkspace } = useWorkspaceSnapshot(
+    props.initialWorkspace,
+    props.initialVersion,
+  );
   const [statusMessage, setStatusMessage] = useState("名册已连接共享工作区");
   const toastRef = useRef<ToastHandle | null>(null);
   const [filter, setFilter] = useState<PlayerFilterState>({
@@ -91,6 +100,10 @@ export function RosterPageClient(props: RosterPageClientProps) {
       try {
         const result = await submit(draft, version);
         setWorkspace(sanitizeWorkspace(result.workspace));
+        void refreshWorkspace(sanitizeWorkspace(result.workspace), {
+          revalidate: false,
+          version: result.version,
+        });
         setVersion(result.version);
         setStatusMessage(successMessage);
         toastRef.current?.showToast(successMessage);
@@ -98,6 +111,10 @@ export function RosterPageClient(props: RosterPageClientProps) {
         if (isVersionConflict(error)) {
           const latest = await loadWorkspaceSnapshot();
           setWorkspace(sanitizeWorkspace(latest.workspace));
+          void refreshWorkspace(sanitizeWorkspace(latest.workspace), {
+            revalidate: false,
+            version: latest.version,
+          });
           setVersion(latest.version);
           setSelectedIds(new Set());
           setStatusMessage("数据已被其他会话更新，已刷新最新内容");
@@ -111,7 +128,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
         // save complete
       }
     },
-    [workspace, version],
+    [workspace, version, refreshWorkspace],
   );
 
   // ── Player upsert (add new) ──
