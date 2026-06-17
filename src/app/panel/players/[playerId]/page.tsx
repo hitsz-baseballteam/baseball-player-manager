@@ -1,5 +1,5 @@
 import { PlayerProfilePageClient } from "@/components/player-profile-page-client";
-import { getPanelWorkspaceSnapshot } from "@/lib/panel-server";
+import { getPanelBootstrap } from "@/lib/panel-server";
 import { PANEL_ROUTES } from "@/lib/routes";
 
 export default async function PanelPlayerProfilePage({
@@ -8,7 +8,7 @@ export default async function PanelPlayerProfilePage({
   params: Promise<{ playerId: string }>;
 }) {
   const { playerId } = await params;
-  const snapshot = await getPanelWorkspaceSnapshot(PANEL_ROUTES.player(playerId));
+  const snapshot = await getPanelBootstrap(PANEL_ROUTES.player(playerId));
 
   return (
     <PlayerProfilePageClient

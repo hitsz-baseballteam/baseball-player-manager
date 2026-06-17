@@ -457,100 +457,90 @@ async function selectNormalizedWorkspaceRecord(
 
   const workspaceId = meta.id;
 
-  const [
-    playersResult,
-    positionsResult,
-    scenariosResult,
-    defenseResult,
-    lineupResult,
-    gamesResult,
-    inningsResult,
-    statLinesResult,
-    milestonesResult,
-  ] = await Promise.all([
-    client.query<PlayerRow>(
-      `
-        select *
-        from public.app_player
-        where workspace_id = $1
-        order by sort_order asc
-      `,
-      [workspaceId],
-    ),
-    client.query<PlayerPositionRow>(
-      `
-        select player_id, position_code
-        from public.app_player_position
-        where workspace_id = $1
-        order by player_id asc, position_code asc
-      `,
-      [workspaceId],
-    ),
-    client.query<ScenarioRow>(
-      `
-        select *
-        from public.app_scenario
-        where workspace_id = $1
-        order by sort_order asc
-      `,
-      [workspaceId],
-    ),
-    client.query<DefenseAssignmentRow>(
-      `
-        select scenario_id, position_code, player_id
-        from public.app_scenario_defense_assignment
-        where workspace_id = $1
-        order by scenario_id asc, position_code asc
-      `,
-      [workspaceId],
-    ),
-    client.query<LineupSlotRow>(
-      `
-        select scenario_id, slot_index, player_id
-        from public.app_scenario_lineup_slot
-        where workspace_id = $1
-        order by scenario_id asc, slot_index asc
-      `,
-      [workspaceId],
-    ),
-    client.query<GameRow>(
-      `
-        select *
-        from public.app_game
-        where workspace_id = $1
-        order by sort_order asc
-      `,
-      [workspaceId],
-    ),
-    client.query<GameInningRow>(
-      `
-        select game_id, inning_number, hits, runs, batters
-        from public.app_game_inning
-        where workspace_id = $1
-        order by game_id asc, inning_number asc
-      `,
-      [workspaceId],
-    ),
-    client.query<GameStatLineRow>(
-      `
-        select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb,
-               hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np
-        from public.app_game_stat_line
-        where workspace_id = $1
-        order by game_id asc, sort_order asc
-      `,
-      [workspaceId],
-    ),
-    client.query<MilestoneRow>(
-      `
-        select *
-        from public.app_milestone
-        where workspace_id = $1
-        order by sort_order asc
-      `,
-      [workspaceId],
-    ),
-  ]);
+  // Serialize queries to avoid concurrent client.query() on the same connection,
+  // which is deprecated in pg@8 and will be removed in pg@9.
+  const playersResult = await client.query<PlayerRow>(
+    `
+      select *
+      from public.app_player
+      where workspace_id = $1
+      order by sort_order asc
+    `,
+    [workspaceId],
+  );
+  const positionsResult = await client.query<PlayerPositionRow>(
+    `
+      select player_id, position_code
+      from public.app_player_position
+      where workspace_id = $1
+      order by player_id asc, position_code asc
+    `,
+    [workspaceId],
+  );
+  const scenariosResult = await client.query<ScenarioRow>(
+    `
+      select *
+      from public.app_scenario
+      where workspace_id = $1
+      order by sort_order asc
+    `,
+    [workspaceId],
+  );
+  const defenseResult = await client.query<DefenseAssignmentRow>(
+    `
+      select scenario_id, position_code, player_id
+      from public.app_scenario_defense_assignment
+      where workspace_id = $1
+      order by scenario_id asc, position_code asc
+    `,
+    [workspaceId],
+  );
+  const lineupResult = await client.query<LineupSlotRow>(
+    `
+      select scenario_id, slot_index, player_id
+      from public.app_scenario_lineup_slot
+      where workspace_id = $1
+      order by scenario_id asc, slot_index asc
+    `,
+    [workspaceId],
+  );
+  const gamesResult = await client.query<GameRow>(
+    `
+      select *
+      from public.app_game
+      where workspace_id = $1
+      order by sort_order asc
+    `,
+    [workspaceId],
+  );
+  const inningsResult = await client.query<GameInningRow>(
+    `
+      select game_id, inning_number, hits, runs, batters
+      from public.app_game_inning
+      where workspace_id = $1
+      order by game_id asc, inning_number asc
+    `,
+    [workspaceId],
+  );
+  const statLinesResult = await client.query<GameStatLineRow>(
+    `
+      select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb,
+             hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np
+      from public.app_game_stat_line
+      where workspace_id = $1
+      order by game_id asc, sort_order asc
+    `,
+    [workspaceId],
+  );
+  const milestonesResult = await client.query<MilestoneRow>(
+    `
+      select *
+      from public.app_milestone
+      where workspace_id = $1
+      order by sort_order asc
+    `,
+    [workspaceId],
+  );
 
   return {
     workspaceId,
@@ -868,7 +858,477 @@ async function ensureNormalizedWorkspaceRecord(
   return created;
 }
 
+async function readNormalizedWorkspaceIfExists(
+  slug: string,
+): Promise<WorkspaceSnapshot | null> {
+  const metaResult = await getPool().query<WorkspaceMetaRow>(
+    `
+      select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+      from public.app_workspace_meta
+      where slug = $1
+      limit 1
+    `,
+    [slug],
+  );
+  const meta = metaResult.rows[0] ?? null;
+  if (!meta) {
+    return null;
+  }
+
+  const workspaceId = meta.id;
+
+  // Pool.query() acquires a fresh client for each call, so Promise.all
+  // gives true inter-connection parallelism without the deprecated
+  // concurrent-client pattern.
+  const [
+    playersResult,
+    positionsResult,
+    scenariosResult,
+    defenseResult,
+    lineupResult,
+    gamesResult,
+    inningsResult,
+    statLinesResult,
+    milestonesResult,
+  ] = await Promise.all([
+    getPool().query<PlayerRow>(
+      `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<PlayerPositionRow>(
+      `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
+      [workspaceId],
+    ),
+    getPool().query<ScenarioRow>(
+      `select * from public.app_scenario where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<DefenseAssignmentRow>(
+      `select scenario_id, position_code, player_id from public.app_scenario_defense_assignment where workspace_id = $1 order by scenario_id asc, position_code asc`,
+      [workspaceId],
+    ),
+    getPool().query<LineupSlotRow>(
+      `select scenario_id, slot_index, player_id from public.app_scenario_lineup_slot where workspace_id = $1 order by scenario_id asc, slot_index asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameRow>(
+      `select * from public.app_game where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameInningRow>(
+      `select game_id, inning_number, hits, runs, batters from public.app_game_inning where workspace_id = $1 order by game_id asc, inning_number asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameStatLineRow>(
+      `select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np from public.app_game_stat_line where workspace_id = $1 order by game_id asc, sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<MilestoneRow>(
+      `select * from public.app_milestone where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+  ]);
+
+  const workspace = buildWorkspaceFromRows({
+    meta,
+    players: playersResult.rows,
+    positions: positionsResult.rows,
+    scenarios: scenariosResult.rows,
+    defenseAssignments: defenseResult.rows,
+    lineupSlots: lineupResult.rows,
+    games: gamesResult.rows,
+    innings: inningsResult.rows,
+    statLines: statLinesResult.rows,
+    milestones: milestonesResult.rows,
+  });
+
+  return {
+    workspace,
+    version: meta.version,
+    updatedAt: toIsoString(meta.updated_at),
+  };
+}
+
+async function readBootstrapWorkspaceIfExists(
+  slug: string,
+): Promise<WorkspaceSnapshot | null> {
+  const metaResult = await getPool().query<WorkspaceMetaRow>(
+    `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+     from public.app_workspace_meta where slug = $1 limit 1`,
+    [slug],
+  );
+  const meta = metaResult.rows[0] ?? null;
+  if (!meta) return null;
+
+  const workspaceId = meta.id;
+  const [
+    playersResult,
+    positionsResult,
+    scenariosResult,
+    defenseResult,
+    lineupResult,
+  ] = await Promise.all([
+    getPool().query<PlayerRow>(
+      `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<PlayerPositionRow>(
+      `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
+      [workspaceId],
+    ),
+    getPool().query<ScenarioRow>(
+      `select * from public.app_scenario where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<DefenseAssignmentRow>(
+      `select scenario_id, position_code, player_id from public.app_scenario_defense_assignment where workspace_id = $1 order by scenario_id asc, position_code asc`,
+      [workspaceId],
+    ),
+    getPool().query<LineupSlotRow>(
+      `select scenario_id, slot_index, player_id from public.app_scenario_lineup_slot where workspace_id = $1 order by scenario_id asc, slot_index asc`,
+      [workspaceId],
+    ),
+  ]);
+
+  const playerPositions = new Map<string, Player["positions"]>();
+  for (const row of positionsResult.rows) {
+    const list = playerPositions.get(row.player_id) ?? [];
+    list.push(row.position_code);
+    playerPositions.set(row.player_id, list);
+  }
+
+  const players: Player[] = playersResult.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    number: row.number,
+    throws: row.throws,
+    bats: row.bats,
+    positions: playerPositions.get(row.id) ?? [],
+    status: row.status,
+    ...(row.joined_on ? { joinedAt: toDateOnly(row.joined_on) } : {}),
+    profile: {
+      profileType: row.profile_type,
+      age: row.age,
+      heightCm: row.height_cm,
+      weightKg: row.weight_kg,
+      fastballTopKmh: row.fastball_top_kmh,
+      fastballAvgKmh: row.fastball_avg_kmh,
+      armStrengthM: row.arm_strength_m,
+      thirtyMeterSec: row.thirty_meter_sec,
+      pitchTypes: row.pitch_types ?? [],
+      scoutingSummary: row.scouting_summary,
+      radar: {
+        pitcher: row.pitcher_radar ?? { velocity: null, command: null, movement: null, stamina: null, fielding: null, mental: null },
+        fielder: row.fielder_radar ?? { contact: null, power: null, speed: null, arm: null, defense: null, instinct: null },
+      },
+    },
+  }));
+
+  const defenseByScenario = new Map<string, Scenario["assignments"]["defense"]>();
+  for (const row of defenseResult.rows) {
+    const current = defenseByScenario.get(row.scenario_id) ?? {
+      P: null, C: null, "1B": null, "2B": null, "3B": null, SS: null, LF: null, CF: null, RF: null,
+    };
+    current[row.position_code] = row.player_id;
+    defenseByScenario.set(row.scenario_id, current);
+  }
+
+  const lineupByScenario = new Map<string, Array<string | null>>();
+  for (const row of lineupResult.rows) {
+    const current = lineupByScenario.get(row.scenario_id) ?? Array<string | null>(9).fill(null);
+    current[row.slot_index] = row.player_id;
+    lineupByScenario.set(row.scenario_id, current);
+  }
+
+  const scenarios: Scenario[] = scenariosResult.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    note: row.note,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+    assignments: {
+      defense: defenseByScenario.get(row.id) ?? {
+        P: null, C: null, "1B": null, "2B": null, "3B": null, SS: null, LF: null, CF: null, RF: null,
+      },
+      lineup: lineupByScenario.get(row.id) ?? Array<string | null>(9).fill(null),
+    },
+  }));
+
+  const workspace: Workspace = {
+    version: WORKSPACE_SCHEMA_VERSION,
+    players,
+    scenarios,
+    activeScenarioId: meta.active_scenario_id && scenarios.some((s) => s.id === meta.active_scenario_id)
+      ? meta.active_scenario_id : scenarios[0]?.id ?? "",
+    games: [],
+    milestones: [],
+    preferences: { helpDismissed: meta.help_dismissed },
+  };
+
+  return {
+    workspace,
+    version: meta.version,
+    updatedAt: toIsoString(meta.updated_at),
+  };
+}
+
+async function readGamesWorkspaceIfExists(
+  slug: string,
+): Promise<WorkspaceSnapshot | null> {
+  const metaResult = await getPool().query<WorkspaceMetaRow>(
+    `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+     from public.app_workspace_meta where slug = $1 limit 1`,
+    [slug],
+  );
+  const meta = metaResult.rows[0] ?? null;
+  if (!meta) return null;
+
+  const workspaceId = meta.id;
+  const [
+    playersResult,
+    positionsResult,
+    gamesResult,
+    inningsResult,
+    statLinesResult,
+  ] = await Promise.all([
+    getPool().query<PlayerRow>(
+      `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<PlayerPositionRow>(
+      `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameRow>(
+      `select * from public.app_game where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameInningRow>(
+      `select game_id, inning_number, hits, runs, batters from public.app_game_inning where workspace_id = $1 order by game_id asc, inning_number asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameStatLineRow>(
+      `select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np from public.app_game_stat_line where workspace_id = $1 order by game_id asc, sort_order asc`,
+      [workspaceId],
+    ),
+  ]);
+
+  const playerPositions = new Map<string, Player["positions"]>();
+  for (const row of positionsResult.rows) {
+    const list = playerPositions.get(row.player_id) ?? [];
+    list.push(row.position_code);
+    playerPositions.set(row.player_id, list);
+  }
+
+  const players: Player[] = playersResult.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    number: row.number,
+    throws: row.throws,
+    bats: row.bats,
+    positions: playerPositions.get(row.id) ?? [],
+    status: row.status,
+    ...(row.joined_on ? { joinedAt: toDateOnly(row.joined_on) } : {}),
+    profile: {
+      profileType: row.profile_type,
+      age: row.age,
+      heightCm: row.height_cm,
+      weightKg: row.weight_kg,
+      fastballTopKmh: row.fastball_top_kmh,
+      fastballAvgKmh: row.fastball_avg_kmh,
+      armStrengthM: row.arm_strength_m,
+      thirtyMeterSec: row.thirty_meter_sec,
+      pitchTypes: row.pitch_types ?? [],
+      scoutingSummary: row.scouting_summary,
+      radar: {
+        pitcher: row.pitcher_radar ?? { velocity: null, command: null, movement: null, stamina: null, fielding: null, mental: null },
+        fielder: row.fielder_radar ?? { contact: null, power: null, speed: null, arm: null, defense: null, instinct: null },
+      },
+    },
+  }));
+
+  const inningsByGame = new Map<string, InningRecord[]>();
+  for (const row of inningsResult.rows) {
+    const current = inningsByGame.get(row.game_id) ?? [];
+    current.push({ inning: row.inning_number, hits: row.hits, runs: row.runs, batters: row.batters ?? [] });
+    inningsByGame.set(row.game_id, current);
+  }
+
+  const statLinesByGame = new Map<string, PlayerGameStatLine[]>();
+  for (const row of statLinesResult.rows) {
+    const current = statLinesByGame.get(row.game_id) ?? [];
+    current.push({
+      playerId: row.player_id, pa: row.pa, ab: row.ab, h: row.h, doubles: row.doubles,
+      triples: row.triples, hr: row.hr, rbi: row.rbi, r: row.r, sb: row.sb,
+      bb: row.bb, hbp: row.hbp, sf: row.sf, so: row.so, ip: row.ip, er: row.er,
+      soPitching: row.so_pitching, bbPitching: row.bb_pitching, hPitching: row.h_pitching,
+      po: row.po, a: row.a, e: row.e, w: row.w, l: row.l, sv: row.sv, np: row.np,
+    });
+    statLinesByGame.set(row.game_id, current);
+  }
+
+  const games: Game[] = gamesResult.rows.map((row) => ({
+    id: row.id,
+    date: toDateOnly(row.game_date),
+    opponent: row.opponent,
+    gameType: row.game_type,
+    totalInnings: row.total_innings,
+    innings: inningsByGame.get(row.id) ?? [],
+    statLines: statLinesByGame.get(row.id) ?? [],
+    ...(row.note ? { note: row.note } : {}),
+  }));
+
+  const workspace: Workspace = {
+    version: WORKSPACE_SCHEMA_VERSION,
+    players,
+    scenarios: [],
+    activeScenarioId: "",
+    games,
+    milestones: [],
+    preferences: { helpDismissed: meta.help_dismissed },
+  };
+
+  return {
+    workspace,
+    version: meta.version,
+    updatedAt: toIsoString(meta.updated_at),
+  };
+}
+
+async function readMilestonesWorkspaceIfExists(
+  slug: string,
+): Promise<WorkspaceSnapshot | null> {
+  const metaResult = await getPool().query<WorkspaceMetaRow>(
+    `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+     from public.app_workspace_meta where slug = $1 limit 1`,
+    [slug],
+  );
+  const meta = metaResult.rows[0] ?? null;
+  if (!meta) return null;
+
+  const workspaceId = meta.id;
+  const [
+    playersResult,
+    positionsResult,
+    gamesResult,
+    statLinesResult,
+    milestonesResult,
+  ] = await Promise.all([
+    getPool().query<PlayerRow>(
+      `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<PlayerPositionRow>(
+      `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameRow>(
+      `select * from public.app_game where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<GameStatLineRow>(
+      `select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np from public.app_game_stat_line where workspace_id = $1 order by game_id asc, sort_order asc`,
+      [workspaceId],
+    ),
+    getPool().query<MilestoneRow>(
+      `select * from public.app_milestone where workspace_id = $1 order by sort_order asc`,
+      [workspaceId],
+    ),
+  ]);
+
+  const playerPositions = new Map<string, Player["positions"]>();
+  for (const row of positionsResult.rows) {
+    const list = playerPositions.get(row.player_id) ?? [];
+    list.push(row.position_code);
+    playerPositions.set(row.player_id, list);
+  }
+
+  const players: Player[] = playersResult.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    number: row.number,
+    throws: row.throws,
+    bats: row.bats,
+    positions: playerPositions.get(row.id) ?? [],
+    status: row.status,
+    ...(row.joined_on ? { joinedAt: toDateOnly(row.joined_on) } : {}),
+    profile: {
+      profileType: row.profile_type,
+      age: row.age,
+      heightCm: row.height_cm,
+      weightKg: row.weight_kg,
+      fastballTopKmh: row.fastball_top_kmh,
+      fastballAvgKmh: row.fastball_avg_kmh,
+      armStrengthM: row.arm_strength_m,
+      thirtyMeterSec: row.thirty_meter_sec,
+      pitchTypes: row.pitch_types ?? [],
+      scoutingSummary: row.scouting_summary,
+      radar: {
+        pitcher: row.pitcher_radar ?? { velocity: null, command: null, movement: null, stamina: null, fielding: null, mental: null },
+        fielder: row.fielder_radar ?? { contact: null, power: null, speed: null, arm: null, defense: null, instinct: null },
+      },
+    },
+  }));
+
+  const statLinesByGame = new Map<string, PlayerGameStatLine[]>();
+  for (const row of statLinesResult.rows) {
+    const current = statLinesByGame.get(row.game_id) ?? [];
+    current.push({
+      playerId: row.player_id, pa: row.pa, ab: row.ab, h: row.h, doubles: row.doubles,
+      triples: row.triples, hr: row.hr, rbi: row.rbi, r: row.r, sb: row.sb,
+      bb: row.bb, hbp: row.hbp, sf: row.sf, so: row.so, ip: row.ip, er: row.er,
+      soPitching: row.so_pitching, bbPitching: row.bb_pitching, hPitching: row.h_pitching,
+      po: row.po, a: row.a, e: row.e, w: row.w, l: row.l, sv: row.sv, np: row.np,
+    });
+    statLinesByGame.set(row.game_id, current);
+  }
+
+  const games: Game[] = gamesResult.rows.map((row) => ({
+    id: row.id,
+    date: toDateOnly(row.game_date),
+    opponent: row.opponent,
+    gameType: row.game_type,
+    totalInnings: row.total_innings,
+    innings: [],
+    statLines: statLinesByGame.get(row.id) ?? [],
+    ...(row.note ? { note: row.note } : {}),
+  }));
+
+  const milestones: Milestone[] = milestonesResult.rows.map((row) => ({
+    id: row.id,
+    date: toDateOnly(row.milestone_date),
+    title: row.title,
+    description: row.description,
+    ...(row.media_url ? { mediaUrl: row.media_url } : {}),
+  }));
+
+  const workspace: Workspace = {
+    version: WORKSPACE_SCHEMA_VERSION,
+    players,
+    scenarios: [],
+    activeScenarioId: "",
+    games,
+    milestones,
+    preferences: { helpDismissed: meta.help_dismissed },
+  };
+
+  return {
+    workspace,
+    version: meta.version,
+    updatedAt: toIsoString(meta.updated_at),
+  };
+}
+
 export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
+  // Fast path: most reads hit the normalized tables. Use the pool directly
+  // (no transaction, parallel queries) to avoid unnecessary BEGIN/COMMIT.
+  const existing = await readNormalizedWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+  if (existing) {
+    return existing;
+  }
+
+  // Slow path: first request ever (no normalized rows yet) — create or
+  // migrate inside a transaction.
   return withTransaction(async (client) => {
     const record = await ensureNormalizedWorkspaceRecord(client, DEFAULT_WORKSPACE_SLUG);
     return {
@@ -877,6 +1337,24 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
       updatedAt: record.updatedAt,
     };
   });
+}
+
+export async function getBootstrapWorkspace(): Promise<WorkspaceSnapshot> {
+  const existing = await readBootstrapWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+  if (existing) return existing;
+  return getOrCreateWorkspaceSnapshot();
+}
+
+export async function getGamesWorkspace(): Promise<WorkspaceSnapshot> {
+  const existing = await readGamesWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+  if (existing) return existing;
+  return getOrCreateWorkspaceSnapshot();
+}
+
+export async function getMilestonesWorkspace(): Promise<WorkspaceSnapshot> {
+  const existing = await readMilestonesWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+  if (existing) return existing;
+  return getOrCreateWorkspaceSnapshot();
 }
 
 export async function replaceWorkspaceSnapshot(params: {
