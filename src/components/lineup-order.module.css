@@ -88,6 +88,16 @@
   font-style: italic;
 }
 
+.slotPos {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  color: var(--theme-accent);
+  flex-shrink: 0;
+}
+
 /* Picker */
 .pickerBackdrop {
   position: fixed;

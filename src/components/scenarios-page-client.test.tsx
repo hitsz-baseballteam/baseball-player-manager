@@ -42,7 +42,7 @@ describe("ScenariosPageClient", () => {
     // Scenario select
     assert.ok(screen.getByRole("combobox", { name: "切换当前方案" }));
     // Board area should be visible in lineup mode
-    assert.ok(screen.getByLabelText("守备位置图"));
+    assert.ok(screen.getByText("打线顺序"));
   });
 
   it("opens create dialog and creates a new scenario", async () => {

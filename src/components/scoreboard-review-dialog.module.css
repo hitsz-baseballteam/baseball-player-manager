@@ -1,0 +1,184 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+}
+
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  width: min(92vw, 640px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px var(--theme-shadow-strong);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--theme-border);
+}
+.dialogHeader h3 { margin: 0; font-size: 16px; font-weight: 700; }
+
+.dialogClose { border: none; background: none; font-size: 20px; color: var(--theme-muted); cursor: pointer; }
+
+.content { padding: 16px 20px; display: grid; gap: 18px; }
+
+.section { display: grid; gap: 8px; }
+
+.sectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.table th {
+  color: var(--theme-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--theme-border);
+  padding: 6px 8px;
+  text-align: center;
+}
+.table td {
+  padding: 5px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--theme-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.playerNum {
+  color: var(--theme-muted);
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+/* Pitcher form */
+.pitcherForm {
+  padding: 10px 12px;
+  background: var(--theme-surface-alt);
+  border-radius: 8px;
+  border: 1px solid var(--theme-border);
+}
+
+.pitcherFormLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-accent);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.pitcherFields {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.miniField {
+  display: grid;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--theme-muted);
+}
+.miniField input {
+  width: 56px;
+  padding: 4px 6px;
+  border: 1px solid var(--theme-border);
+  border-radius: 4px;
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+}
+
+/* PA log */
+.paLog {
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--theme-surface-alt);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.paRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.paRow:nth-child(odd) { background: var(--theme-bg); }
+
+.paIdx { color: var(--theme-muted); min-width: 20px; }
+.paBatter { font-weight: 600; min-width: 48px; }
+.paResult { font-weight: 600; color: var(--theme-accent); }
+.paRuns { color: #c0392b; font-weight: 700; }
+.paRbi { color: #2980b9; font-weight: 600; font-size: 11px; }
+
+.emptyText { color: var(--theme-muted); font-size: 12px; text-align: center; padding: 12px; }
+
+.error {
+  background: color-mix(in srgb, var(--theme-danger) 8%, transparent);
+  border: 1px solid var(--theme-danger);
+  border-radius: 6px;
+  color: var(--theme-danger);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--theme-border);
+}
+
+.btnPrimary {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--theme-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btnPrimary:hover { opacity: 0.85; }
+
+.btnSecondary {
+  padding: 8px 20px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btnSecondary:hover { background: var(--theme-surface-alt); }

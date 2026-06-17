@@ -261,6 +261,7 @@ function getNavIcon(label: string) {
   if (label === "总览") return House;
   if (label === "名册") return UsersThree;
   if (label.includes("场景") || label.includes("排阵")) return ClipboardText;
+  if (label === "记分板") return Baseball;
   if (label.includes("数据")) return ChartBar;
   if (label === "名人堂") return Trophy;
   return GearSix;
