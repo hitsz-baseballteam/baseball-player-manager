@@ -268,7 +268,7 @@ export function Scorecard({
       const baseAfter2 = runner.base + 2 >= 4 ? "score" as const : (runner.base + 2) as 2 | 3;
       if (current === "score") return { ...prev, [playerId]: "stay" as const };
       if (current === "stay") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter1 : "score" as const };
-      if ((typeof current === "number" && current === runner.base + 1) || current === "score") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter2 : "score" as const };
+      if (current === runner.base + 1) return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter2 : "score" as const };
       return { ...prev, [playerId]: "score" as const };
     });
   }
