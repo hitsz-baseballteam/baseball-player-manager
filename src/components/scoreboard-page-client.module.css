@@ -135,3 +135,65 @@
 .btnDanger:hover {
   background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
 }
+
+/* ── Timer bar ── */
+
+.timerBar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 16px; margin: 8px 16px;
+  border-radius: 8px;
+  background: var(--theme-surface-alt);
+  border: 1px solid var(--theme-border);
+  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.timerBarWarn {
+  background: color-mix(in srgb, #f39c12 12%, var(--theme-surface));
+  border-color: #f39c12;
+  color: #e67e22;
+}
+
+.timerBarExpired {
+  background: color-mix(in srgb, var(--theme-danger) 12%, var(--theme-surface));
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
+  animation: timerPulse 1s infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Time expired dialog ── */
+
+.dialogOverlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+
+.dialogBox {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  padding: 24px; max-width: 360px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.dialogBox h3 { margin: 0 0 8px; font-size: 18px; }
+
+.dialogBox p { margin: 0; font-size: 13px; color: var(--theme-muted); line-height: 1.5; }
+
+.btnSecondary {
+  padding: 8px 16px; border: 1px solid var(--theme-border);
+  border-radius: 6px; background: var(--theme-surface-alt);
+  color: var(--theme-fg); font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  padding: 8px 16px; border: none; border-radius: 6px;
+  background: var(--theme-accent); color: white;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}

@@ -34,6 +34,8 @@ export function ScoreboardSetupDialog({
     mode === "dual" ? "training" : "official",
   );
   const [totalInnings, setTotalInnings] = useState(9);
+  const [useTimeLimit, setUseTimeLimit] = useState(false);
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState(120);
   const [scenarioId, setScenarioId] = useState(activeScenario?.id ?? workspace.scenarios[0]?.id ?? "");
   const [error, setError] = useState("");
 
@@ -58,7 +60,10 @@ export function ScoreboardSetupDialog({
     if (mode === "dual" && !teamB) { setError("无法为B队分配球员"); return; }
 
     setError("");
-    const setup: GameSetup = { date, opponent: opponent.trim(), gameType, totalInnings };
+    const setup: GameSetup = {
+      date, opponent: opponent.trim(), gameType, totalInnings,
+      timeLimitMinutes: useTimeLimit ? timeLimitMinutes : undefined,
+    };
     onStart(setup, teamA!, mode === "dual" ? (teamB ?? undefined) : undefined);
   }
 
@@ -124,7 +129,35 @@ export function ScoreboardSetupDialog({
                 }}
               />
             </label>
+            <label className={styles.field}>
+              <span>时间限制</span>
+              <select value={useTimeLimit ? "yes" : "no"} onChange={(e) => setUseTimeLimit(e.target.value === "yes")}>
+                <option value="no">无</option>
+                <option value="yes">有</option>
+              </select>
+            </label>
           </div>
+          {useTimeLimit && (
+            <div className={styles.row}>
+              <label className={styles.field}>
+                <span>比赛时长（分钟）</span>
+                <input
+                  type="number"
+                  min={30}
+                  max={240}
+                  step={10}
+                  value={timeLimitMinutes}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (n >= 30 && n <= 240) setTimeLimitMinutes(n);
+                  }}
+                />
+              </label>
+              <span style={{ fontSize: 11, color: "var(--theme-muted)", alignSelf: "end", paddingBottom: 8 }}>
+                常用: 90 / 120 / 150
+              </span>
+            </div>
+          )}
 
           {/* Scenario picker */}
           <div className={styles.field}>

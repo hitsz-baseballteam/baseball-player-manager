@@ -343,6 +343,147 @@
 .btnStealFail:hover:not(:disabled) { background: color-mix(in srgb, var(--theme-danger) 16%, var(--theme-surface)); }
 .btnStealFail:disabled { opacity: 0.4; }
 
+.btnWildPitch {
+  flex: 1; padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, #e67e22 40%, var(--theme-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, #e67e22 8%, var(--theme-surface));
+  color: #d35400; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.btnWildPitch:hover:not(:disabled) { background: color-mix(in srgb, #e67e22 20%, var(--theme-surface)); }
+.btnWildPitch:disabled { opacity: 0.4; }
+
+.btnPassedBall {
+  flex: 1; padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, #8e44ad 40%, var(--theme-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, #8e44ad 8%, var(--theme-surface));
+  color: #7d3c98; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.btnPassedBall:hover:not(:disabled) { background: color-mix(in srgb, #8e44ad 20%, var(--theme-surface)); }
+.btnPassedBall:disabled { opacity: 0.4; }
+
+/* ── Pitcher cumulative stats ── */
+
+.pitcherStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  border-top: 1px dashed var(--theme-border);
+  margin-top: 4px;
+}
+
+.pitcherStat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.pitcherStatLabel {
+  color: var(--theme-muted);
+  font-weight: 600;
+}
+
+.pitcherStatValue {
+  font-weight: 700;
+  color: var(--theme-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Runner advancement picker ── */
+
+.advanceLabel {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--theme-accent);
+}
+
+.advanceScore .advanceLabel { color: #27ae60; }
+.advanceStay .advanceLabel { color: var(--theme-muted); }
+
+/* ── Post-game stats summary ── */
+
+.statsSummary {
+  padding: 12px;
+  border-top: 2px solid var(--theme-border);
+  margin-top: 8px;
+}
+
+.statsSectionTitle {
+  font-size: 12px; font-weight: 700; color: var(--theme-accent);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin: 10px 0 4px;
+}
+
+.statsTable {
+  width: 100%; border-collapse: collapse; font-size: 11px;
+}
+
+.statsTable th {
+  text-align: center; padding: 4px 6px; color: var(--theme-muted);
+  font-weight: 600; border-bottom: 1px solid var(--theme-border);
+}
+
+.statsTable td {
+  text-align: center; padding: 3px 6px; color: var(--theme-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.statsTable td:first-child { text-align: left; }
+.statsTable th:first-child { text-align: left; }
+
+/* ── Fielding stats panel ── */
+
+.fieldingPanel {
+  padding: 6px 8px;
+  border-top: 1px dashed var(--theme-border);
+  margin-top: 4px;
+  display: grid; gap: 3px;
+}
+
+.fieldingPanelTitle {
+  font-size: 10px; font-weight: 700; color: var(--theme-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.fieldingLine {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; padding: 2px 4px;
+  border-radius: 3px;
+  background: var(--theme-surface-alt);
+}
+
+.fieldingLineName {
+  font-weight: 600; color: var(--theme-fg); min-width: 60px;
+}
+
+.fieldingLineStats {
+  display: flex; gap: 8px; color: var(--theme-muted);
+}
+
+.fieldingLineStat { font-variant-numeric: tabular-nums; }
+.fieldingLineStat span { font-weight: 600; color: var(--theme-fg); }
+
+/* ── Uncaught third strike ── */
+
+.uncaughtBtn {
+  width: 100%; padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, #f39c12 50%, var(--theme-border));
+  border-radius: 6px;
+  background: color-mix(in srgb, #f39c12 10%, var(--theme-surface));
+  color: #e67e22; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.uncaughtBtn:hover { background: color-mix(in srgb, #f39c12 20%, var(--theme-surface)); }
+
 /* ── Batting stats table ── */
 
 .battingTable {

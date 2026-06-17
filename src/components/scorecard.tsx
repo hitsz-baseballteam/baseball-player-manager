@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { LineupStrip } from "@/components/lineup-strip";
 import { OpponentBaseDiamond } from "@/components/opponent-base-diamond";
 import { PAResultGrid } from "@/components/pa-result-grid";
 import { PitchCounter } from "@/components/pitch-counter";
@@ -10,11 +9,15 @@ import { RunnerDiamond } from "@/components/runner-diamond";
 import { SceneFieldBoard } from "@/components/scene-field-board";
 import {
   changePitcher,
+  deriveStatsFromPA,
+  distributeFieldingStats,
   endHalfInning,
   recordPlateAppearance,
   reviewGame,
   shouldEndHalfInning,
+  type LiveStatLine,
   type PAResult,
+  type PlateAppearance,
   type ScoreboardGame,
 } from "@/lib/scoreboard-actions";
 import type { PositionCode, Workspace } from "@/lib/workspace";
@@ -48,14 +51,7 @@ export function Scorecard({
   onUpdateBatting,
   onUpdateFielding,
 }: ScorecardProps) {
-  // Unified game state (the "active" game for inning/outs tracking)
-  const live = (battingGame ?? fieldingGame)!;
-  if (!battingGame && !fieldingGame) return null;
-
-  // ── Batting UI state ──
-  const [showRunSelector, setShowRunSelector] = useState(false);
-  const [pendingResult, setPendingResult] = useState<PAResult | null>(null);
-  const [runsOnPlay, setRunsOnPlay] = useState(0);
+  // ═══ All hooks must be called unconditionally ═══
 
   // ── Two-step defensive event state ──
   const [pendingFieldResult, setPendingFieldResult] = useState<PAResult | null>(null);
@@ -67,36 +63,89 @@ export function Scorecard({
   const [fouls, setFouls] = useState(0);
   const [totalPitches, setTotalPitches] = useState(0);
 
-  // ── Opponent runner tracking (when opponent is batting) ──
-  const [opponentRunners, setOpponentRunners] = useState<{ playerId: string; base: 1 | 2 | 3 }[]>([]);
 
   // ── Popups ──
   const [showPitcherPicker, setShowPitcherPicker] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [transitionLabel, setTransitionLabel] = useState("");
 
-  const currentInningPA = live.innings.find((inn) => inn.inning === live.currentInning);
-  const inningRuns = currentInningPA?.plateAppearances.reduce((sum, pa) => sum + pa.runsScored, 0) ?? 0;
-
-  // Auto-trigger on full count
-  if (fieldingGame && balls >= 4 && isActive) {
-    handleResult("BB");
-    resetCount();
-  }
-  if (fieldingGame && strikes >= 3 && isActive) {
-    handleResult("SO");
-    resetCount();
-  }
-
-  // ── PA result handling ──
-
   // ── Steal runner picker ──
   const [showStealPicker, setShowStealPicker] = useState(false);
   const [stealType, setStealType] = useState<"SB" | "CS">("SB");
 
+  // ── Runner advancement picker (for 1B/2B with runners on base) ──
+  const [showAdvancePicker, setShowAdvancePicker] = useState(false);
+  const pendingAdvanceResultRef = useRef<PAResult | null>(null);
+  const pendingAdvanceFielderRef = useRef<PositionCode | null>(null);
+  const [runnerTargets, setRunnerTargets] = useState<Record<string, "score" | "stay" | 2 | 3>>({});
+
+  // ── PB ball/strike chooser ──
+  const [showPBChooser, setShowPBChooser] = useState(false);
+
+  // ── Uncaught third strike dialog ──
+  const [showUncaught3K, setShowUncaught3K] = useState(false);
+  const pendingUncaughtResultRef = useRef<"WP" | "PB">("WP");
+
+  // ── ROE error type picker ──
+  const [showErrorTypePicker, setShowErrorTypePicker] = useState(false);
+  const pendingROEResultRef = useRef<PAResult | null>(null);
+  const pendingROEFielderRef = useRef<PositionCode | null>(null);
+
+  // ── FC runner picker (fielder's choice — select which runner is out) ──
+  const [showFCRunnerPicker, setShowFCRunnerPicker] = useState(false);
+  const pendingFCResultRef = useRef<PAResult | null>(null);
+  const pendingFCFielderRef = useRef<PositionCode | null>(null);
+
+  // Auto-trigger on full count (via effect to avoid setState during render).
+  // We use refs to keep the effect deps stable while still accessing latest values.
+  const fieldingRef = useRef(fieldingGame);
+  const activeRef = useRef(isActive);
+  fieldingRef.current = fieldingGame;
+  activeRef.current = isActive;
+
+  useEffect(() => {
+    if (!fieldingRef.current || !activeRef.current) return;
+    if (balls >= 4) {
+      handleResult("BB");
+      resetCount();
+    }
+  }, [balls]);
+
+  useEffect(() => {
+    if (!fieldingRef.current || !activeRef.current) return;
+    if (strikes >= 3) {
+      handleResult("SO");
+      resetCount();
+    }
+  }, [strikes]);
+
+  // ═══ Early return after all hooks ═══
+  if (!battingGame && !fieldingGame) return null;
+
+  // Unified game state (the "active" game for inning/outs tracking)
+  const live = (battingGame ?? fieldingGame)!;
+
+  const currentInningPA = live.innings.find((inn) => inn.inning === live.currentInning);
+  const inningRuns = currentInningPA?.plateAppearances.reduce((sum, pa) => sum + pa.runsScored, 0) ?? 0;
+
+  // ── PA result handling ──
+
   function handleResult(result: PAResult) {
     if (!isActive) return;
     if (showFieldPicker) return;
+
+    // PB with <2 strikes: ask ball or strike first
+    if (result === "PB" && strikes < 2 && fieldingGame) {
+      setShowPBChooser(true);
+      return;
+    }
+
+    // WP/PB with 2 strikes: uncaught third strike check
+    if ((result === "WP" || result === "PB") && strikes === 2 && fieldingGame) {
+      pendingUncaughtResultRef.current = result;
+      setShowUncaught3K(true);
+      return;
+    }
 
     // SB/CS need runner selection
     if (result === "SB" || result === "CS") {
@@ -105,9 +154,9 @@ export function Scorecard({
       return;
     }
 
-    // Defensive events that need fielder position selection
+    // Defensive events that need fielder position selection (both our batting and opponent batting)
     const needsFielder = ["GO", "FO", "LO", "DP", "SF", "ROE", "FC"].includes(result);
-    if (needsFielder && fieldingGame && !isOpponentBatting) {
+    if (needsFielder && fieldingGame) {
       setPendingFieldResult(result);
       setShowFieldPicker(true);
       return;
@@ -136,6 +185,331 @@ export function Scorecard({
     else onUpdateFielding(updated);
   }
 
+  function toggleRunnerTarget(playerId: string) {
+    setRunnerTargets((prev) => {
+      const current = prev[playerId];
+      if (!current) return prev;
+      // Cycle: score → stay → base+1 → base+2 → score...
+      const g = battingGame ?? fieldingGame!;
+      const runner = g.runners.find((r) => r.playerId === playerId);
+      if (!runner) return prev;
+      const maxAdv = pendingAdvanceResultRef.current === "2B" ? 2 : 1;
+      const baseAfter1 = runner.base + 1 >= 4 ? "score" as const : (runner.base + 1) as 2 | 3;
+      const baseAfter2 = runner.base + 2 >= 4 ? "score" as const : (runner.base + 2) as 2 | 3;
+      if (current === "score") return { ...prev, [playerId]: "stay" as const };
+      if (current === "stay") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter1 : "score" as const };
+      if (current === runner.base + 1 || current === "score") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter2 : "score" as const };
+      return { ...prev, [playerId]: "score" as const };
+    });
+  }
+
+  function createLocalId(): string {
+    return `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function confirmAdvancement() {
+    setShowAdvancePicker(false);
+    const result = pendingAdvanceResultRef.current;
+    const fielder = pendingAdvanceFielderRef.current;
+    if (!result) return;
+    pendingAdvanceResultRef.current = null;
+    pendingAdvanceFielderRef.current = null;
+
+    // ROE with runners: use custom handler
+    if (result === "ROE") {
+      applyROEError("fielding", fielder);
+      return;
+    }
+    // 1B/2B: standard hit advancement (below)
+    if (result !== "1B" && result !== "2B") return;
+
+    const g = (battingGame ?? fieldingGame)!;
+    const { lineup, currentBatterIndex, currentInning, halfInning, outs, defense, currentPitcherId, statLines } = g;
+
+    // Build custom runnersAfter from user choices
+    const after: Array<{ playerId: string; base: 1 | 2 | 3 }> = [];
+    let runs = 0;
+    for (const r of g.runners) {
+      const target = runnerTargets[r.playerId];
+      if (target === "score") runs++;
+      else if (target === "stay") after.push(r);
+      else after.push({ playerId: r.playerId, base: target });
+    }
+    const batterBase = result === "2B" ? 2 : 1;
+    const batterId = lineup[currentBatterIndex] ?? "__BATTER__";
+    const resolvedAfter = after.map((r) =>
+      r.playerId === "__BATTER__" ? { playerId: batterId, base: r.base } : r);
+    after.push({ playerId: "__BATTER__", base: batterBase as 1 | 2 });
+
+    // Build custom PA
+    const pa: PlateAppearance = {
+      id: createLocalId(),
+      batterId,
+      result,
+      runsScored: runs,
+      rbi: runs,
+      runnersBefore: [...g.runners],
+      runnersAfter: after.map((r) =>
+        r.playerId === "__BATTER__" ? { playerId: batterId, base: r.base } : r as { playerId: string; base: 1 | 2 | 3 }),
+      outsBefore: outs,
+      outsAfter: outs,
+      inning: currentInning,
+      fielderPosition: fielder,
+    };
+
+    // Derive stats
+    const sl = deriveStatsFromPA(pa, statLines);
+    let updatedStatLines = distributeFieldingStats(pa, defense, sl, fielder ?? null);
+
+    // Pitching stats
+    if (currentPitcherId) {
+      const ps = { ...(updatedStatLines[currentPitcherId] ?? { playerId: currentPitcherId, pa: 0, ab: 0, h: 0, doubles: 0, triples: 0, hr: 0, rbi: 0, r: 0, sb: 0, cs: 0, bb: 0, hbp: 0, sf: 0, so: 0, ipOuts: 0, er: 0, soPitching: 0, bbPitching: 0, hPitching: 0, po: 0, a: 0, e: 0, w: 0, l: 0, sv: 0, np: 0 }) };
+      ps.hPitching++;
+      ps.er += runs;
+      updatedStatLines = { ...updatedStatLines, [currentPitcherId]: ps };
+    }
+
+    // Update inning
+    const updatedInnings = g.innings.map((inn) =>
+      inn.inning !== currentInning ? inn : { ...inn, plateAppearances: [...inn.plateAppearances, pa] });
+
+    // Advance batter
+    let nextBatterIndex = currentBatterIndex;
+    if (result !== "2B" && result !== "1B") {} else {
+      nextBatterIndex = (currentBatterIndex + 1) % 9;
+      let attempts = 0;
+      while (!lineup[nextBatterIndex] && attempts < 9) { nextBatterIndex = (nextBatterIndex + 1) % 9; attempts++; }
+    }
+
+    // Update score
+    let scoreTop = g.scoreTop, scoreBottom = g.scoreBottom;
+    if (halfInning === "top") scoreTop += runs; else scoreBottom += runs;
+
+    const updated: ScoreboardGame = {
+      ...g, statLines: updatedStatLines, innings: updatedInnings,
+      currentBatterIndex: nextBatterIndex, runners: resolvedAfter,
+      scoreTop, scoreBottom,
+    };
+
+    if (shouldEndHalfInning(updated)) {
+      const ended = endHalfInning(updated);
+      if (battingGame) onUpdateBatting(ended);
+      else onUpdateFielding(ended);
+    } else {
+      if (battingGame) onUpdateBatting(updated);
+      else onUpdateFielding(updated);
+    }
+
+    setTotalPitches((t) => t + 1);
+    resetCount();
+  }
+
+  function handleErrorType(type: "fielding" | "throwing") {
+    setShowErrorTypePicker(false);
+    const g = battingGame ?? fieldingGame!;
+    const fielder = pendingROEFielderRef.current;
+    pendingROEFielderRef.current = null;
+    pendingROEResultRef.current = null;
+
+    // If runners on base, show advancement picker
+    if (g.runners.length > 0) {
+      // Pre-set all runners to advance 1 base (error typically advances everyone)
+      const targets: Record<string, "score" | "stay" | 2 | 3> = {};
+      for (const r of g.runners) {
+        const targetBase = r.base + 1;
+        targets[r.playerId] = targetBase >= 4 ? "score" : targetBase as 2 | 3;
+      }
+      setRunnerTargets(targets);
+      pendingAdvanceResultRef.current = "ROE";
+      pendingAdvanceFielderRef.current = fielder;
+      setShowAdvancePicker(true);
+      return;
+    }
+
+    // No runners: apply directly
+    applyROEError(type, fielder);
+  }
+
+  function applyROEError(type: "fielding" | "throwing", fielder: PositionCode | null) {
+    const g = battingGame ?? fieldingGame!;
+    const batterId = g.lineup[g.currentBatterIndex] ?? "__BATTER__";
+    const pa: PlateAppearance = {
+      id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      batterId,
+      result: "ROE",
+      runsScored: 0, rbi: 0,
+      runnersBefore: [...g.runners],
+      runnersAfter: [...g.runners.map((r) => ({ playerId: r.playerId, base: r.base as 1 | 2 | 3 })), { playerId: batterId, base: 1 }],
+      outsBefore: g.outs, outsAfter: g.outs,
+      inning: g.currentInning,
+      fielderPosition: fielder,
+      errorType: type,
+      isUnearned: true,
+    };
+    const sl = deriveStatsFromPA(pa, g.statLines);
+    const statLines2 = distributeFieldingStats(pa, g.defense, sl, fielder);
+    const innings2 = g.innings.map((inn) =>
+      inn.inning !== g.currentInning ? inn : { ...inn, plateAppearances: [...inn.plateAppearances, pa] });
+    const nextIdx2 = (g.currentBatterIndex + 1) % 9;
+    const upd: ScoreboardGame = { ...g, statLines: statLines2, innings: innings2, currentBatterIndex: nextIdx2 };
+    if (battingGame) onUpdateBatting(upd);
+    else onUpdateFielding(upd);
+    setTotalPitches((t) => t + 1);
+    resetCount();
+  }
+
+  function handlePBChoice(isBall: boolean) {
+
+  function handleOpponentError() {
+    const g = fieldingGame!;
+    setTotalPitches((t) => t + 1);
+    // Generic opponent ROE: batter reaches 1B, no specific fielder credited
+    const batterId = g.lineup[g.currentBatterIndex] ?? "__BATTER__";
+    const pa: PlateAppearance = {
+      id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      batterId,
+      result: "ROE",
+      runsScored: 0, rbi: 0,
+      runnersBefore: [...g.runners],
+      runnersAfter: [...g.runners.map((r) => ({ playerId: r.playerId, base: r.base as 1 | 2 | 3 })), { playerId: batterId, base: 1 }],
+      outsBefore: g.outs, outsAfter: g.outs,
+      inning: g.currentInning,
+      fielderPosition: null,
+      isUnearned: true,
+    };
+    const sl = deriveStatsFromPA(pa, g.statLines);
+    const innings2 = g.innings.map((inn) =>
+      inn.inning !== g.currentInning ? inn : { ...inn, plateAppearances: [...inn.plateAppearances, pa] });
+    const nextIdx2 = (g.currentBatterIndex + 1) % 9;
+    const upd: ScoreboardGame = { ...g, statLines: sl, innings: innings2, currentBatterIndex: nextIdx2 };
+    onUpdateFielding(upd);
+    resetCount();
+  }
+
+  function handlePBChoice(isBall: boolean) {
+    setShowPBChooser(false);
+    if (isBall) {
+      setBalls((b) => Math.min(b + 1, 4));
+    } else {
+      setStrikes((s) => Math.min(s + 1, 3));
+    }
+    setTotalPitches((t) => t + 1);
+    // Credit PB to current catcher
+    if (fieldingGame) {
+      const catcherId = fieldingGame.defense["C"];
+      if (catcherId) {
+        const sl = fieldingGame.statLines[catcherId] ?? { playerId: catcherId, pa: 0, ab: 0, h: 0, doubles: 0, triples: 0, hr: 0, rbi: 0, r: 0, sb: 0, cs: 0, bb: 0, hbp: 0, sf: 0, so: 0, ipOuts: 0, er: 0, soPitching: 0, bbPitching: 0, hPitching: 0, po: 0, a: 0, e: 0, w: 0, l: 0, sv: 0, np: 0, pb: 0 };
+        const g = { ...fieldingGame, statLines: { ...fieldingGame.statLines, [catcherId]: { ...sl, pb: (sl.pb ?? 0) + 1 } } };
+        onUpdateFielding(g);
+      }
+    }
+    processResult("PB", null);
+  }
+
+  function handleUncaught3K(action: "swing" | "noswing" | "caught" | "safe") {
+    setShowUncaught3K(false);
+    if (action === "noswing") {
+      // Didn't swing — normal WP/PB, counts as a ball
+      setBalls((b) => Math.min(b + 1, 4));
+      setTotalPitches((t) => t + 1);
+      // Credit PB to catcher
+      if (pendingUncaughtResultRef.current === "PB" && fieldingGame) {
+        const catcherId = fieldingGame?.defense["C"];
+        if (catcherId) {
+          const sl = fieldingGame.statLines[catcherId] ?? { playerId: catcherId, pa: 0, ab: 0, h: 0, doubles: 0, triples: 0, hr: 0, rbi: 0, r: 0, sb: 0, cs: 0, bb: 0, hbp: 0, sf: 0, so: 0, ipOuts: 0, er: 0, soPitching: 0, bbPitching: 0, hPitching: 0, po: 0, a: 0, e: 0, w: 0, l: 0, sv: 0, np: 0, pb: 0 };
+          const g = { ...fieldingGame, statLines: { ...fieldingGame.statLines, [catcherId]: { ...sl, pb: (sl.pb ?? 0) + 1 } } };
+          onUpdateFielding(g);
+        }
+      }
+      processResult(pendingUncaughtResultRef.current, null);
+      return;
+    }
+    if (action === "swing") return; // sub-dialog handles this
+
+    // action is "caught" or "safe"
+    const g = fieldingGame!;
+    // Count as a strikeout
+    setTotalPitches((t) => t + 1);
+    if (action === "caught") {
+      // K: batter out, +1 out
+      const pa: PlateAppearance = {
+        id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        batterId: g.lineup[g.currentBatterIndex] ?? "__BATTER__",
+        result: "SO",
+        runsScored: 0, rbi: 0,
+        runnersBefore: [...g.runners],
+        runnersAfter: g.runners.map((r) => ({ playerId: r.playerId, base: r.base as 1 | 2 | 3 })),
+        outsBefore: g.outs,
+        outsAfter: Math.min(g.outs + 1, 3),
+        inning: g.currentInning,
+        fielderPosition: null,
+      };
+      const sl2 = deriveStatsFromPA(pa, g.statLines);
+      const statLines2 = distributeFieldingStats(pa, g.defense, sl2, null);
+      const innings2 = g.innings.map((inn) =>
+        inn.inning !== g.currentInning ? inn : { ...inn, plateAppearances: [...inn.plateAppearances, pa] });
+      const nextIdx2 = (g.currentBatterIndex + 1) % 9;
+      const upd2: ScoreboardGame = { ...g, outs: pa.outsAfter, statLines: statLines2, innings: innings2, currentBatterIndex: nextIdx2 };
+      if (shouldEndHalfInning(upd2)) {
+        const ended = endHalfInning(upd2);
+        onUpdateFielding(ended);
+      } else {
+        onUpdateFielding(upd2);
+      }
+      resetCount();
+      return;
+    }
+    // "safe": K + WP, batter to 1B
+    const batterId = g.lineup[g.currentBatterIndex] ?? "__BATTER__";
+    const pa: PlateAppearance = {
+      id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      batterId,
+      result: "SO", // counts as SO for stats
+      runsScored: 0, rbi: 0,
+      runnersBefore: [...g.runners],
+      runnersAfter: [...g.runners.map((r) => ({ playerId: r.playerId, base: r.base as 1 | 2 | 3 })), { playerId: batterId, base: 1 }],
+      outsBefore: g.outs,
+      outsAfter: g.outs,
+      inning: g.currentInning,
+      fielderPosition: null,
+    };
+    const statLines2 = deriveStatsFromPA(pa, g.statLines);
+    const innings2 = g.innings.map((inn) =>
+      inn.inning !== g.currentInning ? inn : { ...inn, plateAppearances: [...inn.plateAppearances, pa] });
+    const nextIdx2 = (g.currentBatterIndex + 1) % 9;
+    const upd2: ScoreboardGame = { ...g, statLines: statLines2, innings: innings2, currentBatterIndex: nextIdx2, runners: [...g.runners, { playerId: batterId, base: 1 }] };
+    // Also record WP for the pitcher
+    if (g.currentPitcherId) {
+      const ps = { ...upd2.statLines[g.currentPitcherId], np: (upd2.statLines[g.currentPitcherId]?.np ?? 0) + 1 };
+      upd2.statLines = { ...upd2.statLines, [g.currentPitcherId]: ps };
+    }
+    onUpdateFielding(upd2);
+    setTotalPitches((t) => t + 1);
+    resetCount();
+  }
+
+  function handleFCRunnerPick(playerId: string) {
+    setShowFCRunnerPicker(false);
+    const result = pendingFCResultRef.current;
+    const fielder = pendingFCFielderRef.current;
+    if (!result) return;
+    pendingFCResultRef.current = null;
+    pendingFCFielderRef.current = null;
+
+    const g = battingGame ?? fieldingGame!;
+    // Move the selected runner to the front so FC engine removes them
+    const runners = [...g.runners];
+    const idx = runners.findIndex((r) => r.playerId === playerId);
+    if (idx > 0) {
+      const [target] = runners.splice(idx, 1);
+      runners.unshift(target);
+    }
+    const tempGame = { ...g, runners };
+    const updated = recordPlateAppearance(tempGame, result, fielder, isOpponentBatting);
+    if (battingGame) onUpdateBatting(updated);
+    else onUpdateFielding(updated);
+  }
+
   function handleFielderClick(position: PositionCode) {
     if (!pendingFieldResult) return;
     const result = pendingFieldResult;
@@ -146,35 +520,44 @@ export function Scorecard({
 
   function processResult(result: PAResult, fielder: PositionCode | null) {
     const g = battingGame ?? fieldingGame!;
-    const hasRunnerOn3 = g.runners.some((r) => r.base === 3);
-    const hasRunnerOn2 = g.runners.some((r) => r.base === 2);
-    const basesLoaded = g.runners.length >= 3;
 
-    // Only ask for runs when scoring is realistically possible
-    // HR always clears the bases — no need to ask
-    const needsRunInput = result !== "HR" && (
-      (hasRunnerOn3 && ["1B","2B","3B","GO","SF","SAC","DP","BB","HBP","FC"].includes(result)) ||
-      (hasRunnerOn2 && ["1B","2B","3B"].includes(result)) ||
-      (g.runners.length > 0 && ["2B","3B"].includes(result)) ||
-      (basesLoaded && ["BB","HBP"].includes(result))
-    );
-
-    if (needsRunInput && battingGame) {
-      (window as any).__pendingFielder = fielder;
-      setPendingResult(result);
-      setShowRunSelector(true);
-      setRunsOnPlay(0);
-    } else {
-      applyResult(result, fielder);
+    // ROE: ask error type (fielding vs throwing) after fielder is selected
+    if (result === "ROE" && fielder) {
+      pendingROEResultRef.current = result;
+      pendingROEFielderRef.current = fielder;
+      setShowErrorTypePicker(true);
+      return;
     }
+
+    // FC with multiple runners: ask which runner was put out
+    if (result === "FC" && g.runners.length > 1) {
+      pendingFCResultRef.current = result;
+      pendingFCFielderRef.current = fielder;
+      setShowFCRunnerPicker(true);
+      return;
+    }
+    // For 1B/2B with runners on base, let user choose advancement per runner
+    if ((result === "1B" || result === "2B") && g.runners.length > 0) {
+      const maxAdvance = result === "2B" ? 2 : 1;
+      const targets: Record<string, "score" | "stay" | 2 | 3> = {};
+      for (const r of g.runners) {
+        const targetBase = r.base + maxAdvance;
+        targets[r.playerId] = targetBase >= 4 ? "score" : targetBase as 2 | 3;
+      }
+      setRunnerTargets(targets);
+      pendingAdvanceResultRef.current = result;
+      pendingAdvanceFielderRef.current = fielder;
+      setShowAdvancePicker(true);
+      return;
+    }
+
+    // All other results: engine computes runner advancement automatically
+    applyResult(result, fielder);
   }
 
   function applyResult(result: PAResult, fielder?: PositionCode | null) {
-    const fld = fielder ?? (window as any).__pendingFielder as PositionCode | undefined;
-    delete (window as any).__pendingFielder;
-
     const g = battingGame ?? fieldingGame!;
-    const updated = recordPlateAppearance(g, result, fld);
+    const updated = recordPlateAppearance(g, result, fielder, isOpponentBatting);
 
     if (battingGame) {
       onUpdateBatting(updated);
@@ -182,8 +565,12 @@ export function Scorecard({
       onUpdateFielding(updated);
     }
 
-    // SB/CS are base running events — don't reset pitch count
-    if (result !== "SB" && result !== "CS") resetCount();
+    // In-play results count as a pitch thrown (BB/SO already counted by ball/strike clicks)
+    if (result !== "BB" && result !== "SB" && result !== "CS") {
+      setTotalPitches((t) => t + 1);
+    }
+    // SB/CS/WP are non-batter events — don't reset pitch count
+    if (result !== "SB" && result !== "CS" && result !== "WP") resetCount();
 
     if (shouldEndHalfInning(updated)) {
       const half = updated.halfInning;
@@ -197,16 +584,6 @@ export function Scorecard({
       const ended = endHalfInning(updated);
       if (battingGame) onUpdateBatting(ended);
       else onUpdateFielding(ended);
-    }
-  }
-
-  function confirmRuns() {
-    if (pendingResult) {
-      const fld = (window as any).__pendingFielder as PositionCode | undefined;
-      delete (window as any).__pendingFielder;
-      applyResult(pendingResult, fld);
-      setPendingResult(null);
-      setShowRunSelector(false);
     }
   }
 
@@ -233,7 +610,10 @@ export function Scorecard({
     else onUpdateFielding(updated);
   }
   function handleChangePitcher(playerId: string) {
-    if (fieldingGame) onUpdateFielding(changePitcher(fieldingGame, playerId));
+    if (fieldingGame) {
+      onUpdateFielding(changePitcher(fieldingGame, playerId, totalPitches));
+      resetCount();
+    }
     setShowPitcherPicker(false);
   }
 
@@ -268,6 +648,87 @@ export function Scorecard({
   const eligiblePitchers = workspace.players.filter(
     p => p.status === "available" && p.id !== fieldingGame?.currentPitcherId,
   );
+
+  // ── Post-game stats summary (when game is over / in review) ──
+
+  function renderGameStats() {
+    if (isActive) return null;
+    const g = battingGame ?? fieldingGame;
+    if (!g || g.innings.length === 0) return null;
+    const allStatLines = Object.values(g.statLines).filter(
+      (sl) => sl.pa > 0 || sl.ipOuts > 0 || sl.po > 0 || sl.a > 0 || sl.e > 0,
+    );
+    if (allStatLines.length === 0) return null;
+
+    const battingStats = allStatLines.filter((sl) => sl.pa > 0).sort((a, b) => b.pa - a.pa);
+    const pitchingStats = allStatLines.filter((sl) => sl.ipOuts > 0 || sl.soPitching > 0 || sl.bbPitching > 0).sort((a, b) => b.ipOuts - a.ipOuts);
+    const fieldingStats = allStatLines.filter((sl) => sl.po > 0 || sl.a > 0 || sl.e > 0).sort((a, b) => b.po - a.po);
+
+    return (
+      <div className={styles.statsSummary}>
+        {battingStats.length > 0 && (
+          <>
+            <div className={styles.statsSectionTitle}>打击数据</div>
+            <table className={styles.statsTable}>
+              <thead><tr><th>球员</th><th>PA</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th><th>R</th><th>BB</th><th>SO</th><th>SB</th></tr></thead>
+              <tbody>
+                {battingStats.map((sl) => {
+                  const p = workspace.players.find((x) => x.id === sl.playerId);
+                  return (
+                    <tr key={sl.playerId}>
+                      <td>{p ? `${p.name} #${p.number}` : sl.playerId}</td>
+                      <td>{sl.pa}</td><td>{sl.ab}</td><td>{sl.h}</td><td>{sl.hr || "-"}</td>
+                      <td>{sl.rbi || "-"}</td><td>{sl.r || "-"}</td><td>{sl.bb || "-"}</td><td>{sl.so || "-"}</td><td>{sl.sb || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
+        {pitchingStats.length > 0 && (
+          <>
+            <div className={styles.statsSectionTitle}>投球数据</div>
+            <table className={styles.statsTable}>
+              <thead><tr><th>球员</th><th>IP</th><th>ER</th><th>SO</th><th>BB</th><th>H</th><th>NP</th></tr></thead>
+              <tbody>
+                {pitchingStats.map((sl) => {
+                  const p = workspace.players.find((x) => x.id === sl.playerId);
+                  const ip = sl.ipOuts > 0 ? `${Math.floor(sl.ipOuts / 3)}.${sl.ipOuts % 3}` : "-";
+                  return (
+                    <tr key={sl.playerId}>
+                      <td>{p ? `${p.name} #${p.number}` : sl.playerId}</td>
+                      <td>{ip}</td><td>{sl.er || "-"}</td><td>{sl.soPitching || "-"}</td>
+                      <td>{sl.bbPitching || "-"}</td><td>{sl.hPitching || "-"}</td><td>{sl.np || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
+        {fieldingStats.length > 0 && (
+          <>
+            <div className={styles.statsSectionTitle}>守备数据</div>
+            <table className={styles.statsTable}>
+              <thead><tr><th>球员</th><th>PO</th><th>A</th><th>E</th><th>PB</th></tr></thead>
+              <tbody>
+                {fieldingStats.map((sl) => {
+                  const p = workspace.players.find((x) => x.id === sl.playerId);
+                  return (
+                    <tr key={sl.playerId}>
+                      <td>{p ? `${p.name} #${p.number}` : sl.playerId}</td>
+                      <td>{sl.po || "-"}</td><td>{sl.a || "-"}</td><td>{sl.e || "-"}</td><td>{sl.pb || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+    );
+  }
 
   // ── Render ──
 
@@ -314,7 +775,7 @@ export function Scorecard({
             /* Opponent batting — simplified controls + runner tracking */
             <div className={styles.opponentSection}>
               <div className={styles.opponentTopRow}>
-                <OpponentBaseDiamond runners={opponentRunners} />
+                <OpponentBaseDiamond runners={fieldingGame?.runners ?? []} />
                 <div className={styles.opponentRunInfo}>
                   <span className={styles.opponentRunLabel}>对手得分</span>
                   <span className={styles.opponentRunValue}>
@@ -326,6 +787,34 @@ export function Scorecard({
                 记录对手打席结果（仅用于我方投手/守备统计）
               </p>
               <PAResultGrid onResult={handleResult} disabled={!isActive} />
+
+              {/* Special defensive events: WP, SB, CS */}
+              {(fieldingGame?.runners?.length ?? 0) > 0 && (
+                <div className={styles.stealRow}>
+                  <button type="button" className={styles.btnSteal}
+                    disabled={!isActive} onClick={() => handleResult("SB")}>
+                    🏃 对手盗垒
+                  </button>
+                  <button type="button" className={styles.btnStealFail}
+                    disabled={!isActive} onClick={() => handleResult("CS")}>
+                    ❌ 对手盗垒失败
+                  </button>
+                </div>
+              )}
+              <div className={styles.stealRow}>
+                <button type="button" className={styles.btnWildPitch}
+                  disabled={!isActive} onClick={() => handleResult("WP")}>
+                  💥 暴投
+                </button>
+                <button type="button" className={styles.btnPassedBall}
+                  disabled={!isActive} onClick={() => handleResult("PB")}>
+                  🧤 捕逸
+                </button>
+                <button type="button" className={styles.btnStealFail}
+                  disabled={!isActive} onClick={handleOpponentError}>
+                  ❌ 对方失误
+                </button>
+              </div>
             </div>
           ) : battingGame ? (
             /* Our team batting — full view */
@@ -426,6 +915,54 @@ export function Scorecard({
                 disabled={!isActive}
               />
 
+              {/* Current pitcher cumulative stats */}
+              {fieldingGame?.currentPitcherId && fieldingGame.statLines[fieldingGame.currentPitcherId] && (
+                <div className={styles.pitcherStats}>
+                  <div className={styles.pitcherStat}>
+                    <span className={styles.pitcherStatLabel}>夺三振</span>
+                    <span className={styles.pitcherStatValue}>{fieldingGame.statLines[fieldingGame.currentPitcherId].soPitching}</span>
+                  </div>
+                  <div className={styles.pitcherStat}>
+                    <span className={styles.pitcherStatLabel}>四坏</span>
+                    <span className={styles.pitcherStatValue}>{fieldingGame.statLines[fieldingGame.currentPitcherId].bbPitching}</span>
+                  </div>
+                  <div className={styles.pitcherStat}>
+                    <span className={styles.pitcherStatLabel}>被安打</span>
+                    <span className={styles.pitcherStatValue}>{fieldingGame.statLines[fieldingGame.currentPitcherId].hPitching}</span>
+                  </div>
+                  <div className={styles.pitcherStat}>
+                    <span className={styles.pitcherStatLabel}>自责分</span>
+                    <span className={styles.pitcherStatValue}>{fieldingGame.statLines[fieldingGame.currentPitcherId].er}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Fielding stats panel */}
+              {fieldingGame && (
+                <div className={styles.fieldingPanel}>
+                  <div className={styles.fieldingPanelTitle}>守备数据</div>
+                  {(["P","C","1B","2B","3B","SS","LF","CF","RF"] as const).map((pos) => {
+                    const pid = fieldingGame.defense[pos];
+                    if (!pid) return null;
+                    const sl = fieldingGame.statLines[pid];
+                    const p = workspace.players.find((x) => x.id === pid);
+                    const po = sl?.po ?? 0; const a = sl?.a ?? 0; const e = sl?.e ?? 0; const pb = sl?.pb ?? 0;
+                    if (po === 0 && a === 0 && e === 0 && pb === 0) return null;
+                    return (
+                      <div key={pos} className={styles.fieldingLine}>
+                        <span className={styles.fieldingLineName}>{pos} {p?.name ?? pid}</span>
+                        <span className={styles.fieldingLineStats}>
+                          <span className={styles.fieldingLineStat}>PO <span>{po}</span></span>
+                          <span className={styles.fieldingLineStat}>A <span>{a}</span></span>
+                          <span className={styles.fieldingLineStat}>E <span>{e}</span></span>
+                          {pb > 0 && <span className={styles.fieldingLineStat}>PB <span>{pb}</span></span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className={styles.fieldActions}>
                 <button type="button" className={styles.controlBtn}
                   onClick={() => setShowPitcherPicker(!showPitcherPicker)} disabled={!isActive}>
@@ -446,6 +983,9 @@ export function Scorecard({
           )}
         </div>
       </div>
+
+      {/* ═══ Post-game stats ═══ */}
+      {renderGameStats()}
 
       {/* ═══ Bench / Substitutes ═══ */}
       <BenchStrip
@@ -482,19 +1022,159 @@ export function Scorecard({
         </div>
       )}
 
-      {/* ── Run selector ── */}
-      {showRunSelector && (
+
+      {/* ── ROE error type picker ── */}
+      {showErrorTypePicker && (
+        <div className={styles.runOverlay}>
+          <div className={styles.runDialog} style={{ minWidth: 260 }}>
+            <p className={styles.runQuestion}>野手失误 — 失误类型</p>
+            <p style={{ fontSize: 11, color: "var(--theme-muted)", marginTop: -4, marginBottom: 10 }}>
+              已选位置：{pendingROEFielderRef.current ?? "—"}
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className={styles.uncaughtBtn}
+                onClick={() => handleErrorType("fielding")}>
+                👐 接球失误
+              </button>
+              <button type="button" className={styles.btnWildPitch}
+                onClick={() => handleErrorType("throwing")}>
+                🎯 传球失误
+              </button>
+            </div>
+            <p style={{ fontSize: 10, color: "var(--theme-muted)", marginTop: 6 }}>
+              接球=漏接/掉球 · 传球=传偏/暴传
+            </p>
+            <button type="button" className={styles.btnSecondary}
+              onClick={() => { setShowErrorTypePicker(false); pendingROEResultRef.current = null; }} style={{ marginTop: 6 }}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── PB ball/strike chooser ── */}
+      {showPBChooser && (
+        <div className={styles.runOverlay}>
+          <div className={styles.runDialog} style={{ minWidth: 240 }}>
+            <p className={styles.runQuestion}>🧤 捕逸 — 好球还是坏球？</p>
+            <p style={{ fontSize: 11, color: "var(--theme-muted)", marginTop: -4, marginBottom: 10 }}>
+              当前 {balls}B-{strikes}S · 选择这次漏接的球种
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className={styles.uncaughtBtn}
+                onClick={() => handlePBChoice(false)}>
+                🟢 好球
+              </button>
+              <button type="button" className={styles.btnPassedBall}
+                onClick={() => handlePBChoice(true)}>
+                🔴 坏球
+              </button>
+            </div>
+            <button type="button" className={styles.btnSecondary}
+              onClick={() => setShowPBChooser(false)} style={{ marginTop: 8 }}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Uncaught third strike dialog ── */}
+      {showUncaught3K && (
+        <div className={styles.runOverlay}>
+          <div className={styles.runDialog} style={{ minWidth: 280 }}>
+            <p className={styles.runQuestion}>⚡ 2好球暴投/捕逸 — 不死三振判定</p>
+            <p style={{ fontSize: 11, color: "var(--theme-muted)", marginTop: -4, marginBottom: 10 }}>
+              打者是否挥棒？一垒{fieldingGame?.runners.some(r => r.base === 1) ? "有人" : "无人"} · 出局 {fieldingGame?.outs ?? 0}/2
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <button type="button" className={styles.uncaughtBtn}
+                onClick={() => handleUncaught3K("swing")}>
+                🏏 挥棒了 → 不死三振
+              </button>
+              <button type="button" className={styles.btnSecondary}
+                onClick={() => handleUncaught3K("noswing")}>
+                ✋ 没挥棒 → 正常暴投（坏球）
+              </button>
+            </div>
+            {/* Sub-options after swing */}
+            <div style={{ marginTop: 10, borderTop: "1px solid var(--theme-border)", paddingTop: 10 }}>
+              <p style={{ fontSize: 11, color: "var(--theme-muted)", marginBottom: 6 }}>挥棒后 — 选择结果：</p>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button type="button" className={styles.btnSteal}
+                  onClick={() => handleUncaught3K("caught")}>
+                  🧤 捕手接稳 / 传一垒（出局）
+                </button>
+                <button type="button" className={styles.btnWildPitch}
+                  onClick={() => handleUncaught3K("safe")}>
+                  💥 暴投上垒（安全）
+                </button>
+              </div>
+            </div>
+            <button type="button" className={styles.btnSecondary}
+              onClick={() => setShowUncaught3K(false)} style={{ marginTop: 8 }}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Runner advancement picker (1B/2B with runners on) ── */}
+      {showAdvancePicker && (
+        <div className={styles.runOverlay}>
+          <div className={styles.runDialog} style={{ minWidth: 320 }}>
+            <p className={styles.runQuestion}>
+              {pendingAdvanceResultRef.current === "2B" ? "二垒安打" : "一垒安打"} — 跑者推进
+            </p>
+            <p style={{ fontSize: 11, color: "var(--theme-muted)", marginTop: -4, marginBottom: 8 }}>
+              点击每个跑者切换：得分 → 停留 → 进一垒 → 进二垒
+            </p>
+            <div className={styles.stealRunnerList}>
+              {(battingGame ?? fieldingGame)!.runners.map((r) => {
+                const p = workspace.players.find((pl) => pl.id === r.playerId);
+                const target = runnerTargets[r.playerId];
+                const label = target === "score" ? "⚾ 得分" : target === "stay" ? "🛑 停留" : `▶ 进${target}垒`;
+                const baseLabel = { 1: "一垒", 2: "二垒", 3: "三垒" }[r.base];
+                return (
+                  <button
+                    key={r.playerId}
+                    type="button"
+                    className={`${styles.stealRunnerBtn} ${target === "score" ? styles.advanceScore : target === "stay" ? styles.advanceStay : ""}`}
+                    onClick={() => toggleRunnerTarget(r.playerId)}
+                  >
+                    <span className={styles.stealRunnerBase}>{baseLabel}</span>
+                    {p ? <><strong>#{p.number}</strong> {p.name}</> : r.playerId}
+                    <span className={styles.advanceLabel}>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className={styles.btnPrimary} onClick={confirmAdvancement}>确认</button>
+              <button type="button" className={styles.btnSecondary}
+                onClick={() => { setShowAdvancePicker(false); pendingAdvanceResultRef.current = null; }}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FC runner picker ── */}
+      {showFCRunnerPicker && (
         <div className={styles.runOverlay}>
           <div className={styles.runDialog}>
-            <p className={styles.runQuestion}>几分下分？</p>
-            <div className={styles.runButtons}>
-              {[0, 1, 2, 3, 4].map(n => (
-                <button key={n} type="button"
-                  className={`${styles.runBtn} ${runsOnPlay === n ? styles.runBtnActive : ""}`}
-                  onClick={() => setRunsOnPlay(n)}>{n}</button>
-              ))}
+            <p className={styles.runQuestion}>野手选择杀了哪个跑者？</p>
+            <div className={styles.stealRunnerList}>
+              {(battingGame ?? fieldingGame)!.runners.map((r) => {
+                const p = workspace.players.find((pl) => pl.id === r.playerId);
+                const baseLabel = { 1: "一垒", 2: "二垒", 3: "三垒" }[r.base];
+                return (
+                  <button
+                    key={r.playerId}
+                    type="button"
+                    className={styles.stealRunnerBtn}
+                    onClick={() => handleFCRunnerPick(r.playerId)}
+                  >
+                    <span className={styles.stealRunnerBase}>{baseLabel}</span>
+                    {p ? <><strong>#{p.number}</strong> {p.name}</> : r.playerId}
+                  </button>
+                );
+              })}
             </div>
-            <button type="button" className={styles.btnPrimary} onClick={confirmRuns}>确认</button>
+            <button type="button" className={styles.btnSecondary}
+              onClick={() => { setShowFCRunnerPicker(false); pendingFCResultRef.current = null; }}>取消</button>
           </div>
         </div>
       )}
@@ -708,4 +1388,5 @@ function renderOuts(outs: number) {
       {" "}{outs}出局
     </span>
   );
+}
 }

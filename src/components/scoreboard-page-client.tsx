@@ -12,7 +12,6 @@ import {
   createScoreboardGame,
   loadDraftFromLocalStorage,
   reopenGame,
-  reviewGame,
   saveDraftToLocalStorage,
   type GameSetup,
   type ScoreboardGame,
@@ -69,20 +68,15 @@ export function ScoreboardPageClient({
   // ── localStorage crash recovery ──
   useEffect(() => {
     const draft = loadDraftFromLocalStorage(DRAFT_KEY);
-    if (draft && draft.phase === "recording") {
-      const resume = window.confirm("检测到未完成的比赛记录，是否恢复？");
-      if (resume) {
-        setPhase({
-          type: "recording",
-          mode: "standard",
-          teamA: draft,
-          teamB: null,
-        });
-        toastRef.current?.showToast("已恢复未完成的比赛");
-        return;
-      }
-      clearDraftFromLocalStorage(DRAFT_KEY);
+    if (draft?.phase === "recording" && window.confirm("检测到未完成的比赛记录，是否恢复？")) {
+      // Defer state update via microtask to avoid sync setState in effect
+      const timer = setTimeout(() => {
+        setPhase({ type: "recording", mode: "standard", teamA: draft, teamB: null });
+      }, 0);
+      return () => clearTimeout(timer);
     }
+    if (draft) clearDraftFromLocalStorage(DRAFT_KEY);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save draft every 5 PAs
@@ -217,25 +211,6 @@ export function ScoreboardPageClient({
     toastRef.current?.showToast("比赛已保存到数据中心！");
   }
 
-  function handleFinalizeDual(gameA: Game, gameB: Game) {
-    // Save first game, then second sequentially
-    handleSave(
-      (current) => {
-        const next = cloneWorkspace(current);
-        next.games = [...next.games, gameA, gameB];
-        return next;
-      },
-      async (_nextWorkspace, currentVersion) => {
-        // Create both games; the second call uses the updated version from the first
-        const r1 = await createGame(gameA, currentVersion);
-        return createGame(gameB, r1.version);
-      },
-    );
-    setPhase({ type: "setup" });
-    clearDraftFromLocalStorage(DRAFT_KEY);
-    toastRef.current?.showToast("两场比赛已保存到数据中心！");
-  }
-
   function handleCancel() {
     const hasData = phase.type === "recording" && phase.teamA.innings.some((inn) => inn.plateAppearances.length > 0);
     if (hasData) {
@@ -250,6 +225,52 @@ export function ScoreboardPageClient({
 
   const isRecording = phase.type === "recording";
   const isReview = phase.type === "review";
+
+  // ── Countdown timer ──
+  const timeLimit = isRecording && phase.type === "recording" && phase.teamA.setup.timeLimitMinutes
+    ? phase.teamA.setup.timeLimitMinutes : null;
+  const [remainingSeconds, setRemainingSeconds] = useState(timeLimit ? timeLimit * 60 : 0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showTimeExpiredDialog, setShowTimeExpiredDialog] = useState(false);
+  const timeExpiredRef = useRef(false);
+
+  useEffect(() => {
+    if (!timeLimit) return;
+    const id = setTimeout(() => setRemainingSeconds(timeLimit * 60), 0);
+    timeExpiredRef.current = false;
+    timerRef.current = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (!timeExpiredRef.current) {
+            timeExpiredRef.current = true;
+            setTimeout(() => setShowTimeExpiredDialog(true), 100);
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { clearTimeout(id); if (timerRef.current) clearInterval(timerRef.current); };
+  }, [timeLimit]);
+
+  function handleTimeExpiredAction(action: "tie" | "extend") {
+    setShowTimeExpiredDialog(false);
+    if (action === "extend") {
+      if (isRecording && phase.type === "recording") {
+        const g = phase.teamA;
+        const updated = { ...g, setup: { ...g.setup, totalInnings: g.setup.totalInnings + 1 } };
+        setPhase({ ...phase, teamA: updated });
+        toastRef.current?.showToast("已延长一局！");
+      }
+    }
+  }
+
+  function formatTime(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
   return (
     <ToastProvider toastRef={toastRef}>
@@ -285,7 +306,37 @@ export function ScoreboardPageClient({
 
         {/* Recording */}
         {isRecording && (
-          <div className={styles.singleGrid}>
+          <>
+            {/* Timer bar */}
+            {timeLimit && (
+              <div className={`${styles.timerBar} ${remainingSeconds < 300 ? styles.timerBarWarn : ""} ${remainingSeconds === 0 ? styles.timerBarExpired : ""}`}>
+                <span>⏱ 剩余 {formatTime(remainingSeconds)}</span>
+                <span>{remainingSeconds === 0 ? "时间到" : timeLimit + "分制"}</span>
+              </div>
+            )}
+
+            {/* Time expired dialog */}
+            {showTimeExpiredDialog && (
+              <div className={styles.dialogOverlay}>
+                <div className={styles.dialogBox}>
+                  <h3>⏰ 比赛时间到</h3>
+                  <p>时间已用完。当前是否为新开局？<br />若两队平分本局结束，可决定平局或延长一局。</p>
+                  <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <button className={styles.btnSecondary} onClick={() => handleTimeExpiredAction("tie")}>
+                      🤝 时间到（平局）
+                    </button>
+                    <button className={styles.btnPrimary} onClick={() => handleTimeExpiredAction("extend")}>
+                      +1 延长一局
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 10, color: "var(--theme-muted)", marginTop: 8 }}>
+                    本局结束后不再新开。可随时结束比赛。
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className={styles.singleGrid}>
             {phase.mode === "dual" ? (
               /* Dual mode: batting+fielding swap per half-inning */
               <Scorecard
@@ -339,6 +390,7 @@ export function ScoreboardPageClient({
               })()
             )}
           </div>
+          </>
         )}
 
         {/* Cancel button during recording */}

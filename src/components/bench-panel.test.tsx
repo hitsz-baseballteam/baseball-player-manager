@@ -19,7 +19,7 @@ describe("BenchPanel", () => {
     ) as Record<string, string | null>;
   }
 
-  it("renders all players from the roster", () => {
+  it("renders bench players from the roster", () => {
     const players = getPlayers();
     render(
       <BenchPanel
@@ -29,16 +29,19 @@ describe("BenchPanel", () => {
       />,
     );
 
-    assert.ok(screen.getByText("全队球员"));
-    for (const p of players) {
+    assert.ok(screen.getByText("替补球员"));
+    // All available players appear
+    const availablePlayers = players.filter((p) => p.status === "available");
+    for (const p of availablePlayers) {
       assert.ok(screen.getByText(p.name), `Player ${p.name} not found`);
     }
   });
 
-  it("shows 投手 (pitcher) tag when player is assigned to defense", () => {
+  it("excludes players already assigned to defense from bench", () => {
     const players = getPlayers();
     const defense = emptyDefense();
-    defense["P"] = players[0].id;
+    const firstPlayer = players.find((p) => p.status === "available")!;
+    defense["P"] = firstPlayer.id;
 
     render(
       <BenchPanel
@@ -48,11 +51,10 @@ describe("BenchPanel", () => {
       />,
     );
 
-    // The pitcher gets a "投手" meta tag
-    assert.ok(screen.getByText("投手"));
+    assert.strictEqual(screen.queryByText(firstPlayer.name), null);
   });
 
-  it("shows 待分配 for unassigned players", () => {
+  it("shows 替补 tag for bench players", () => {
     const players = getPlayers();
     render(
       <BenchPanel
@@ -62,7 +64,8 @@ describe("BenchPanel", () => {
       />,
     );
 
-    assert.ok(screen.getAllByText("待分配").length > 0);
+    const tags = screen.getAllByText("替补");
+    assert.ok(tags.length > 0);
   });
 
   it("renders empty state without crashing", () => {
@@ -74,6 +77,6 @@ describe("BenchPanel", () => {
       />,
     );
 
-    assert.ok(screen.getByText("全队球员"));
+    assert.ok(screen.getByText("无替补球员"));
   });
 });

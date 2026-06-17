@@ -275,7 +275,7 @@ export function ScenariosPageClient({
     if (days) {
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + days);
-      (updated as any)._tempJoinExpiry = expiry.toISOString();
+      (updated as { _tempJoinExpiry?: string })._tempJoinExpiry = expiry.toISOString();
     }
     try {
       const result = await updatePlayer(updated, version);

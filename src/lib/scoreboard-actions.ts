@@ -22,7 +22,9 @@ export type PAResult =
   | "SF" | "SAC"                    // sacrifice fly / sacrifice bunt
   | "ROE"                           // reached on error
   | "FC"                            // fielder's choice
-  | "SB" | "CS";                    // stolen base / caught stealing
+  | "SB" | "CS"                    // stolen base / caught stealing
+  | "WP"                            // wild pitch (pitcher's fault, all runners advance 1)
+  | "PB";                           // passed ball (catcher's fault, all runners advance 1)
 
 /** Phase of the scoreboard workflow. */
 export type ScoreboardPhase = "setup" | "recording" | "review";
@@ -33,6 +35,8 @@ export type GameSetup = {
   opponent: string;
   gameType: "official" | "training";
   totalInnings: number;
+  /** Optional time limit in minutes. When set, a countdown timer runs and expires at 0. */
+  timeLimitMinutes?: number;
 };
 
 /** Runner position on a base. */
@@ -55,6 +59,10 @@ export type PlateAppearance = {
   inning: number;
   /** Which defensive position fielded the ball (for GO/FO/LO/DP/SF/ROE/FC). */
   fielderPosition?: PositionCode | null;
+  /** For ROE: type of error committed. */
+  errorType?: "fielding" | "throwing";
+  /** Whether the batter reached on an error (marks run as unearned for pitcher ERA). */
+  isUnearned?: boolean;
 };
 
 /** Pitcher change record. */
@@ -85,6 +93,7 @@ export type LiveStatLine = {
   hPitching: number;
   // Fielding
   po: number; a: number; e: number;
+  pb: number;  // passed balls
   // Decisions
   w: number; l: number; sv: number;
   np: number;
@@ -135,7 +144,7 @@ function emptyLiveStatLine(playerId: string): LiveStatLine {
     bb: 0, hbp: 0, sf: 0, so: 0,
     ipOuts: 0, er: 0,
     soPitching: 0, bbPitching: 0, hPitching: 0,
-    po: 0, a: 0, e: 0,
+    po: 0, a: 0, e: 0, pb: 0,
     w: 0, l: 0, sv: 0,
     np: 0,
   };
@@ -149,26 +158,11 @@ function ensureStatLine(
   return { ...statLines, [playerId]: emptyLiveStatLine(playerId) };
 }
 
-function outsToIp(outs: number): number {
-  if (outs <= 0) return 0;
-  const full = Math.floor(outs / 3);
-  const remainder = outs % 3;
-  return full + remainder * 0.1; // e.g. 5 outs = 1.2 → rounds to 1 + 0.2
-}
-
-/** Format outs as IP display string like "5.2" (5 IP + 2 outs). */
 function outsToIpDisplay(outs: number): number {
   if (outs <= 0) return 0;
   const full = Math.floor(outs / 3);
   const rem = outs % 3;
-  // Store as int.frac where frac is 0, 1, or 2
   return full + rem * 0.1;
-}
-
-function ipDisplayToOuts(ip: number): number {
-  const full = Math.floor(ip);
-  const frac = Math.round((ip - full) * 10);
-  return full * 3 + Math.min(frac, 2);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -523,7 +517,39 @@ export function computeRunnerAdvancement(
       const after = sorted.slice(1); // remove lead runner
       return { runnersAfter: after, runsScored: 0, batterRbi: 0, batterEndBase: 0 };
     }
-  }
+
+    case "PB":  // falls through — same advancement as WP
+    case "WP": {
+      // Wild pitch / passed ball: ALL runners advance 1 base, runner on 3rd scores
+      let runs = 0;
+      const after: RunnerState[] = [];
+      for (const r of sorted) {
+        if (r.base === 3) {
+          runs++;
+        } else {
+          after.push({ playerId: r.playerId, base: (r.base + 1) as 1 | 2 | 3 });
+        }
+      }
+      return { runnersAfter: after, runsScored: runs, batterRbi: 0, batterEndBase: 0 };
+    }
+
+    case "FC": {
+      // Fielder's choice: lead runner is out, other runners advance, batter to 1B
+      if (sorted.length === 0) return { runnersAfter: [{ playerId: "__BATTER__", base: 1 }], runsScored: 0, batterRbi: 0, batterEndBase: 1 };
+      let runs = 0;
+      const after: RunnerState[] = [];
+      const [, ...rest] = sorted; // lead runner removed (forced out)
+      for (const r of rest) {
+        if (r.base === 3) {
+          runs++;
+        } else {
+          after.push({ playerId: r.playerId, base: (r.base + 1) as 1 | 2 | 3 });
+        }
+      }
+      after.push({ playerId: "__BATTER__", base: 1 });
+      return { runnersAfter: after, runsScored: runs, batterRbi: 0, batterEndBase: 1 };
+    }
+}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -562,7 +588,10 @@ export function deriveStatsFromPA(
     case "SF": batter.sf++; break;
     case "SAC": break; // SAC does not count as AB
     case "ROE": batter.ab++; break;
-    case "FC": batter.ab++; break;
+    case "FC":
+      // FC: batter reaches on fielder's choice — counts as AB, no hit, RBI from runs scored
+      batter.ab++;
+      break;
     case "SB":
       // SB does NOT count as a PA/AB for the batter — it's a base running event
       // The runner's SB stat is handled separately
@@ -570,6 +599,15 @@ export function deriveStatsFromPA(
     case "CS":
       // CS does NOT count as a PA/AB for the batter
       break;
+    case "WP":
+    case "PB":
+      // WP/PB are defensive miscues, not batter events — handled below
+      break;
+  }
+
+  // WP/PB/SB/CS: non-batter events, return early without batter stat changes
+  if (result === "WP" || result === "PB") {
+    return sl; // Wild pitch / passed ball don't affect batter stats
   }
 
   // SB/CS: credit the runner who stole/was caught
@@ -786,6 +824,7 @@ export function recordPlateAppearance(
   game: ScoreboardGame,
   result: PAResult,
   fielderPosition?: PositionCode | null,
+  isOpponentBatting: boolean = false,
 ): ScoreboardGame {
   if (game.phase !== "recording") return game;
 
@@ -796,19 +835,25 @@ export function recordPlateAppearance(
   outfieldCycle = totalPAs;
 
   const lineup = game.lineup;
-  // Find the next valid batter
-  let batterId: string | null = null;
-  let batterIndex = game.currentBatterIndex;
-  for (let i = 0; i < 9; i++) {
-    const idx = (game.currentBatterIndex + i) % 9;
-    if (lineup[idx]) {
-      batterId = lineup[idx];
-      batterIndex = idx;
-      break;
+  // For opponent batting, use a placeholder batter — we don't track their lineup
+  let batterId: string | null;
+  let batterIndex: number;
+  if (isOpponentBatting) {
+    batterId = "__OPPONENT__";
+    batterIndex = game.currentBatterIndex; // don't advance opponent batter index
+  } else {
+    batterId = null;
+    batterIndex = game.currentBatterIndex;
+    for (let i = 0; i < 9; i++) {
+      const idx = (game.currentBatterIndex + i) % 9;
+      if (lineup[idx]) {
+        batterId = lineup[idx];
+        batterIndex = idx;
+        break;
+      }
     }
+    if (!batterId) return game; // No batters in lineup — shouldn't happen
   }
-
-  if (!batterId) return game; // No batters in lineup — shouldn't happen
 
   // Compute runner advancement
   const adv = computeRunnerAdvancement(result, game.runners);
@@ -830,7 +875,7 @@ export function recordPlateAppearance(
     outsAfter: Math.min(game.outs + (
       result === "CS" ? 1 :
       result === "SB" ? 0 :
-      result !== "ROE" && result !== "BB" && result !== "HBP" && result !== "1B" && result !== "2B" && result !== "3B" && result !== "HR" && result !== "FC"
+      result !== "ROE" && result !== "BB" && result !== "HBP" && result !== "WP" && result !== "PB" && result !== "1B" && result !== "2B" && result !== "3B" && result !== "HR" && result !== "FC"
         ? (result === "DP" ? 2 : 1) : 0
     ), 3),
     inning: game.currentInning,
@@ -848,6 +893,12 @@ export function recordPlateAppearance(
     if (result === "SO") pitchStats.soPitching++;
     if (result === "BB") pitchStats.bbPitching++;
     if (result === "1B" || result === "2B" || result === "3B" || result === "HR") pitchStats.hPitching++;
+    if (result === "HBP") pitchStats.bbPitching++; // HBP counts as BB for pitcher stats
+    // Track earned runs (PB runs not charged to pitcher — catcher's fault)
+    if (adv.runsScored > 0 && result !== "PB") pitchStats.er += adv.runsScored;
+    // Track outs recorded by this pitcher
+    const outsThisPA = pa.outsAfter - pa.outsBefore;
+    if (outsThisPA > 0) pitchStats.ipOuts += outsThisPA;
     statLines = { ...statLines, [game.currentPitcherId]: pitchStats };
   }
 
@@ -860,9 +911,9 @@ export function recordPlateAppearance(
     return { ...inn, plateAppearances: [...inn.plateAppearances, pa] };
   });
 
-  // Advance batter index (skip for SB/CS — batter stays at plate)
+  // Advance batter index (skip for SB/CS/WP, and for opponent batting)
   let nextBatterIndex = batterIndex;
-  if (result !== "SB" && result !== "CS") {
+  if (result !== "SB" && result !== "CS" && result !== "WP" && result !== "PB" && !isOpponentBatting) {
     nextBatterIndex = (batterIndex + 1) % 9;
     let attempts = 0;
     while (!lineup[nextBatterIndex] && attempts < 9) {
@@ -958,22 +1009,36 @@ export function shouldEndHalfInning(game: ScoreboardGame): boolean {
 export function changePitcher(
   game: ScoreboardGame,
   newPitcherId: string,
+  pitchesThrown: number = 0,
 ): ScoreboardGame {
   if (game.phase !== "recording") return game;
+
+  // Save NP for old pitcher
+  let statLines = { ...game.statLines };
+  if (game.currentPitcherId && pitchesThrown > 0) {
+    statLines = ensureStatLine(statLines, game.currentPitcherId);
+    statLines = {
+      ...statLines,
+      [game.currentPitcherId]: {
+        ...statLines[game.currentPitcherId],
+        np: (statLines[game.currentPitcherId]?.np ?? 0) + pitchesThrown,
+      },
+    };
+  }
 
   // Record outs for current pitcher before change
   const change: PitcherChange = {
     inning: game.currentInning,
     outsRecorded: game.innings.reduce((sum, inn) => {
       if (inn.inning < game.currentInning) return sum + inn.plateAppearances.length * 1;
-      // Approximate total outs from PAs in all innings
       return sum;
-    }, 0), // We'll compute properly on finalize
+    }, 0),
     newPitcherId,
   };
 
   return {
     ...game,
+    statLines,
     currentPitcherId: newPitcherId,
     pitcherChanges: [...game.pitcherChanges, change],
   };
@@ -1016,7 +1081,6 @@ export function finalizeGame(
   }));
 
   // Compute pitcher IP from changes
-  const pitcherIP: Record<string, number> = {};
   const pitcherOuts: Record<string, number> = {};
 
   // Compute total outs per pitcher based on pitcher changes
@@ -1026,15 +1090,13 @@ export function finalizeGame(
     pitcherOuts[scoreboardGame.currentPitcherId] = totalOuts;
   } else {
     const changes = [...scoreboardGame.pitcherChanges].sort((a, b) => a.outsRecorded - b.outsRecorded);
-    let prevOuts = 0;
-    let prevPitcherId: string | null = null;
 
     // First pitcher: from game start to first change
     if (scoreboardGame.currentPitcherId) {
       // Walk through PAs and assign outs to pitchers
       let runningOuts = 0;
-      let currentPitcherIdx = 0;
-      let activePitcher = scoreboardGame.defense["P"]; // starting pitcher
+      const currentPitcherIdx = 0;
+      const activePitcher = scoreboardGame.defense["P"]; // starting pitcher
 
       // Find starting pitcher
       const allPitchers: string[] = [activePitcher ?? ""];
