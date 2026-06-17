@@ -132,6 +132,72 @@ export function Scorecard({
   const currentInningPA = live.innings.find((inn) => inn.inning === live.currentInning);
   const inningRuns = currentInningPA?.plateAppearances.reduce((sum, pa) => sum + pa.runsScored, 0) ?? 0;
 
+  // ── Core engine ──
+
+  function applyResult(result: PAResult, fielder?: PositionCode | null) {
+    const g = battingGame ?? fieldingGame!;
+    const updated = recordPlateAppearance(g, result, fielder, isOpponentBatting);
+
+    if (battingGame) {
+      onUpdateBatting(updated);
+    } else {
+      onUpdateFielding(updated);
+    }
+
+    if (result !== "BB" && result !== "SB" && result !== "CS") {
+      setTotalPitches((t) => t + 1);
+    }
+    if (result !== "SB" && result !== "CS" && result !== "WP") resetCount();
+
+    if (shouldEndHalfInning(updated)) {
+      const half = updated.halfInning;
+      const inn = updated.currentInning;
+      const label = half === "top"
+        ? `▼ 下半局 · 第${inn}局`
+        : `▲ 上半局 · 第${inn + 1}局`;
+      setTransitionLabel(label);
+      setShowTransition(true);
+      setTimeout(() => setShowTransition(false), 2000);
+      const ended = endHalfInning(updated);
+      if (battingGame) onUpdateBatting(ended);
+      else onUpdateFielding(ended);
+    }
+  }
+
+  function processResult(result: PAResult, fielder: PositionCode | null) {
+    const g = battingGame ?? fieldingGame!;
+
+    if (result === "ROE" && fielder) {
+      pendingROEResultRef.current = result;
+      pendingROEFielderRef.current = fielder;
+      setShowErrorTypePicker(true);
+      return;
+    }
+
+    if (result === "FC" && g.runners.length > 1) {
+      pendingFCResultRef.current = result;
+      pendingFCFielderRef.current = fielder;
+      setShowFCRunnerPicker(true);
+      return;
+    }
+
+    if ((result === "1B" || result === "2B") && g.runners.length > 0) {
+      const maxAdvance = result === "2B" ? 2 : 1;
+      const targets: Record<string, "score" | "stay" | 2 | 3> = {};
+      for (const r of g.runners) {
+        const targetBase = r.base + maxAdvance;
+        targets[r.playerId] = targetBase >= 4 ? "score" : targetBase as 2 | 3;
+      }
+      setRunnerTargets(targets);
+      pendingAdvanceResultRef.current = result;
+      pendingAdvanceFielderRef.current = fielder;
+      setShowAdvancePicker(true);
+      return;
+    }
+
+    applyResult(result, fielder);
+  }
+
   // ── PA result handling ──
 
   function handleResult(result: PAResult) {
@@ -202,7 +268,7 @@ export function Scorecard({
       const baseAfter2 = runner.base + 2 >= 4 ? "score" as const : (runner.base + 2) as 2 | 3;
       if (current === "score") return { ...prev, [playerId]: "stay" as const };
       if (current === "stay") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter1 : "score" as const };
-      if (current === runner.base + 1 || current === "score") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter2 : "score" as const };
+      if ((typeof current === "number" && current === runner.base + 1) || current === "score") return { ...prev, [playerId]: maxAdv >= 2 ? baseAfter2 : "score" as const };
       return { ...prev, [playerId]: "score" as const };
     });
   }
@@ -520,75 +586,6 @@ export function Scorecard({
     setPendingFieldResult(null);
     setShowFieldPicker(false);
     processResult(result, position);
-  }
-
-  function processResult(result: PAResult, fielder: PositionCode | null) {
-    const g = battingGame ?? fieldingGame!;
-
-    // ROE: ask error type (fielding vs throwing) after fielder is selected
-    if (result === "ROE" && fielder) {
-      pendingROEResultRef.current = result;
-      pendingROEFielderRef.current = fielder;
-      setShowErrorTypePicker(true);
-      return;
-    }
-
-    // FC with multiple runners: ask which runner was put out
-    if (result === "FC" && g.runners.length > 1) {
-      pendingFCResultRef.current = result;
-      pendingFCFielderRef.current = fielder;
-      setShowFCRunnerPicker(true);
-      return;
-    }
-    // For 1B/2B with runners on base, let user choose advancement per runner
-    if ((result === "1B" || result === "2B") && g.runners.length > 0) {
-      const maxAdvance = result === "2B" ? 2 : 1;
-      const targets: Record<string, "score" | "stay" | 2 | 3> = {};
-      for (const r of g.runners) {
-        const targetBase = r.base + maxAdvance;
-        targets[r.playerId] = targetBase >= 4 ? "score" : targetBase as 2 | 3;
-      }
-      setRunnerTargets(targets);
-      pendingAdvanceResultRef.current = result;
-      pendingAdvanceFielderRef.current = fielder;
-      setShowAdvancePicker(true);
-      return;
-    }
-
-    // All other results: engine computes runner advancement automatically
-    applyResult(result, fielder);
-  }
-
-  function applyResult(result: PAResult, fielder?: PositionCode | null) {
-    const g = battingGame ?? fieldingGame!;
-    const updated = recordPlateAppearance(g, result, fielder, isOpponentBatting);
-
-    if (battingGame) {
-      onUpdateBatting(updated);
-    } else {
-      onUpdateFielding(updated);
-    }
-
-    // In-play results count as a pitch thrown (BB/SO already counted by ball/strike clicks)
-    if (result !== "BB" && result !== "SB" && result !== "CS") {
-      setTotalPitches((t) => t + 1);
-    }
-    // SB/CS/WP are non-batter events — don't reset pitch count
-    if (result !== "SB" && result !== "CS" && result !== "WP") resetCount();
-
-    if (shouldEndHalfInning(updated)) {
-      const half = updated.halfInning;
-      const inn = updated.currentInning;
-      const label = half === "top"
-        ? `▼ 下半局 · 第${inn}局`
-        : `▲ 上半局 · 第${inn + 1}局`;
-      setTransitionLabel(label);
-      setShowTransition(true);
-      setTimeout(() => setShowTransition(false), 2000);
-      const ended = endHalfInning(updated);
-      if (battingGame) onUpdateBatting(ended);
-      else onUpdateFielding(ended);
-    }
   }
 
   // ── Controls ──
