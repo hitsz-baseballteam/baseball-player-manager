@@ -67,15 +67,17 @@ export function ScoreboardPageClient({
 
   // ── localStorage crash recovery ──
   useEffect(() => {
-    const draft = loadDraftFromLocalStorage(DRAFT_KEY);
-    if (draft?.phase === "recording" && window.confirm("检测到未完成的比赛记录，是否恢复？")) {
-      // Defer state update via microtask to avoid sync setState in effect
-      const timer = setTimeout(() => {
-        setPhase({ type: "recording", mode: "standard", teamA: draft, teamB: null });
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-    if (draft) clearDraftFromLocalStorage(DRAFT_KEY);
+    try {
+      const draft = loadDraftFromLocalStorage(DRAFT_KEY);
+      if (draft?.phase === "recording" && window.confirm("检测到未完成的比赛记录，是否恢复？")) {
+        const timer = setTimeout(() => {
+          setPhase({ type: "recording", mode: "standard", teamA: draft, teamB: null });
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    } catch { /* ignore corrupted draft */ }
+    // No valid draft — start fresh
+    clearDraftFromLocalStorage(DRAFT_KEY);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

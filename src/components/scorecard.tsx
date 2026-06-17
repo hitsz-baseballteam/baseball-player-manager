@@ -428,8 +428,6 @@ export function Scorecard({
     resetCount();
   }
 
-  function handlePBChoice(isBall: boolean) {
-
   function handleOpponentError() {
     const g = fieldingGame!;
     setTotalPitches((t) => t + 1);
@@ -1385,5 +1383,4 @@ function renderOuts(outs: number) {
       {" "}{outs}出局
     </span>
   );
-}
 }
