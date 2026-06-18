@@ -25,8 +25,11 @@ Database migrations live in `supabase/migrations/`.
 
 | File | Purpose |
 |---|---|
-| `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export — pure workspace rules |
-| `src/lib/workspace-store.ts` | PostgreSQL read/write with version-based optimistic concurrency |
+| `src/lib/workspace/` | Domain types, sanitizers, auto-assignment, import/export — pure workspace rules (split into `types.ts` / `base.ts` / `sanitizers.ts` / `helpers.ts` / `index.ts`) |
+| `src/lib/workspace-store.ts` | Normalized-table read/write with version-based optimistic concurrency (replaces single-row `app_workspace` JSONB writes; legacy table retained as rollback source) |
+| `src/lib/panel-server.ts` | Server-side auth check + workspace reader wrappers (`getPanelBootstrap` / `getPanelGames` / `getPanelMilestones` / `getPanelWorkspaceSnapshot`) used by every `/panel/*` page |
+| `src/lib/scoreboard-actions.ts` | Live game state engine: PA-result derivation, runner advancement, defense, finalize |
+| `src/lib/hall-of-fame.ts` | Career-stats and badge computation for the Hall of Fame page |
 | `src/lib/use-workspace-snapshot.ts` | Shared client workspace/version state, snapshot application, and conflict refresh |
 | `src/components/app-shell.tsx` | Global shell shared by all pages |
 | `src/components/player-manager-client.tsx` | Homepage command-desk client |

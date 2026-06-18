@@ -9,10 +9,12 @@
 ## 1. Executive Summary
 
 - **The domain model is the app's strongest asset.** Pure functions with real baseball knowledge (auto-assignment, scenario warnings, position-aware profiles) are well-isolated from framework and IO concerns.
-- **API routes are unprotected.** `src/proxy.ts` is dead code — never imported, never executed. Both `GET /api/workspace` and `PUT /api/workspace` accept unauthenticated requests.
+- **API routes are partially protected.** `src/proxy.ts` is active (Next.js 16 renamed `middleware.ts` → `proxy.ts`), but its matcher is narrower than "all `/api/*`" — see TD-10.
 - **The persistence layer has zero automated tests.** Optimistic concurrency — the app's most critical reliability mechanism — runs entirely on untested code in `workspace-store.ts`.
 - **Code duplication is the most actionable quality issue.** `NAV_ITEMS`, the lineup board layout (`FieldBoard` + `LineupOrder` + `BenchPanel`), and the save-with-retry logic are duplicated across 2–4 page components.
 - **Test coverage is broad at the domain/component level but missing in the server layer.** Domain logic, components, and auth have good tests. The store, proxy/middleware, and database utilities do not.
+
+> **Correction (2026-06-18):** the original review listed `src/proxy.ts` as "dead code" and recommended renaming it to `src/middleware.ts`. That recommendation was based on Next.js 15 knowledge. In **Next.js 16**, the file convention was renamed the other way: `middleware.ts` → `proxy.ts` (with the exported function also named `proxy`). The build output explicitly reports `ƒ Proxy (Middleware)` and `curl` against `/api/workspace` and `/panel/roster` returns `401` / `307 → /panel/login`, confirming the proxy is active. The remaining gap is the matcher scope, not the file itself.
 
 ---
 
@@ -20,11 +22,11 @@
 
 **Grade: B (75–82)**
 
-The app is production-quality for its current scale (single-team, single-instance). The architecture is clean, the domain model is deep, and most runtime paths are tested. Three things prevent an A:
+The app is production-quality for its current scale (single-team, single-instance). The architecture is clean, the domain model is deep, and most runtime paths are tested. Two things prevent an A:
 
 | Blocker | Impact |
 |---|---|
-| Dead proxy → unprotected API routes | 🔴 Security |
+| Narrow proxy matcher → resource write APIs (`/api/players/*`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*`) accept unauthenticated requests (TD-10) | 🔴 Security |
 | Zero persistence-layer tests | 🔴 Reliability |
 | Duplicated component logic across pages | 🟡 Maintainability |
 
@@ -54,7 +56,7 @@ The app is production-quality for its current scale (single-team, single-instanc
 │  │ limit      │  │ clear  │  │ ⚠️ NO AUTH GUARD    │ │
 │  └────────────┘  └────────┘  └────────────────────┘ │
 │  ┌─────────────────────────────────────────────────┐ │
-│  │ proxy.ts (DEAD CODE — never imported/executed)  │ │
+│  │ proxy.ts (active, matches /panel/* + /api/workspace/*)  │ │
 │  └─────────────────────────────────────────────────┘ │
 ├──────────────────────────────────────────────────────┤
 │  Persistence (workspace-store.ts / db.ts)            │
@@ -80,13 +82,15 @@ The app is production-quality for its current scale (single-team, single-instanc
 └──────────────────────────────────────────────────────┘
 ```
 
+> **Correction (2026-06-18):** the persistence layer was re-architected on 2026-06-16 — see [ADR-007](../design-docs/adr-007-normalized-workspace-storage.md). The single `app_workspace` JSONB row was replaced by a normalized `app_*` table family (`app_workspace_meta` + `app_player` + `app_scenario` + `app_game` + …), with transactional version-checked writes and `revalidateTag()` cross-request cache invalidation. The diagram and §7 SQL below reflect the pre-cutover state at the time of the original review; current code is in `src/lib/workspace-store.ts`.
+
 ### 3.2 Layer Ratings
 
 | Layer | Rating | Key Evidence |
 |---|---|---|
 | Domain | **Strong** | Pure functions; no framework/IO imports; deep baseball knowledge encoded |
 | Persistence | **Adequate** | OCC is correct but untested; single-row bottleneck; no transaction wrapping |
-| API | **Adequate** (🔴 Critical gap) | Good Zod validation and status codes, but auth guard is dead code |
+| API | **Adequate** (🔴 Critical gap) | Good Zod validation and status codes, but proxy matcher does not cover resource write APIs (TD-10) |
 | UI | **Strong** | Consistent server/client split pattern; `AppShell` composition; ARIA coverage |
 
 ### 3.3 Key Architectural Findings
@@ -122,8 +126,8 @@ The app is production-quality for its current scale (single-team, single-instanc
 | 8 | `/players/[playerId]/games` | Page (SSR) | ✅ Cookie check | Player game log |
 | 9 | `POST /api/unlock` | API Route | ❌ None (rate limited) | Passcode → signed cookie |
 | 10 | `POST /api/logout` | API Route | ❌ None | Clears cookie |
-| 11 | `GET /api/workspace` | API Route | ❌ **None** (proxy dead) | Read workspace snapshot |
-| 12 | `PUT /api/workspace` | API Route | ❌ **None** (proxy dead) | Write workspace with OCC |
+| 11 | `GET /api/workspace` | API Route | ✅ Cookie check (proxy active) | Read workspace snapshot |
+| 12 | `PUT /api/workspace` | API Route | ✅ Cookie check (proxy active, 405 method_not_allowed) | Whole-workspace write disabled; resource-specific writes use `/api/players/*` etc. |
 
 ### 4.2 API Design Assessment: 🟢 Good
 
@@ -133,17 +137,19 @@ The app is production-quality for its current scale (single-team, single-instanc
 - Version-based OCC via `WHERE version = $4`
 - Consistent JSON error envelope: `{ error: "code" }`
 
-### 4.3 🔴 Critical: Dead Proxy — Unprotected API Routes
+### 4.3 🔴 Critical: Proxy Is Active, But Matcher Is Too Narrow
 
-`src/proxy.ts` exports a middleware function with `config.matcher: ["/api/workspace/:path*"]` that checks the unlock cookie and returns 401 if invalid. **This file is dead code.**
+`src/proxy.ts` exports a function `proxy(request: NextRequest)` with `config.matcher: ["/panel/:path*", "/api/workspace/:path*"]` that checks the signed unlock cookie and either redirects panel requests to `/panel/login` or returns `401` for unmatched API requests. **This file is alive and enforced** — Next.js 16 uses `proxy.ts` (not `middleware.ts`) as the request-processor file convention.
 
-- Zero imports of `proxy.ts` anywhere in the project
-- No `src/middleware.ts` or root `middleware.ts` exists
-- Next.js only auto-detects middleware from `middleware.ts`, not `proxy.ts`
+Empirical verification (2026-06-18):
 
-**Consequence:** `GET /api/workspace` and `PUT /api/workspace` accept any unauthenticated request. A direct `curl` or script can read the entire workspace or write corrupted data, bypassing page-level auth entirely. Browser-based code sends cookies via `credentials: "same-origin"`, but network-level requests have no such limitation.
+- `npm run build` output reports `ƒ Proxy (Middleware)` for the project
+- `curl -i http://localhost:3000/api/workspace` returns `HTTP/1.1 401 Unauthorized`
+- `curl -i http://localhost:3000/panel/roster` returns `HTTP/1.1 307 → /panel/login?next=%2Fpanel%2Froster`
 
-**Fix:** Rename `src/proxy.ts` → `src/middleware.ts` and verify the matcher works.
+**The remaining gap is matcher scope, not file aliveness.** The proxy only protects `/api/workspace/:path*`; the resource write APIs under `/api/players/*`, `/api/scenarios/*`, `/api/games/*`, and `/api/milestones/*` are not in the matcher, so they currently accept any request that passes Zod validation. This is tracked as **TD-10** in `docs/exec-plans/tech-debt-tracker.md`.
+
+**Fix:** Extend the matcher to `["/panel/:path*", "/api/:path*"]` (or split it into per-resource groups), and add tests covering each new matched route. The TD-10 entry already calls this out.
 
 ### 4.4 Auth Flow
 
@@ -171,14 +177,15 @@ Page SSR:
 | `error.tsx` | DB connection failures on pages produce unhandled crash, not user-facing error |
 | `loading.tsx` | No suspense fallback while `getOrCreateWorkspaceSnapshot()` resolves — blank white screen |
 
-### 4.6 Rate Limiting Gaps
+### 4.6 Rate Limiting Gaps (state as of 2026-06-18)
 
 | Endpoint | Rate Limited? | Risk |
 |----------|--------------|------|
 | `POST /api/unlock` | ✅ 5/60s/IP | Protected |
-| `POST /api/logout` | ❌ None | Can be spammed |
-| `GET /api/workspace` | ❌ None | Unprotected DB read |
-| `PUT /api/workspace` | ❌ None | Unprotected DB write + version conflict churn |
+| `POST /api/logout` | ✅ 20/60s/IP (see `src/app/api/logout/route.ts`) | Protected |
+| `GET /api/workspace` | ✅ 120/60s per IP+session (see `enforceWorkspaceReadRateLimit` in `_workspace-api.ts`) | Read flood guarded |
+| `PUT /api/workspace` | ✅ 30/60s per IP+session (`PUT` is now `405 method_not_allowed`; preconditions still apply) | Write flood + 503 maintenance guard |
+| Resource writes under `/api/players/*`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*` | ❌ None at route level | **TD-10** — only proxy matcher gap remains; client retries do not defend server-side |
 
 ---
 
@@ -190,7 +197,7 @@ Page SSR:
 
 | ID | Title | Location |
 |---|---|---|
-| — | Dead proxy → unprotected API routes | `src/proxy.ts` (see §4.3) |
+| — | Narrow proxy matcher → resource write APIs accept unauthenticated requests (TD-10) | `src/proxy.ts` matcher (see §4.3) |
 
 #### 🟠 Major (4 issues)
 
@@ -222,7 +229,7 @@ Page SSR:
 
 | # | Task | Estimated Time |
 |---|---|---|
-| 1 | Rename `src/proxy.ts` → `src/middleware.ts` to close the unprotected API gap | **15 min** |
+| 1 | Extend the proxy matcher in `src/proxy.ts` to cover `/api/:path*` (or per-resource groups) so `/api/players/*`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*` reject unauthenticated requests; add unauthenticated-write tests for each new matched route (TD-10) | **20 min** |
 | 2 | Extract `LINEUP_SIZE = 9` constant into `types.ts`, replace 3 inline `9`s | **15 min** |
 | 3 | Extract shared `NAV_ITEMS` constant into a `nav-items.ts` file | **20 min** |
 | 4 | Remove or populate the dead `/lineup` 307 redirect route | **10 min** |
@@ -275,12 +282,12 @@ Page SSR:
 |---|---|
 | `workspace-store.ts` | 🔴 **High** — OCC, version conflicts, insert race |
 | `db.ts` | 🟠 Medium — Connection pool, SSL config |
-| `proxy.ts` | 🟠 Medium — Auth guard logic |
+| `proxy.ts` | 🟢 Low — Active Next.js 16 request proxy; covered by `src/lib/proxy.test.ts` (matcher scope is TD-10, not file aliveness) |
 | `migrate-v2-to-v3.ts` | 🟠 Medium — Runs on every read |
 | `unlock-form.tsx` | 🟢 Low — Thin component |
 | Server page components | 🟢 Low — Thin auth + load wrappers |
 
-**Bottom line:** 195 test results (194 pass + 1 todo). Good breadth at the domain and component level. **The persistence layer is the critical gap.**
+**Bottom line:** 302 test results (300 pass + 2 todo) as of 2026-06-18. Good breadth at the domain, component, scoreboard, hall-of-fame and auth/rate-limit/proxy layers. **The persistence layer is still the critical gap** — `workspace-store.ts` (1504 lines) remains untested; this is the highest-impact follow-up to close.
 
 ---
 
@@ -291,21 +298,21 @@ Page SSR:
 | Area | Rating | Notes |
 |---|---|---|
 | Auth mechanism | 🟡 Fair | HMAC-signed cookies are sound; passcode = signing key prevents rotation |
-| API route protection | 🔴 Critical | Dead proxy means `/api/workspace` is open to unauthenticated access |
+| API route protection | 🟡 Fair (TD-10) | Proxy is active, but matcher is narrower than "all `/api/*`"; `/api/workspace/*` is protected, resource writes under `/api/players/*`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*` are not |
 | Cookie security | 🟢 Good | `httpOnly`, `sameSite=lax`, `secure` in production, 7-day maxAge |
 | Timing attacks | 🟢 Good | `timingSafeEqual` on signature comparison |
 | Rate limiting | 🟡 Fair | Only on `/api/unlock`; in-memory (resets on restart) |
 | Input validation | 🟢 Good | Zod on API routes + sanitizers as defense-in-depth |
 | CSRF | 🟡 Fair | `sameSite=lax` + JSON-only API is reasonable; no explicit CSRF token |
-| Security headers | 🔴 Missing | No CSP, X-Frame-Options, X-Content-Type-Options |
+| Security headers | 🟢 Good (since 2026-06-04) | `next.config.ts` ships CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and `private, no-store` cache headers for `/panel/*` and `/api/*` |
 | Passcode storage | 🟢 OK | Plain-text comparison is acceptable for shared-passcode model |
 | Row-level security | 🟢 Good | RLS enabled on `app_workspace`; `anon`/`authenticated` roles revoked |
 
-### 6.2 Security Fix Priorities
+### 6.2 Security Fix Priorities (state as of 2026-06-18)
 
-1. **Immediate:** Rename `src/proxy.ts` → `src/middleware.ts` — closes the unprotected API route gap.
-2. **High:** Add rate limiting to `/api/workspace` and `/api/logout`.
-3. **Medium:** Add security headers via `next.config.ts` `headers()` config.
+1. **Immediate:** Extend the proxy matcher in `src/proxy.ts` to cover `/api/:path*` (or per-resource groups) so `/api/players/*`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*` reject unauthenticated requests (TD-10). The 2026-06-14 review's "rename to middleware.ts" recommendation is voided by the Next.js 16 proxy convention.
+2. **High:** ~~Add rate limiting to `/api/workspace` and `/api/logout`.~~ **Done** — see `enforceWorkspaceReadRateLimit` / `enforceWorkspaceWritePreconditions` in `_workspace-api.ts` (120/30 req per 60s, keyed by IP+session) and the 20/60s limit in `src/app/api/logout/route.ts`. Remaining work: extend the same precondition to resource write APIs once the proxy matcher is widened (TD-10 dependency).
+3. **Medium:** ~~Add security headers via `next.config.ts` `headers()` config.~~ **Done** — see `next.config.ts` (`CONTENT_SECURITY_POLICY`, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cache-Control).
 4. **Low:** Separate passcode from cookie signing key (add `APP_COOKIE_SECRET`).
 5. **Low:** Consider bcrypt/argon2 for passcode hashing if rotation support is desired.
 
@@ -370,7 +377,7 @@ RETURNING slug, version, data, updated_at
 
 | # | Action | Effort | Files |
 |---|---|---|---|
-| 1 | **Rename `src/proxy.ts` → `src/middleware.ts`** and verify the matcher protects `/api/workspace` | **Low** (15 min) | `src/proxy.ts` → `src/middleware.ts` |
+| 1 | **Extend the proxy matcher** to cover all `/api/*` routes and add unauthenticated-write tests for each new matched route (TD-10) | **Low** (20 min) | `src/proxy.ts` matcher |
 | 2 | **Add tests for `workspace-store.ts`** covering: version conflict detection, `getOrCreateWorkspaceSnapshot` insert race, OCC retry, migration on read | **Medium** (2–3 hours) | New `src/lib/workspace-store.test.ts` |
 
 #### 🟠 High (next sprint)
@@ -379,7 +386,7 @@ RETURNING slug, version, data, updated_at
 |---|---|---|---|
 | 3 | **Extract shared `useWorkspaceSave` hook** to eliminate duplicated save-with-retry logic | **Low** (30 min) | New `src/hooks/use-workspace-save.ts`; update `lineup-page-client.tsx`, `scenarios-page-client.tsx` |
 | 4 | **Extract shared `<LineupBoard>` component** (FieldBoard + LineupOrder + BenchPanel) | **Low** (30 min) | New `src/components/lineup-board.tsx`; update 2 page clients |
-| 5 | **Add rate limiting to `/api/workspace` and `/api/logout`** | **Low** (20 min) | `src/app/api/workspace/route.ts`, `src/app/api/logout/route.ts` |
+| 5 | **Add rate limiting to resource write APIs** (`/api/players/*`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*`) once the proxy matcher is extended | **Low** (20 min) | new route groups |
 
 #### 🟡 Medium (this month)
 
@@ -439,7 +446,7 @@ Estimated total effort for Immediate + High + Medium items: **~10 hours**
 | `src/lib/workspace-store.ts` | 210 | PostgreSQL OCC reads/writes |
 | `src/lib/db.ts` | 40 | pg.Pool creation |
 | `src/lib/auth.ts` | 60 | Passcode + cookie signing |
-| `src/proxy.ts` | 50 | **Dead** auth middleware |
+| `src/proxy.ts` | 33 | Next.js 16 request proxy protecting `/panel/*` and `/api/workspace/*` |
 | `src/lib/workspace-client.ts` | 100 | Client-side fetch + retry |
 | `src/components/app-shell.tsx` | 80 | Global layout shell |
 | `src/components/player-manager-client.tsx` | 120 | Homepage command desk |
