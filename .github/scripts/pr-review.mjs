@@ -256,22 +256,31 @@ function sanitizeReviewOutput(raw) {
   }
   // 1. Drop <think>...</think> blocks (multiline, case-insensitive).
   let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-  // 2. Drop ALL fenced code blocks. Reasoning models wrap their internal
-  //    thinking in ``` ... ``` blocks (verified on PR #13 where the model
-  //    emitted two thinking blocks inside code fences). The 5-section
-  //    review format does not use code fences, so removing them is safe.
-  text = text
-    .replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?\n```/g, "")
-    .replace(/```[\s\S]*?```/g, "")
-    .trim();
-  // 3. Find the LAST `## Summary` heading and slice from there. The model
-  //    often emits stub `## Summary...` headings (sometimes multiple) before
-  //    writing the real review; the last one is the canonical one.
+  // 2. Find the LAST `## Summary` heading. The model often emits stub
+  //    `## Summary...` headings (sometimes multiple) before writing the
+  //    real review; the last one is the canonical one.
   const summaryRe = /^##\s*Summary\b/gim;
   let lastSummaryIdx = -1;
   let m;
   while ((m = summaryRe.exec(text)) !== null) lastSummaryIdx = m.index;
-  if (lastSummaryIdx > 0) text = text.slice(lastSummaryIdx);
+  if (lastSummaryIdx >= 0) {
+    // Normal path: the real review starts at the last `## Summary`.
+    // Slicing from there drops every preceding stub heading, code-fence
+    // wrapped thinking, and preamble in one go — without needing to
+    // strip legitimate code blocks that may appear inside the review.
+    text = text.slice(lastSummaryIdx);
+  } else {
+    // Fallback: no `## Summary` heading found anywhere. The model may have
+    // wrapped its entire response (think + review) in code fences without
+    // emitting any real heading. Strip fenced code blocks as a last resort
+    // so the section count isn't artificially zero. This only runs when
+    // the normal path failed; legitimate code blocks inside a real review
+    // are never touched.
+    text = text
+      .replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?\n```/g, "")
+      .replace(/```[\s\S]*?```/g, "")
+      .trim();
+  }
   // 4. Count how many of the 5 expected headings are present AND check
   //    that they appear in the prescribed order.
   const required = [
