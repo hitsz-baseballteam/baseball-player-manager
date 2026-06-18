@@ -22,18 +22,17 @@ import {
 import {
   createUniqueScenarioName,
   getActiveScenario,
-  sanitizeWorkspace,
   type Workspace,
 } from "@/lib/workspace";
 import {
   activateScenario,
   createScenario,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   submitMutationWithRetry,
   type WorkspaceSnapshot,
   updateScenarioAssignments,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
 type PlayerManagerClientProps = {
@@ -64,8 +63,13 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
   const helpRef = useRef<HelpDrawerHandle | null>(null);
   const guideRef = useRef<GuideHandle | null>(null);
 
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(props.initialWorkspace));
-  const [remoteVersion, setRemoteVersion] = useState(props.initialVersion);
+  const {
+    workspace,
+    version: remoteVersion,
+    setWorkspace,
+    applySnapshot,
+    refreshWorkspace,
+  } = useWorkspaceSnapshot(props.initialWorkspace, props.initialVersion);
   const [saveStatus, setSaveStatus] = useState("云端工作区已准备");
   const [helpOpen, setHelpOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(
@@ -98,15 +102,12 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
         applyMutation,
         submit,
       );
-      setWorkspace(sanitizeWorkspace(result.workspace));
-      setRemoteVersion(result.version);
+      applySnapshot(result);
       setSaveStatus(messages.success);
       toastRef.current?.showToast(messages.success);
     } catch (error) {
       if (isVersionConflict(error)) {
-        const latest = await loadWorkspaceSnapshot();
-        setWorkspace(sanitizeWorkspace(latest.workspace));
-        setRemoteVersion(latest.version);
+        await refreshWorkspace();
         setSaveStatus("工作区已被其他会话更新，已刷新最新数据");
         toastRef.current?.showToast("工作区已被其他会话更新，已刷新最新数据");
       } else {
@@ -115,7 +116,7 @@ export function PlayerManagerClient(props: PlayerManagerClientProps) {
         toastRef.current?.showToast(messages.failure);
       }
     }
-  }, [workspace, remoteVersion]);
+  }, [workspace, remoteVersion, setWorkspace, applySnapshot, refreshWorkspace]);
 
   const handleAutoAssign = useCallback(() => {
     void applyWorkspaceMutation(

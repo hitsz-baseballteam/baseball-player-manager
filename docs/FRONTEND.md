@@ -18,7 +18,7 @@
 各受保护业务页面 `page.tsx` 默认是服务端组件，职责统一：
 
 - 读取 cookie，执行认证守卫
-- 调用 `getOrCreateWorkspaceSnapshot()` 加载共享 workspace
+- 根据页面调用 full / bootstrap / games / milestones server reader 加载裁剪后的共享 workspace
 - 将 `workspace` 和 `version` 作为 props 传给客户端页面组件
 
 典型结构：
@@ -41,7 +41,7 @@ page.tsx (server)
 | `AppShell` | 全局壳层：导航、页面题头、状态卡、内容槽位 |
 | `HomeOverview` | 首页总控区：Alert Deck、Command Strip、Key Metrics、Scenario Snapshot、Lineup Pulse |
 | `PlayerManagerClient` | 首页 command-desk 客户端：直接动作、页面跳转、帮助/引导 |
-| `RosterPageClient` | 名册工作台状态：workspace/version、筛选、选择、对话框、保存与冲突处理 |
+| `RosterPageClient` | 名册工作台状态：筛选、选择、对话框、保存与冲突处理；workspace/version 由共享 hook 管理 |
 | `RosterOverview` | 名册工作台视图层：filters、counts、cards、bulk actions |
 | `LineupPageClient` | 独立排阵板实现，保留为抽取后的守位/棒次工作台组件与测试载体；当前生产路由已并入 `ScenariosPageClient` |
 | `ScenariosPageClient` | 场景页状态：CRUD、当前方案切换、对比模式、保存与冲突处理 |
@@ -87,6 +87,7 @@ src/lib/
 ├── roster-actions.ts
 ├── workspace.ts
 ├── workspace-client.ts
+├── use-workspace-snapshot.ts
 └── workspace-store.ts
 ```
 
@@ -99,10 +100,10 @@ Server page.tsx
   └── getOrCreateWorkspaceSnapshot()
        ↓
 Client page component
-  └── 本地 workspace state + 交互
+  └── useWorkspaceSnapshot() + 页面交互状态
        ↓
 workspace-client.ts
-  └── GET /api/workspace + resource-specific write APIs
+  └── 冲突刷新 GET /api/workspace + resource-specific write APIs
        ↓
 API routes + optimistic concurrency
 ```
@@ -116,7 +117,9 @@ API routes + optimistic concurrency
   - 排阵 / 场景 → `lineup-actions.ts`
   - 导入导出 → `export-actions.ts`
 - **客户端持久化统一走 `workspace-client.ts`**
+- **snapshot contract 统一走 `useWorkspaceSnapshot()`**：成功响应通过 `applySnapshot()` 同步 workspace/version，冲突或失败恢复通过 `refreshWorkspace()`
 - **冲突处理显式化**：页面客户端负责展示“已刷新最新数据”或“保存失败”等状态消息
+- **不自动预取 Panel 兄弟路由**：Panel 导航链接设置 `prefetch={false}`，避免进入页面时并发触发多个私有 RSC 读取
 
 ## 样式方法
 

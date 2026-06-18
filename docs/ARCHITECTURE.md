@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-15.
+This document describes the repository as currently observed on 2026-06-18.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -83,12 +83,15 @@ Observed behavior:
 - `app_workspace_meta` stores the workspace version/token and top-level preferences
 - players, positions, scenarios, assignments, games, innings, stat lines, and milestones live in dedicated `app_*` tables
 - reads sanitize database data before returning it
+- each aggregate or slice read uses one checked-out client inside a `REPEATABLE READ READ ONLY` transaction
+- full, bootstrap, games, and milestones reads use tagged cross-request caches; successful writes invalidate the shared workspace tag
 - writes sanitize incoming workspace data before persisting it
+- normalized child rows are rewritten with set-based `jsonb_to_recordset()` inserts rather than one query per record
 - updates increment a numeric `version`
 - update conflicts return `null` when the requested `version` no longer matches the locked workspace-meta row
 - the legacy `public.app_workspace` JSONB table is retained only as a rollback/bootstrap source during the cutover window
 
-On the client side, `src/lib/workspace-client.ts` keeps `GET /api/workspace` as the bootstrap read path, while normal writes go through resource-specific routes such as `/api/players`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*`, and `/api/workspace/import|reset|preferences`. Conflict retries are handled by `submitMutationWithRetry()`.
+Server pages inject the initial snapshot. Interactive pages use `useWorkspaceSnapshot()` to apply returned workspace/version pairs and refresh after conflicts. `workspace-client.ts` owns the full-snapshot reload and resource-specific mutation requests. Conflict retries for replay-safe mutations are handled by `submitMutationWithRetry()`.
 
 ### 3. Authentication and request protection
 
@@ -117,6 +120,7 @@ The legacy homepage runtime has been retired. The current UI is now route-based 
 - `src/components/player-manager-client.tsx` renders the homepage command desk using `AppShell` + `HomeOverview`
 - `src/components/roster-page-client.tsx`, `scenarios-page-client.tsx`, `stats-page-client.tsx`, `settings-page-client.tsx`, `player-profile-page-client.tsx`, and `games-page-client.tsx` each own one dedicated workbench/page surface
 - `src/components/lineup-page-client.tsx` remains as a standalone extracted lineup-board implementation and test surface, but no live route renders it directly
+- the main clients share `useWorkspaceSnapshot()` for initial snapshot state, successful response application, and conflict refresh
 - shared business logic is factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
 - `Toast`, `HelpDrawer`, and `GuideOverlay` are reusable adjunct UI layered around the page shells rather than around a DOM manager
 
@@ -162,9 +166,11 @@ These notes are based on current code imports and call sites, not aspirational r
 - `src/app/**` acts as the runtime boundary: pages and API routes call into `src/lib/**`
 - `src/lib/workspace.ts` is intentionally reused across server and client code for shared types and pure logic
 - browser code does not import `pg`; database access stays in `db.ts` / `workspace-store.ts`
-- client bootstrap reads go through `fetch('/api/workspace')` in `workspace-client.ts`
+- initial page reads happen in Server Components; client-side `GET /api/workspace` is reserved for conflict/failure refresh and retry
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
 - React route pages persist through `workspace-client.ts` and the resource-oriented `/api/*` boundary rather than calling database code directly
+- Panel navigation disables automatic sibling-route prefetch because each route is a private, data-heavy RSC request
+- Noto Sans SC is self-hosted as variable Unicode-range chunks; versioned WebP command-board and logo assets receive long-lived immutable caching
 - homepage direct actions reuse shared pure logic (`lineup-actions.ts`, `export-actions.ts`) instead of selector-based DOM bridge calls
 - `roster-actions.ts` now also owns roster filter helpers used by the roster workbench
 

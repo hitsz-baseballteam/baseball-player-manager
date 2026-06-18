@@ -8,5 +8,8 @@ This project vendors the following open-source font files for local, offline-saf
 - Noto Sans SC (Simplified Chinese subset) — SIL Open Font License 1.1
   - Source: `@fontsource/noto-sans-sc` 5.2.9
   - Upstream: https://github.com/google/fonts/tree/main/ofl/notosanssc
+- Noto Sans SC Variable — SIL Open Font License 1.1
+  - Source: `@fontsource-variable/noto-sans-sc` 5.2.9
+  - Upstream: https://github.com/google/fonts/tree/main/ofl/notosanssc
 
 Font files live alongside this notice in `src/fonts/`.

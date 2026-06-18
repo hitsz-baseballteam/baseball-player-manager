@@ -27,6 +27,7 @@ Database migrations live in `supabase/migrations/`.
 |---|---|
 | `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export — pure workspace rules |
 | `src/lib/workspace-store.ts` | PostgreSQL read/write with version-based optimistic concurrency |
+| `src/lib/use-workspace-snapshot.ts` | Shared client workspace/version state, snapshot application, and conflict refresh |
 | `src/components/app-shell.tsx` | Global shell shared by all pages |
 | `src/components/player-manager-client.tsx` | Homepage command-desk client |
 | `src/components/home-overview.tsx` | Homepage alert deck, command strip, metrics, lineup pulse |

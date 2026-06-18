@@ -6,15 +6,14 @@ import { AppShell } from "@/components/app-shell";
 import { PlayerProfileEditor } from "@/components/player-profile-editor";
 import {
   cloneWorkspace,
-  sanitizeWorkspace,
   type Player,
   type Workspace,
 } from "@/lib/workspace";
 import {
   isVersionConflict,
-  loadWorkspaceSnapshot,
   updatePlayer,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
 const NAV_ITEMS = panelNavItems("名册");
@@ -28,10 +27,8 @@ type PlayerProfilePageClientProps = {
 export function PlayerProfilePageClient(
   props: PlayerProfilePageClientProps,
 ) {
-  const [workspace, setWorkspace] = useState(() =>
-    sanitizeWorkspace(props.initialWorkspace),
-  );
-  const [version, setVersion] = useState(props.initialVersion);
+  const { workspace, version, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(props.initialWorkspace, props.initialVersion);
   const [saving, setSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("球员档案已连接共享工作区");
 
@@ -55,14 +52,11 @@ export function PlayerProfilePageClient(
 
     try {
       const result = await updatePlayer(nextPlayer, version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
-      setVersion(result.version);
+      applySnapshot(result);
       setStatusMessage("球员档案已同步到云端");
     } catch (error) {
       if (isVersionConflict(error)) {
-        const latest = await loadWorkspaceSnapshot();
-        setWorkspace(sanitizeWorkspace(latest.workspace));
-        setVersion(latest.version);
+        await refreshWorkspace();
         setStatusMessage("工作区已被其他会话更新，当前页面已刷新最新数据");
       } else {
         console.error(error);

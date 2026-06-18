@@ -24,6 +24,8 @@ type WorkspaceSnapshot = {
 
 That aggregate is assembled from the normalized `app_*` tables below.
 
+Aggregate and slice reads run on one PostgreSQL client in a `REPEATABLE READ READ ONLY` transaction so related rows come from one database snapshot.
+
 ## Date And Time Conventions
 
 - `joined_on`, `game_date`, `milestone_date` use SQL `date`
@@ -296,10 +298,15 @@ The application reaches the database through the server-side `pg` connection, no
 
 All mutations follow the same high-level flow:
 
-1. Lock the `app_workspace_meta` row for slug `default`
-2. Compare the incoming `version`
-3. Apply all related inserts, updates, and deletes in one SQL transaction
-4. Increment `app_workspace_meta.version`
-5. Return a fresh assembled `WorkspaceSnapshot`
+1. Assemble the current normalized record inside a write transaction
+2. Lock the `app_workspace_meta` row only when slug and incoming `version` both match
+3. Abort with a conflict when the conditional lock fails
+4. Sanitize the next aggregate and compute the incremented version in memory
+5. Upsert workspace meta, then delete current child rows; cascades remove dependent rows
+6. Reinsert each non-empty table as one set-based `jsonb_to_recordset()` statement in foreign-key order
+7. Commit, then invalidate all server-side workspace read slices
+8. Return the committed `WorkspaceSnapshot`
+
+This remains a whole-workspace wipe-and-rewrite model. Resource-specific HTTP routes narrow the client contract, but they do not perform row-level partial persistence internally.
 
 See [API.md](./API.md) for the route-level contract and [ARCHITECTURE.md](./ARCHITECTURE.md) for the broader runtime context.

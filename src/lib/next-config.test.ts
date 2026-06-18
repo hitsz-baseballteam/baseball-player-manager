@@ -28,4 +28,21 @@ describe("next security headers", () => {
       "DENY",
     );
   });
+
+  it("caches versioned WebP assets as immutable", async () => {
+    const headerGroups = await nextConfig.headers?.();
+    const assetHeaders = headerGroups?.find(
+      (entry) => entry.source === "/assets/:path*.webp",
+    )?.headers ?? [];
+    const teamHeaders = headerGroups?.find(
+      (entry) => entry.source === "/team/:path*.webp",
+    )?.headers ?? [];
+
+    for (const headers of [assetHeaders, teamHeaders]) {
+      assert.equal(
+        headers.find((header) => header.key === "Cache-Control")?.value,
+        "public, max-age=31536000, immutable",
+      );
+    }
+  });
 });

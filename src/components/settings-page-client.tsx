@@ -8,7 +8,6 @@ import { ToastProvider, type ToastHandle } from "@/components/toast";
 import {
   cloneWorkspace,
   createMilestone,
-  sanitizeWorkspace,
   timestampFilePart,
   type PendingImport,
   type Workspace,
@@ -18,9 +17,9 @@ import {
   deleteWorkspaceMilestone,
   importWorkspaceSnapshot,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   resetWorkspace,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 
 import {
   applyScenarioImport,
@@ -58,8 +57,8 @@ export function SettingsPageClient({
 }: SettingsPageClientProps) {
   const toastRef = useRef<ToastHandle | null>(null);
 
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
-  const [version, setVersion] = useState(initialVersion);
+  const { workspace, version, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(initialWorkspace, initialVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -116,13 +115,12 @@ export function SettingsPageClient({
     setImportError(null);
     try {
       const result = await importWorkspaceSnapshot(next, version);
-      setVersion(result.version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
+      applySnapshot(result);
       toastRef.current?.showToast("导入成功");
     } catch {
       setImportError("保存失败，请重试。");
     }
-  }, [importPayload, workspace, version]);
+  }, [importPayload, workspace, version, applySnapshot]);
 
   const handleResetExampleData = useCallback(async () => {
     if (!window.confirm("确认重置为示例数据？当前共享工作区会被默认球员与默认方案覆盖。")) {
@@ -134,14 +132,11 @@ export function SettingsPageClient({
 
     try {
       const result = await resetWorkspace(workspace.preferences.helpDismissed, version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
-      setVersion(result.version);
+      applySnapshot(result);
       toastRef.current?.showToast("已重置为示例数据");
     } catch (error) {
       if (isVersionConflict(error)) {
-        const latest = await loadWorkspaceSnapshot();
-        setWorkspace(sanitizeWorkspace(latest.workspace));
-        setVersion(latest.version);
+        await refreshWorkspace();
         toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容");
       } else {
         setSaveError("重置失败，请稍后重试");
@@ -150,7 +145,7 @@ export function SettingsPageClient({
     } finally {
       setIsSaving(false);
     }
-  }, [version, workspace.preferences.helpDismissed]);
+  }, [version, workspace.preferences.helpDismissed, applySnapshot, refreshWorkspace]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -182,14 +177,11 @@ export function SettingsPageClient({
     setMilestoneDraft({ date: "", title: "", description: "" });
     try {
       const result = await createWorkspaceMilestone(ms, version);
-      setVersion(result.version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
+      applySnapshot(result);
       toastRef.current?.showToast("里程碑已添加");
     } catch (error) {
       try {
-        const snapshot = await loadWorkspaceSnapshot();
-        setVersion(snapshot.version);
-        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        await refreshWorkspace();
         if (isVersionConflict(error)) {
           toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
         } else {
@@ -208,14 +200,11 @@ export function SettingsPageClient({
     setSaveError(null);
     try {
       const result = await deleteWorkspaceMilestone(id, version);
-      setVersion(result.version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
+      applySnapshot(result);
       toastRef.current?.showToast("里程碑已删除");
     } catch (error) {
       try {
-        const snapshot = await loadWorkspaceSnapshot();
-        setVersion(snapshot.version);
-        setWorkspace(sanitizeWorkspace(snapshot.workspace));
+        await refreshWorkspace();
         if (isVersionConflict(error)) {
           toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
         } else {

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { revalidateTag, unstable_cache } from "next/cache";
 
 import {
   createDefaultWorkspace,
@@ -20,6 +21,8 @@ import { getPool } from "@/lib/db";
 import type { PoolClient } from "pg";
 
 type Queryable = Pick<PoolClient, "query">;
+
+const WORKSPACE_CACHE_TAG = `workspace:${DEFAULT_WORKSPACE_SLUG}`;
 
 type LegacyWorkspaceRow = {
   id: string;
@@ -213,6 +216,21 @@ async function withTransaction<T>(work: (client: PoolClient) => Promise<T>) {
   const client = await getPool().connect();
   try {
     await client.query("begin");
+    const result = await work(client);
+    await client.query("commit");
+    return result;
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function withReadTransaction<T>(work: (client: PoolClient) => Promise<T>) {
+  const client = await getPool().connect();
+  try {
+    await client.query("begin transaction isolation level repeatable read read only");
     const result = await work(client);
     await client.query("commit");
     return result;
@@ -570,6 +588,18 @@ async function wipeNormalizedWorkspace(client: Queryable, workspaceId: string) {
   await client.query("delete from public.app_player where workspace_id = $1", [workspaceId]);
 }
 
+async function insertJsonRows(
+  client: Queryable,
+  sql: string,
+  rows: ReadonlyArray<Record<string, unknown>>,
+) {
+  if (rows.length === 0) {
+    return;
+  }
+
+  await client.query(sql, [JSON.stringify(rows)]);
+}
+
 async function writeNormalizedWorkspace(params: {
   client: Queryable;
   workspaceId: string;
@@ -618,199 +648,259 @@ async function writeNormalizedWorkspace(params: {
 
   await wipeNormalizedWorkspace(client, workspaceId);
 
-  for (const [index, player] of safeWorkspace.players.entries()) {
-    await client.query(
-      `
-        insert into public.app_player (
-          workspace_id, id, sort_order, name, number, throws, bats, status, joined_on,
-          profile_type, age, height_cm, weight_kg, fastball_top_kmh, fastball_avg_kmh,
-          arm_strength_m, thirty_meter_sec, scouting_summary, pitcher_radar, fielder_radar,
-          pitch_types
-        )
-        values (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, $12, $13,
-          $14, $15, $16, $17, $18, $19::jsonb, $20::jsonb, $21::text[]
-        )
-      `,
-      [
-        workspaceId,
-        player.id,
-        index,
-        player.name,
-        player.number,
-        player.throws,
-        player.bats,
-        player.status,
-        normalizeDateOnly(player.joinedAt),
-        player.profile.profileType,
-        player.profile.age,
-        player.profile.heightCm,
-        player.profile.weightKg,
-        player.profile.fastballTopKmh,
-        player.profile.fastballAvgKmh,
-        player.profile.armStrengthM,
-        player.profile.thirtyMeterSec,
-        player.profile.scoutingSummary,
-        JSON.stringify(player.profile.radar.pitcher),
-        JSON.stringify(player.profile.radar.fielder),
-        player.profile.pitchTypes,
-      ],
-    );
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_player (
+        workspace_id, id, sort_order, name, number, throws, bats, status, joined_on,
+        profile_type, age, height_cm, weight_kg, fastball_top_kmh, fastball_avg_kmh,
+        arm_strength_m, thirty_meter_sec, scouting_summary, pitcher_radar, fielder_radar,
+        pitch_types
+      )
+      select workspace_id, id, sort_order, name, number, throws, bats, status, joined_on,
+             profile_type, age, height_cm, weight_kg, fastball_top_kmh, fastball_avg_kmh,
+             arm_strength_m, thirty_meter_sec, scouting_summary, pitcher_radar, fielder_radar,
+             pitch_types
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, id text, sort_order integer, name text, number text, throws text,
+        bats text, status text, joined_on date, profile_type text, age integer, height_cm integer,
+        weight_kg integer, fastball_top_kmh numeric, fastball_avg_kmh numeric,
+        arm_strength_m numeric, thirty_meter_sec numeric, scouting_summary text,
+        pitcher_radar jsonb, fielder_radar jsonb, pitch_types text[]
+      )
+    `,
+    safeWorkspace.players.map((player, sortOrder) => ({
+      workspace_id: workspaceId,
+      id: player.id,
+      sort_order: sortOrder,
+      name: player.name,
+      number: player.number,
+      throws: player.throws,
+      bats: player.bats,
+      status: player.status,
+      joined_on: normalizeDateOnly(player.joinedAt),
+      profile_type: player.profile.profileType,
+      age: player.profile.age,
+      height_cm: player.profile.heightCm,
+      weight_kg: player.profile.weightKg,
+      fastball_top_kmh: player.profile.fastballTopKmh,
+      fastball_avg_kmh: player.profile.fastballAvgKmh,
+      arm_strength_m: player.profile.armStrengthM,
+      thirty_meter_sec: player.profile.thirtyMeterSec,
+      scouting_summary: player.profile.scoutingSummary,
+      pitcher_radar: player.profile.radar.pitcher,
+      fielder_radar: player.profile.radar.fielder,
+      pitch_types: player.profile.pitchTypes,
+    })),
+  );
 
-    for (const position of player.positions) {
-      await client.query(
-        `
-          insert into public.app_player_position (workspace_id, player_id, position_code)
-          values ($1, $2, $3)
-        `,
-        [workspaceId, player.id, position],
-      );
-    }
-  }
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_player_position (workspace_id, player_id, position_code)
+      select workspace_id, player_id, position_code
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, player_id text, position_code text
+      )
+    `,
+    safeWorkspace.players.flatMap((player) =>
+      player.positions.map((position) => ({
+        workspace_id: workspaceId,
+        player_id: player.id,
+        position_code: position,
+      })),
+    ),
+  );
 
-  for (const [index, scenario] of safeWorkspace.scenarios.entries()) {
-    await client.query(
-      `
-        insert into public.app_scenario (
-          workspace_id, id, sort_order, name, note, created_at, updated_at
-        )
-        values ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz)
-      `,
-      [
-        workspaceId,
-        scenario.id,
-        index,
-        scenario.name,
-        scenario.note,
-        scenario.createdAt,
-        scenario.updatedAt,
-      ],
-    );
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_scenario (
+        workspace_id, id, sort_order, name, note, created_at, updated_at
+      )
+      select workspace_id, id, sort_order, name, note, created_at, updated_at
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, id text, sort_order integer, name text, note text,
+        created_at timestamptz, updated_at timestamptz
+      )
+    `,
+    safeWorkspace.scenarios.map((scenario, sortOrder) => ({
+      workspace_id: workspaceId,
+      id: scenario.id,
+      sort_order: sortOrder,
+      name: scenario.name,
+      note: scenario.note,
+      created_at: scenario.createdAt,
+      updated_at: scenario.updatedAt,
+    })),
+  );
 
-    for (const [positionCode, playerId] of Object.entries(scenario.assignments.defense)) {
-      await client.query(
-        `
-          insert into public.app_scenario_defense_assignment (
-            workspace_id, scenario_id, position_code, player_id
-          )
-          values ($1, $2, $3, $4)
-        `,
-        [workspaceId, scenario.id, positionCode, playerId],
-      );
-    }
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_scenario_defense_assignment (
+        workspace_id, scenario_id, position_code, player_id
+      )
+      select workspace_id, scenario_id, position_code, player_id
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, scenario_id text, position_code text, player_id text
+      )
+    `,
+    safeWorkspace.scenarios.flatMap((scenario) =>
+      Object.entries(scenario.assignments.defense).map(([positionCode, playerId]) => ({
+        workspace_id: workspaceId,
+        scenario_id: scenario.id,
+        position_code: positionCode,
+        player_id: playerId,
+      })),
+    ),
+  );
 
-    for (const [slotIndex, playerId] of scenario.assignments.lineup.entries()) {
-      await client.query(
-        `
-          insert into public.app_scenario_lineup_slot (
-            workspace_id, scenario_id, slot_index, player_id
-          )
-          values ($1, $2, $3, $4)
-        `,
-        [workspaceId, scenario.id, slotIndex, playerId],
-      );
-    }
-  }
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_scenario_lineup_slot (
+        workspace_id, scenario_id, slot_index, player_id
+      )
+      select workspace_id, scenario_id, slot_index, player_id
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, scenario_id text, slot_index smallint, player_id text
+      )
+    `,
+    safeWorkspace.scenarios.flatMap((scenario) =>
+      scenario.assignments.lineup.map((playerId, slotIndex) => ({
+        workspace_id: workspaceId,
+        scenario_id: scenario.id,
+        slot_index: slotIndex,
+        player_id: playerId,
+      })),
+    ),
+  );
 
-  for (const [index, game] of safeWorkspace.games.entries()) {
-    await client.query(
-      `
-        insert into public.app_game (
-          workspace_id, id, sort_order, game_date, opponent, game_type, total_innings, note
-        )
-        values ($1, $2, $3, $4::date, $5, $6, $7, $8)
-      `,
-      [
-        workspaceId,
-        game.id,
-        index,
-        normalizeDateOnly(game.date),
-        game.opponent,
-        game.gameType,
-        game.totalInnings,
-        game.note ?? null,
-      ],
-    );
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_game (
+        workspace_id, id, sort_order, game_date, opponent, game_type, total_innings, note
+      )
+      select workspace_id, id, sort_order, game_date, opponent, game_type, total_innings, note
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, id text, sort_order integer, game_date date, opponent text,
+        game_type text, total_innings integer, note text
+      )
+    `,
+    safeWorkspace.games.map((game, sortOrder) => ({
+      workspace_id: workspaceId,
+      id: game.id,
+      sort_order: sortOrder,
+      game_date: normalizeDateOnly(game.date),
+      opponent: game.opponent,
+      game_type: game.gameType,
+      total_innings: game.totalInnings,
+      note: game.note ?? null,
+    })),
+  );
 
-    for (const inning of game.innings) {
-      await client.query(
-        `
-          insert into public.app_game_inning (
-            workspace_id, game_id, inning_number, hits, runs, batters
-          )
-          values ($1, $2, $3, $4, $5, $6::text[])
-        `,
-        [workspaceId, game.id, inning.inning, inning.hits, inning.runs, inning.batters],
-      );
-    }
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_game_inning (
+        workspace_id, game_id, inning_number, hits, runs, batters
+      )
+      select workspace_id, game_id, inning_number, hits, runs, batters
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, game_id text, inning_number integer, hits integer, runs integer,
+        batters text[]
+      )
+    `,
+    safeWorkspace.games.flatMap((game) =>
+      game.innings.map((inning) => ({
+        workspace_id: workspaceId,
+        game_id: game.id,
+        inning_number: inning.inning,
+        hits: inning.hits,
+        runs: inning.runs,
+        batters: inning.batters,
+      })),
+    ),
+  );
 
-    for (const [statIndex, statLine] of game.statLines.entries()) {
-      await client.query(
-        `
-          insert into public.app_game_stat_line (
-            workspace_id, game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi,
-            r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e,
-            w, l, sv, np
-          )
-          values (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-            $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
-          )
-        `,
-        [
-          workspaceId,
-          game.id,
-          statLine.playerId,
-          statIndex,
-          statLine.pa,
-          statLine.ab,
-          statLine.h,
-          statLine.doubles,
-          statLine.triples,
-          statLine.hr,
-          statLine.rbi,
-          statLine.r,
-          statLine.sb,
-          statLine.bb,
-          statLine.hbp,
-          statLine.sf,
-          statLine.so,
-          statLine.ip,
-          statLine.er,
-          statLine.soPitching,
-          statLine.bbPitching,
-          statLine.hPitching,
-          statLine.po,
-          statLine.a,
-          statLine.e,
-          statLine.w,
-          statLine.l,
-          statLine.sv,
-          statLine.np,
-        ],
-      );
-    }
-  }
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_game_stat_line (
+        workspace_id, game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi,
+        r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e,
+        w, l, sv, np
+      )
+      select workspace_id, game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr,
+             rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching,
+             po, a, e, w, l, sv, np
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, game_id text, player_id text, sort_order integer, pa integer,
+        ab integer, h integer, doubles integer, triples integer, hr integer, rbi integer,
+        r integer, sb integer, bb integer, hbp integer, sf integer, so integer, ip numeric,
+        er integer, so_pitching integer, bb_pitching integer, h_pitching integer, po integer,
+        a integer, e integer, w integer, l integer, sv integer, np integer
+      )
+    `,
+    safeWorkspace.games.flatMap((game) =>
+      game.statLines.map((statLine, sortOrder) => ({
+        workspace_id: workspaceId,
+        game_id: game.id,
+        player_id: statLine.playerId,
+        sort_order: sortOrder,
+        pa: statLine.pa,
+        ab: statLine.ab,
+        h: statLine.h,
+        doubles: statLine.doubles,
+        triples: statLine.triples,
+        hr: statLine.hr,
+        rbi: statLine.rbi,
+        r: statLine.r,
+        sb: statLine.sb,
+        bb: statLine.bb,
+        hbp: statLine.hbp,
+        sf: statLine.sf,
+        so: statLine.so,
+        ip: statLine.ip,
+        er: statLine.er,
+        so_pitching: statLine.soPitching,
+        bb_pitching: statLine.bbPitching,
+        h_pitching: statLine.hPitching,
+        po: statLine.po,
+        a: statLine.a,
+        e: statLine.e,
+        w: statLine.w,
+        l: statLine.l,
+        sv: statLine.sv,
+        np: statLine.np,
+      })),
+    ),
+  );
 
-  for (const [index, milestone] of safeWorkspace.milestones.entries()) {
-    await client.query(
-      `
-        insert into public.app_milestone (
-          workspace_id, id, sort_order, milestone_date, title, description, media_url
-        )
-        values ($1, $2, $3, $4::date, $5, $6, $7)
-      `,
-      [
-        workspaceId,
-        milestone.id,
-        index,
-        normalizeDateOnly(milestone.date),
-        milestone.title,
-        milestone.description,
-        milestone.mediaUrl ?? null,
-      ],
-    );
-  }
+  await insertJsonRows(
+    client,
+    `
+      insert into public.app_milestone (
+        workspace_id, id, sort_order, milestone_date, title, description, media_url
+      )
+      select workspace_id, id, sort_order, milestone_date, title, description, media_url
+      from jsonb_to_recordset($1::jsonb) as rows(
+        workspace_id uuid, id text, sort_order integer, milestone_date date, title text,
+        description text, media_url text
+      )
+    `,
+    safeWorkspace.milestones.map((milestone, sortOrder) => ({
+      workspace_id: workspaceId,
+      id: milestone.id,
+      sort_order: sortOrder,
+      milestone_date: normalizeDateOnly(milestone.date),
+      title: milestone.title,
+      description: milestone.description,
+      media_url: milestone.mediaUrl ?? null,
+    })),
+  );
 }
 
 async function ensureNormalizedWorkspaceRecord(
@@ -859,100 +949,26 @@ async function ensureNormalizedWorkspaceRecord(
 }
 
 async function readNormalizedWorkspaceIfExists(
+  client: Queryable,
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
-  const metaResult = await getPool().query<WorkspaceMetaRow>(
-    `
-      select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
-      from public.app_workspace_meta
-      where slug = $1
-      limit 1
-    `,
-    [slug],
-  );
-  const meta = metaResult.rows[0] ?? null;
-  if (!meta) {
+  const record = await selectNormalizedWorkspaceRecord(client, slug);
+  if (!record) {
     return null;
   }
 
-  const workspaceId = meta.id;
-
-  // Pool.query() acquires a fresh client for each call, so Promise.all
-  // gives true inter-connection parallelism without the deprecated
-  // concurrent-client pattern.
-  const [
-    playersResult,
-    positionsResult,
-    scenariosResult,
-    defenseResult,
-    lineupResult,
-    gamesResult,
-    inningsResult,
-    statLinesResult,
-    milestonesResult,
-  ] = await Promise.all([
-    getPool().query<PlayerRow>(
-      `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
-      [workspaceId],
-    ),
-    getPool().query<PlayerPositionRow>(
-      `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
-      [workspaceId],
-    ),
-    getPool().query<ScenarioRow>(
-      `select * from public.app_scenario where workspace_id = $1 order by sort_order asc`,
-      [workspaceId],
-    ),
-    getPool().query<DefenseAssignmentRow>(
-      `select scenario_id, position_code, player_id from public.app_scenario_defense_assignment where workspace_id = $1 order by scenario_id asc, position_code asc`,
-      [workspaceId],
-    ),
-    getPool().query<LineupSlotRow>(
-      `select scenario_id, slot_index, player_id from public.app_scenario_lineup_slot where workspace_id = $1 order by scenario_id asc, slot_index asc`,
-      [workspaceId],
-    ),
-    getPool().query<GameRow>(
-      `select * from public.app_game where workspace_id = $1 order by sort_order asc`,
-      [workspaceId],
-    ),
-    getPool().query<GameInningRow>(
-      `select game_id, inning_number, hits, runs, batters from public.app_game_inning where workspace_id = $1 order by game_id asc, inning_number asc`,
-      [workspaceId],
-    ),
-    getPool().query<GameStatLineRow>(
-      `select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np from public.app_game_stat_line where workspace_id = $1 order by game_id asc, sort_order asc`,
-      [workspaceId],
-    ),
-    getPool().query<MilestoneRow>(
-      `select * from public.app_milestone where workspace_id = $1 order by sort_order asc`,
-      [workspaceId],
-    ),
-  ]);
-
-  const workspace = buildWorkspaceFromRows({
-    meta,
-    players: playersResult.rows,
-    positions: positionsResult.rows,
-    scenarios: scenariosResult.rows,
-    defenseAssignments: defenseResult.rows,
-    lineupSlots: lineupResult.rows,
-    games: gamesResult.rows,
-    innings: inningsResult.rows,
-    statLines: statLinesResult.rows,
-    milestones: milestonesResult.rows,
-  });
-
   return {
-    workspace,
-    version: meta.version,
-    updatedAt: toIsoString(meta.updated_at),
+    workspace: record.workspace,
+    version: record.version,
+    updatedAt: record.updatedAt,
   };
 }
 
 async function readBootstrapWorkspaceIfExists(
+  client: Queryable,
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
-  const metaResult = await getPool().query<WorkspaceMetaRow>(
+  const metaResult = await client.query<WorkspaceMetaRow>(
     `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
      from public.app_workspace_meta where slug = $1 limit 1`,
     [slug],
@@ -961,34 +977,26 @@ async function readBootstrapWorkspaceIfExists(
   if (!meta) return null;
 
   const workspaceId = meta.id;
-  const [
-    playersResult,
-    positionsResult,
-    scenariosResult,
-    defenseResult,
-    lineupResult,
-  ] = await Promise.all([
-    getPool().query<PlayerRow>(
+  const playersResult = await client.query<PlayerRow>(
       `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<PlayerPositionRow>(
+    );
+  const positionsResult = await client.query<PlayerPositionRow>(
       `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
       [workspaceId],
-    ),
-    getPool().query<ScenarioRow>(
+    );
+  const scenariosResult = await client.query<ScenarioRow>(
       `select * from public.app_scenario where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<DefenseAssignmentRow>(
+    );
+  const defenseResult = await client.query<DefenseAssignmentRow>(
       `select scenario_id, position_code, player_id from public.app_scenario_defense_assignment where workspace_id = $1 order by scenario_id asc, position_code asc`,
       [workspaceId],
-    ),
-    getPool().query<LineupSlotRow>(
+    );
+  const lineupResult = await client.query<LineupSlotRow>(
       `select scenario_id, slot_index, player_id from public.app_scenario_lineup_slot where workspace_id = $1 order by scenario_id asc, slot_index asc`,
       [workspaceId],
-    ),
-  ]);
+    );
 
   const playerPositions = new Map<string, Player["positions"]>();
   for (const row of positionsResult.rows) {
@@ -1073,9 +1081,10 @@ async function readBootstrapWorkspaceIfExists(
 }
 
 async function readGamesWorkspaceIfExists(
+  client: Queryable,
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
-  const metaResult = await getPool().query<WorkspaceMetaRow>(
+  const metaResult = await client.query<WorkspaceMetaRow>(
     `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
      from public.app_workspace_meta where slug = $1 limit 1`,
     [slug],
@@ -1084,34 +1093,26 @@ async function readGamesWorkspaceIfExists(
   if (!meta) return null;
 
   const workspaceId = meta.id;
-  const [
-    playersResult,
-    positionsResult,
-    gamesResult,
-    inningsResult,
-    statLinesResult,
-  ] = await Promise.all([
-    getPool().query<PlayerRow>(
+  const playersResult = await client.query<PlayerRow>(
       `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<PlayerPositionRow>(
+    );
+  const positionsResult = await client.query<PlayerPositionRow>(
       `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
       [workspaceId],
-    ),
-    getPool().query<GameRow>(
+    );
+  const gamesResult = await client.query<GameRow>(
       `select * from public.app_game where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<GameInningRow>(
+    );
+  const inningsResult = await client.query<GameInningRow>(
       `select game_id, inning_number, hits, runs, batters from public.app_game_inning where workspace_id = $1 order by game_id asc, inning_number asc`,
       [workspaceId],
-    ),
-    getPool().query<GameStatLineRow>(
+    );
+  const statLinesResult = await client.query<GameStatLineRow>(
       `select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np from public.app_game_stat_line where workspace_id = $1 order by game_id asc, sort_order asc`,
       [workspaceId],
-    ),
-  ]);
+    );
 
   const playerPositions = new Map<string, Player["positions"]>();
   for (const row of positionsResult.rows) {
@@ -1196,9 +1197,10 @@ async function readGamesWorkspaceIfExists(
 }
 
 async function readMilestonesWorkspaceIfExists(
+  client: Queryable,
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
-  const metaResult = await getPool().query<WorkspaceMetaRow>(
+  const metaResult = await client.query<WorkspaceMetaRow>(
     `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
      from public.app_workspace_meta where slug = $1 limit 1`,
     [slug],
@@ -1207,34 +1209,26 @@ async function readMilestonesWorkspaceIfExists(
   if (!meta) return null;
 
   const workspaceId = meta.id;
-  const [
-    playersResult,
-    positionsResult,
-    gamesResult,
-    statLinesResult,
-    milestonesResult,
-  ] = await Promise.all([
-    getPool().query<PlayerRow>(
+  const playersResult = await client.query<PlayerRow>(
       `select * from public.app_player where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<PlayerPositionRow>(
+    );
+  const positionsResult = await client.query<PlayerPositionRow>(
       `select player_id, position_code from public.app_player_position where workspace_id = $1 order by player_id asc, position_code asc`,
       [workspaceId],
-    ),
-    getPool().query<GameRow>(
+    );
+  const gamesResult = await client.query<GameRow>(
       `select * from public.app_game where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<GameStatLineRow>(
+    );
+  const statLinesResult = await client.query<GameStatLineRow>(
       `select game_id, player_id, sort_order, pa, ab, h, doubles, triples, hr, rbi, r, sb, bb, hbp, sf, so, ip, er, so_pitching, bb_pitching, h_pitching, po, a, e, w, l, sv, np from public.app_game_stat_line where workspace_id = $1 order by game_id asc, sort_order asc`,
       [workspaceId],
-    ),
-    getPool().query<MilestoneRow>(
+    );
+  const milestonesResult = await client.query<MilestoneRow>(
       `select * from public.app_milestone where workspace_id = $1 order by sort_order asc`,
       [workspaceId],
-    ),
-  ]);
+    );
 
   const playerPositions = new Map<string, Player["positions"]>();
   for (const row of positionsResult.rows) {
@@ -1319,10 +1313,10 @@ async function readMilestonesWorkspaceIfExists(
   };
 }
 
-export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
-  // Fast path: most reads hit the normalized tables. Use the pool directly
-  // (no transaction, parallel queries) to avoid unnecessary BEGIN/COMMIT.
-  const existing = await readNormalizedWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+async function readOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
+  const existing = await withReadTransaction((client) =>
+    readNormalizedWorkspaceIfExists(client, DEFAULT_WORKSPACE_SLUG),
+  );
   if (existing) {
     return existing;
   }
@@ -1339,29 +1333,63 @@ export async function getOrCreateWorkspaceSnapshot(): Promise<WorkspaceSnapshot>
   });
 }
 
-export async function getBootstrapWorkspace(): Promise<WorkspaceSnapshot> {
-  const existing = await readBootstrapWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+async function readBootstrapWorkspace(): Promise<WorkspaceSnapshot> {
+  const existing = await withReadTransaction((client) =>
+    readBootstrapWorkspaceIfExists(client, DEFAULT_WORKSPACE_SLUG),
+  );
   if (existing) return existing;
-  return getOrCreateWorkspaceSnapshot();
+  return readOrCreateWorkspaceSnapshot();
 }
 
-export async function getGamesWorkspace(): Promise<WorkspaceSnapshot> {
-  const existing = await readGamesWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+async function readGamesWorkspace(): Promise<WorkspaceSnapshot> {
+  const existing = await withReadTransaction((client) =>
+    readGamesWorkspaceIfExists(client, DEFAULT_WORKSPACE_SLUG),
+  );
   if (existing) return existing;
-  return getOrCreateWorkspaceSnapshot();
+  return readOrCreateWorkspaceSnapshot();
 }
 
-export async function getMilestonesWorkspace(): Promise<WorkspaceSnapshot> {
-  const existing = await readMilestonesWorkspaceIfExists(DEFAULT_WORKSPACE_SLUG);
+async function readMilestonesWorkspace(): Promise<WorkspaceSnapshot> {
+  const existing = await withReadTransaction((client) =>
+    readMilestonesWorkspaceIfExists(client, DEFAULT_WORKSPACE_SLUG),
+  );
   if (existing) return existing;
-  return getOrCreateWorkspaceSnapshot();
+  return readOrCreateWorkspaceSnapshot();
+}
+
+export const getOrCreateWorkspaceSnapshot = unstable_cache(
+  readOrCreateWorkspaceSnapshot,
+  ["workspace", DEFAULT_WORKSPACE_SLUG, "full"],
+  { tags: [WORKSPACE_CACHE_TAG], revalidate: false },
+);
+
+export const getBootstrapWorkspace = unstable_cache(
+  readBootstrapWorkspace,
+  ["workspace", DEFAULT_WORKSPACE_SLUG, "bootstrap"],
+  { tags: [WORKSPACE_CACHE_TAG], revalidate: false },
+);
+
+export const getGamesWorkspace = unstable_cache(
+  readGamesWorkspace,
+  ["workspace", DEFAULT_WORKSPACE_SLUG, "games"],
+  { tags: [WORKSPACE_CACHE_TAG], revalidate: false },
+);
+
+export const getMilestonesWorkspace = unstable_cache(
+  readMilestonesWorkspace,
+  ["workspace", DEFAULT_WORKSPACE_SLUG, "milestones"],
+  { tags: [WORKSPACE_CACHE_TAG], revalidate: false },
+);
+
+function invalidateWorkspaceCache() {
+  revalidateTag(WORKSPACE_CACHE_TAG, { expire: 0 });
 }
 
 export async function replaceWorkspaceSnapshot(params: {
   workspace: Workspace;
   version: number;
 }): Promise<WorkspaceSnapshot | null> {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const record = await ensureNormalizedWorkspaceRecord(client, DEFAULT_WORKSPACE_SLUG);
     const lockResult = await client.query(
       `
@@ -1396,13 +1424,18 @@ export async function replaceWorkspaceSnapshot(params: {
       updatedAt,
     };
   });
+
+  if (result) {
+    invalidateWorkspaceCache();
+  }
+  return result;
 }
 
 export async function mutateWorkspaceSnapshot(params: {
   version: number;
   mutate: (current: Workspace) => Workspace;
 }): Promise<WorkspaceSnapshot | null> {
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const record = await ensureNormalizedWorkspaceRecord(client, DEFAULT_WORKSPACE_SLUG);
     const lockResult = await client.query(
       `
@@ -1437,6 +1470,11 @@ export async function mutateWorkspaceSnapshot(params: {
       updatedAt,
     };
   });
+
+  if (result) {
+    invalidateWorkspaceCache();
+  }
+  return result;
 }
 
 export async function backfillLegacyWorkspacesToNormalized() {

@@ -53,6 +53,7 @@
 
 :root {
   --font-display: var(--font-ui);
+  --font-body-sc: "Noto Sans SC Variable";
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --theme-accent-fg: #fff;
   --theme-warn: var(--theme-warm);
@@ -63,6 +64,7 @@
   --shell-panel-shadow: 0 2px 8px var(--theme-shadow);
   --shell-hero-ink: var(--theme-fg);
   --shell-muted: var(--theme-muted);
+}
 
 /* Profile-local variable mappings (used by player-profile-editor *.module.css) */
 :root {

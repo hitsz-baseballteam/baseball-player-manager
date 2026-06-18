@@ -8,7 +8,6 @@ import styles from "@/components/games-page-client.module.css";
 import {
   cloneWorkspace,
   createId,
-  sanitizeWorkspace,
   type Game,
   type Player,
   type PlayerGameStatLine,
@@ -18,10 +17,10 @@ import {
   createGame as createGameRequest,
   deleteGame as deleteGameRequest,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updateGame as updateGameRequest,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 import { panelNavItems } from "@/lib/routes";
 
 const NAV_ITEMS = panelNavItems("");
@@ -117,8 +116,8 @@ export function GamesPageClient({
   initialVersion,
   playerId,
 }: GamesPageClientProps) {
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
-  const [version, setVersion] = useState(initialVersion);
+  const { workspace, version, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(initialWorkspace, initialVersion);
   const [statusMessage, setStatusMessage] = useState("比赛数据已连接共享工作区");
   const [tab, setTab] = useState<TabType>("official");
   const [dialog, setDialog] = useState<GameDialogState>({ type: "closed" });
@@ -153,16 +152,13 @@ export function GamesPageClient({
     setStatusMessage("正在同步到云端...");
     try {
       const result = await submit(version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
-      setVersion(result.version);
+      applySnapshot(result);
       setStatusMessage(successMessage);
       toastRef.current?.showToast(successMessage);
       return true;
     } catch (error) {
       if (isVersionConflict(error)) {
-        const latest = await loadWorkspaceSnapshot();
-        setWorkspace(sanitizeWorkspace(latest.workspace));
-        setVersion(latest.version);
+        await refreshWorkspace();
         setStatusMessage("工作区已被其他会话更新，已刷新最新数据");
         toastRef.current?.showToast("工作区已被其他会话更新，已刷新最新数据");
       } else {
