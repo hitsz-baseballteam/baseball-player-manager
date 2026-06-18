@@ -49,6 +49,7 @@ Focus areas:
 Rules:
 - Be specific. Reference file paths and line numbers from the diff.
 - Be concise: total review under 600 words. Cut filler.
+- Each section: at most 3 bullets. If you have more, group them under a single bullet or pick the most important. The sanitizer will mark the review incomplete if the model runs out of output tokens before writing all 5 sections.
 - If the diff is empty, trivial, or only touches docs/formatting, say so plainly.
 - If you find nothing, say "Looks good to me." Do not invent issues.
 - Do not restate the diff.
@@ -111,10 +112,12 @@ async function callMiniMax({ baseUrl, model, apiKey, system, user }) {
     ],
     temperature: 0.2,
     // Budget for the final 5-section review. Reasoning models (MiniMax-M3)
-    // emit chain-of-thought before the final answer; 2048 was eaten by the
-    // <think> block and left the review truncated mid-section. 4096 leaves
-    // room for the structured review after the model has finished reasoning.
-    max_tokens: 4096,
+    // spend many of their output tokens on internal chain-of-thought that
+    // doesn't appear in `content`; 4096 was too small — the model hit the
+    // cap mid-Suggestions and never reached Positives (verified on PR #13
+    // v3 review). 8192 leaves room for both the thinking pass and the full
+    // 5-section structured review, with margin.
+    max_tokens: 8192,
     // NOTE: do not pass `stop: ["</think>"]`. The OpenAI-compatible `stop`
     // parameter halts generation at the FIRST literal occurrence of the
     // sequence in the response — including any </think> text the model
