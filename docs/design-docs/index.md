@@ -37,6 +37,7 @@
 | ADR-003 | [选择 HMAC cookie 认证而非 JWT / Supabase Auth](./adr-003-hmac-cookie-auth.md) | 已采纳 | 2026-06-02 |
 | ADR-004 | [选择乐观并发而非悲观锁](./adr-004-optimistic-concurrency.md) | 已采纳 | 2026-06-02 |
 | ADR-006 | [退役首页 legacy workspace，首页收敛为纯 React 总控台](./adr-006-retire-legacy-homepage-workspace.md) | 已采纳 | 2026-06-05 |
+| ADR-007 | [归一化 workspace 存储（替代 ADR-005）](./adr-007-normalized-workspace-storage.md) | 已采纳 | 2026-06-16 |
 
 ## 已归档决策
 

@@ -25,8 +25,12 @@ Database migrations live in `supabase/migrations/`.
 
 | File | Purpose |
 |---|---|
-| `src/lib/workspace.ts` | Domain types, sanitizers, auto-assignment, import/export — pure workspace rules |
-| `src/lib/workspace-store.ts` | PostgreSQL read/write with version-based optimistic concurrency |
+| `src/lib/workspace/` | Domain types, sanitizers, auto-assignment, import/export — pure workspace rules (split into `types.ts` / `base.ts` / `sanitizers.ts` / `helpers.ts` / `index.ts`) |
+| `src/lib/workspace-store.ts` | Normalized-table read/write with version-based optimistic concurrency (replaces single-row `app_workspace` JSONB writes; legacy table retained as rollback source) |
+| `src/lib/panel-server.ts` | Server-side auth check + workspace reader wrappers (`getPanelBootstrap` / `getPanelGames` / `getPanelMilestones` / `getPanelWorkspaceSnapshot`) used by every `/panel/*` page |
+| `src/lib/scoreboard-actions.ts` | Live game state engine: PA-result derivation, runner advancement, defense, finalize |
+| `src/lib/hall-of-fame.ts` | Career-stats and badge computation for the Hall of Fame page |
+| `src/lib/use-workspace-snapshot.ts` | Shared client workspace/version state, snapshot application, and conflict refresh |
 | `src/components/app-shell.tsx` | Global shell shared by all pages |
 | `src/components/player-manager-client.tsx` | Homepage command-desk client |
 | `src/components/home-overview.tsx` | Homepage alert deck, command strip, metrics, lineup pulse |
@@ -80,3 +84,5 @@ Plan file naming: `YYYYMMDD-简短描述.md`. Known debt lives in `docs/exec-pla
 2. Read files before editing them.
 3. When docs and code disagree, trust the code, then fix the docs.
 4. Keep changes self-contained: implementation, tests, docs, and verification notes together.
+5. 提交PR时标题需总结写明改动内容，并且有fix/feat/optimise等前缀，例如：fix(scorecard): fix blank page crash from merge conflict；feat: Scoreboard — complete pitch-by-pitch game recording system.
+6. 完成构建/代码改动后，同步对齐相对应的文档。

@@ -67,6 +67,47 @@ describe("lineup-actions", () => {
       assert.equal(getActiveScenario(ws3).assignments.lineup[0], playerId,
         "lineup slot should be preserved when assigning defense");
     });
+
+    it("auto-adds player to lineup when assigned to empty defense position", () => {
+      const ws = fresh();
+      const playerId = ws.players[0].id;
+      // Clear lineup
+      const scenario = getActiveScenario(ws);
+      scenario.assignments.lineup = Array(9).fill(null);
+      // Assign to defense — empty position, should go to first empty lineup slot
+      const ws2 = assignDefensePosition(ws, "P", playerId);
+      const lineup2 = getActiveScenario(ws2).assignments.lineup;
+      assert.equal(lineup2[0], playerId,
+        "player should be auto-added to first empty lineup slot");
+    });
+
+    it("replaces old defender in lineup when position is taken", () => {
+      const ws = fresh();
+      const oldPlayer = ws.players[0].id;   // 陈浩宇
+      const newPlayer = ws.players[1].id;   // 林子昂
+      const scenario = getActiveScenario(ws);
+      // Old player at 3B and batting 5th
+      scenario.assignments.defense["3B"] = oldPlayer;
+      scenario.assignments.lineup =          [null, null, null, null, oldPlayer, null, null, null, null];
+      // Assign new player to 3B — should replace old at both 3B AND 5th in lineup
+      const ws2 = assignDefensePosition(ws, "3B", newPlayer);
+      const s2 = getActiveScenario(ws2);
+      assert.equal(s2.assignments.defense["3B"], newPlayer, "new player at 3B");
+      assert.equal(s2.assignments.lineup[4], newPlayer, "new player at old slot (5th)");
+      assert.equal(s2.assignments.lineup.indexOf(oldPlayer), -1, "old player removed from lineup");
+    });
+
+    it("does not duplicate player in lineup if already batting elsewhere", () => {
+      const ws = fresh();
+      const playerId = ws.players[0].id;
+      const scenario = getActiveScenario(ws);
+      scenario.assignments.lineup = [playerId, null, null, null, null, null, null, null, null];
+      const ws2 = assignDefensePosition(ws, "P", playerId);
+      const lineup2 = getActiveScenario(ws2).assignments.lineup;
+      // Player should still be in slot 0, not duplicated in slot 1
+      assert.equal(lineup2[0], playerId);
+      assert.equal(lineup2[1], null, "should not duplicate to slot 1");
+    });
   });
 
   describe("clearDefensePosition", () => {

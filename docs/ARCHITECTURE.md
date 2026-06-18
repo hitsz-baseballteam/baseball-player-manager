@@ -2,7 +2,7 @@
 
 ## Status
 
-This document describes the repository as currently observed on 2026-06-17 (after the latest TD-10 latency optimization pass).
+This document describes the repository as currently observed on 2026-06-18.
 Where something is unknown from repository evidence, it is listed under **Open Questions** instead of being guessed.
 
 ## Repository Shape
@@ -18,11 +18,11 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 | Path | What it currently owns |
 |---|---|
 | `src/app/` | Next.js routes, pages, global styles, and API endpoints |
-| `src/components/` | React UI components, including the homepage app shell, command-desk overview, help/toast/guide overlays, roster and scenario workbenches, and player profile editor |
-| `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and cross-page client helpers |
+| `src/components/` | React UI components, including the homepage app shell, command-desk overview, help/toast/guide overlays, roster / scenario / scoreboard / hall-of-fame workbenches, and player profile editor |
+| `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, scoreboard engine, hall-of-fame computation, panel-server helpers, and cross-page client helpers |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
-| `docs/` | Architecture, product/engineering docs, references, and archives |
+| `docs/` | Architecture, design docs, quality notes, and references |
 | `.github/workflows/` | CI workflow for lint, test, and build |
 
 ## Entry Points
@@ -54,8 +54,13 @@ From `package.json`:
 | `src/app/{roster,scenarios,stats,settings,players/**}/` | Redirect aliases that permanently forward to their `/panel` equivalents |
 | `src/app/lineup/page.tsx` | Compatibility redirect that forwards `/lineup` to `/panel/scenarios` |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
-| `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint |
-| `src/proxy.ts` | Protects `/panel/*` plus private workspace API namespaces by validating the signed unlock cookie |
+| `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint (GET) and returns `405 method_not_allowed` for PUT |
+| `src/app/api/workspace/{bootstrap,games,milestones,import,reset,preferences}/route.ts` | Resource-shaped workspace sub-routes: bootstrap snapshot, game/milestone slices, full-workspace import/reset, preference updates |
+| `src/app/api/players/route.ts` + `bulk-update` + `bulk-delete` + `[playerId]` | Protected resource write APIs for player CRUD and bulk edits |
+| `src/app/api/scenarios/route.ts` + `[scenarioId]` + `.../activate` + `.../assignments` | Protected resource write APIs for scenario CRUD, activation, and assignment replacement |
+| `src/app/api/games/route.ts` + `[gameId]` | Protected resource write APIs for game CRUD |
+| `src/app/api/milestones/route.ts` + `[milestoneId]` | Protected resource write APIs for milestone CRUD |
+| `src/proxy.ts` | Next.js 16 request proxy that protects `/panel/*` and all private API namespaces by validating the signed unlock cookie |
 | `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components
@@ -70,12 +75,25 @@ From `package.json`:
 - `helpers.ts` — domain helpers (getActiveScenario, buildAutoScenario, analyzeScenarioWarnings, prepareImport, formatting)
 - `index.ts` — barrel re-export for backward-compatible `@/lib/workspace` imports
 
+Other shared logic modules in `src/lib/`:
+
+- `roster-actions.ts` — roster CRUD / bulk edits / filter helpers
+- `lineup-actions.ts` — defense/lineup mutations shared by `ScenariosPageClient` and the legacy `LineupPageClient`
+- `export-actions.ts` — JSON import/export and `prepareImport()` for JSON payloads
+- `scoreboard-actions.ts` — live game engine (PA-result derivation, runner advancement, defense, finalize)
+- `hall-of-fame.ts` — career-stats and badge aggregation for the Hall of Fame page
+- `stats.ts` — batting / pitching / fielding line computation
+- `migrate-v2-to-v3.ts` — legacy state migration retained for old data fallback
+- `local-id.ts` — local-only id generator for client-side drafts
+
 ### 2. Persistence and concurrency
 
 Database access is split across:
 
 - `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`, with Supabase-host detection that normalizes `sslmode` handling and enforces strict TLS certificate verification
 - `src/lib/workspace-store.ts` — assembles the shared workspace snapshot from normalized tables and applies transactional version-checked writes
+- `src/lib/panel-server.ts` — `cache()`-wrapped server-side helpers (`getPanelBootstrap`, `getPanelGames`, `getPanelMilestones`, `getPanelWorkspaceSnapshot`) that combine auth check + workspace read in one place so each `/panel/*` page does not duplicate the boilerplate
+- `src/lib/maintenance.ts` — `MAINTENANCE_READ_ONLY=1` switch consumed by the write precondition helper in `_workspace-api.ts`
 
 Observed behavior:
 
@@ -83,12 +101,15 @@ Observed behavior:
 - `app_workspace_meta` stores the workspace version/token and top-level preferences
 - players, positions, scenarios, assignments, games, innings, stat lines, and milestones live in dedicated `app_*` tables
 - reads sanitize database data before returning it
+- each aggregate or slice read uses one checked-out client inside a `REPEATABLE READ READ ONLY` transaction
+- full, bootstrap, games, and milestones reads use tagged cross-request caches; successful writes invalidate the shared workspace tag
 - writes sanitize incoming workspace data before persisting it
+- normalized child rows are rewritten with set-based `jsonb_to_recordset()` inserts rather than one query per record
 - updates increment a numeric `version`
 - update conflicts return `null` when the requested `version` no longer matches the locked workspace-meta row
 - the legacy `public.app_workspace` JSONB table is retained only as a rollback/bootstrap source during the cutover window
 
-On the client side, `src/lib/workspace-client.ts` keeps `GET /api/workspace` as the bootstrap read path, while normal writes go through resource-specific routes such as `/api/players`, `/api/scenarios/*`, `/api/games/*`, `/api/milestones/*`, and `/api/workspace/import|reset|preferences`. Conflict retries are handled by `submitMutationWithRetry()`.
+Server pages inject the initial snapshot. Interactive pages use `useWorkspaceSnapshot()` to apply returned workspace/version pairs and refresh after conflicts. `workspace-client.ts` owns the full-snapshot reload and resource-specific mutation requests. Conflict retries for replay-safe mutations are handled by `submitMutationWithRetry()`.
 
 ### 3. Authentication and request protection
 
@@ -99,7 +120,7 @@ Relevant files:
 - `src/lib/auth.ts` — verifies `APP_ADMIN_PASSCODE_HASH`, signs cookies with `AUTH_SECRET`, and enforces absolute session expiry
 - `src/app/panel/login/actions.ts` — verifies the submitted passcode, applies rate limiting, sets the `baseball_manager_unlock` cookie, and redirects
 - `src/lib/rate-limiter.ts` — in-memory fixed-window rate limiter used by login submissions, logout, and workspace routes
-- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated private API requests under `/api/workspace`, `/api/players`, `/api/scenarios`, `/api/games`, and `/api/milestones` with `401`
+- `src/proxy.ts` — redirects unauthenticated `/panel/*` requests to `/panel/login` and rejects unauthenticated `/api/workspace/*` requests with `401`
 - `src/app/api/logout/route.ts` — expires the cookie
 
 Observed limits and boundaries:
@@ -108,15 +129,17 @@ Observed limits and boundaries:
 - workspace reads, workspace resource writes, and logout requests also have route-level rate limits
 - the unlock cookie is `httpOnly`, `sameSite=lax`, `secure` in production, and includes a server-validated absolute expiry
 - `/panel/login` validates its `next` parameter against `/panel`-local paths before navigation
-- panel responses receive `private, no-store` headers through `next.config.ts`; `/api/workspace` also explicitly returns `private, no-store` plus `Cloudflare-CDN-Cache-Control: no-store`. Read performance now relies on the server-side cache layers, not browser HTTP caching. See the data flow section below.
+- panel and API responses receive `private, no-store` headers through `next.config.ts`
 
 ### 4. React page-shell architecture
 
 The legacy homepage runtime has been retired. The current UI is now route-based React throughout.
 
 - `src/components/player-manager-client.tsx` renders the homepage command desk using `AppShell` + `HomeOverview`
-- `src/components/roster-page-client.tsx`, `scenarios-page-client.tsx`, `stats-page-client.tsx`, `settings-page-client.tsx`, `player-profile-page-client.tsx`, and `games-page-client.tsx` each own one dedicated workbench/page surface
+- `src/components/roster-page-client.tsx`, `scenarios-page-client.tsx`, `stats-page-client.tsx`, `settings-page-client.tsx`, `player-profile-page-client.tsx`, `games-page-client.tsx`, `scoreboard-page-client.tsx`, and `hall-of-fame-page-client.tsx` each own one dedicated workbench/page surface
 - `src/components/lineup-page-client.tsx` remains as a standalone extracted lineup-board implementation and test surface, but no live route renders it directly
+- the main clients share `useWorkspaceSnapshot()` for initial snapshot state, successful response application, and conflict refresh
+- `src/components/public-home.tsx` is the public homepage (`/`) and does not use `AppShell`
 - shared business logic is factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
 - `Toast`, `HelpDrawer`, and `GuideOverlay` are reusable adjunct UI layered around the page shells rather than around a DOM manager
 
@@ -160,73 +183,15 @@ Observed SQL behavior:
 These notes are based on current code imports and call sites, not aspirational rules.
 
 - `src/app/**` acts as the runtime boundary: pages and API routes call into `src/lib/**`
-- `src/lib/workspace.ts` is intentionally reused across server and client code for shared types and pure logic
+- `src/lib/workspace/` (the domain barrel `index.ts`) is intentionally reused across server and client code for shared types and pure logic
 - browser code does not import `pg`; database access stays in `db.ts` / `workspace-store.ts`
-- client bootstrap reads go through `fetch('/api/workspace')` in `workspace-client.ts`
+- initial page reads happen in Server Components; client-side `GET /api/workspace` is reserved for conflict/failure refresh and retry
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
 - React route pages persist through `workspace-client.ts` and the resource-oriented `/api/*` boundary rather than calling database code directly
+- Panel navigation disables automatic sibling-route prefetch because each route is a private, data-heavy RSC request
+- Noto Sans SC is self-hosted as variable Unicode-range chunks; versioned WebP command-board and logo assets receive long-lived immutable caching
 - homepage direct actions reuse shared pure logic (`lineup-actions.ts`, `export-actions.ts`) instead of selector-based DOM bridge calls
 - `roster-actions.ts` now also owns roster filter helpers used by the roster workbench
-
-## Data Flow and Caching Layers
-
-The panel reads/writes traverse four layered caches. Each layer invalidates the next on writes; reads are checked from the outermost layer first.
-
-```
-                                    +------------------------+
-   Browser tab / F5                 |  Browser HTTP cache    |  (disabled for
-                                    |                        |   /api/workspace)
-                                    +-----------+------------+
-                                                | miss
-                                                v
-                                    +------------------------+
-   useWorkspaceSnapshot(initial)    |  React state in client |  (fallbackData for SSR,
-                                    |  (workspace-client.ts) |   auto-load if omitted)
-                                    +-----------+------------+
-                                                | miss (F5 / new tab)
-                                                v
-   GET /panel/*  Server Component   +------------------------+
-   → getPanelWorkspaceSnapshot      |  React cache()         |  (same-request dedup
-                                    |  (panel-server.ts)     |   across Server Components)
-                                    +-----------+------------+
-                                                | miss (cross-request)
-                                                v
-   getOrCreateWorkspaceSnapshot     +------------------------+
-   (workspace-store.ts)             |  unstable_cache        |  (10s revalidate, tag
-                                    |                        |   "workspace"; per-process)
-                                    +-----------+------------+
-                                                | miss
-                                                v
-                                    +------------------------+
-                                    |  PostgreSQL            |
-                                    |  (9 SELECTs in one     |
-                                    |   withTransaction;     |
-                                    |   writes are 9 for-    |
-                                    |   loop INSERTs —       |
-                                    |   unnest migration     |
-                                    |   tracked as TD-10     |
-                                    |   P1-1 follow-up)      |
-                                    +------------------------+
-```
-
-- **Client cache** (`useWorkspaceSnapshot` in `src/lib/workspace-client.ts`): React state mirror with `{ data, mutate, isLoading }`. First render uses SSR-injected `initialWorkspace` as `fallbackData`, so no client fetch on first paint. Mutations call `mutate(newData, { revalidate: false })` to optimistically update.
-- **React `cache()`** (`src/lib/panel-server.ts`): deduplicates multiple Server Component calls to `getPanelWorkspaceSnapshot` within a single Next.js render. Cross-request ineffective.
-- **Next.js `unstable_cache`** (`src/lib/workspace-store.ts::getOrCreateWorkspaceSnapshot`): 10s revalidate + tag `"workspace"`. Survives across requests but is per-process.
-- **Browser HTTP cache**: intentionally disabled for `/api/workspace` via `Cache-Control: private, no-store, max-age=0` and `Cloudflare-CDN-Cache-Control: no-store`. Other private `/api/*` endpoints also avoid browser caching.
-
-### Write invalidation
-
-Every write path through `mutateWorkspaceSnapshot` / `replaceWorkspaceSnapshot` calls `revalidateTag("workspace", "max")` after commit, which forces the `unstable_cache` layer to drop its entry on next read. The client cache is updated via the mutation `mutate()` callback. There is no browser cache window for private workspace reads anymore.
-
-### Why two cache layers (`cache()` + `unstable_cache`)
-
-- `cache()` is free and dedupes within a request. Without it, every Server Component in a render path re-queries the DB (9 SELECTs each).
-- `unstable_cache` survives across requests within the 10s window, so a 5-tab open user navigating the panel doesn't re-query the DB. Without it, every navigation hits the DB.
-- Both are required; either alone leaves the other gap.
-
-### Connection-pool and serial-query reality
-
-`src/lib/db.ts` configures `max: 1` for Supabase hosts (avoids PgBouncer transaction-mode prepared-statement conflicts) and `max: 5` for other hosts (overridable via `DB_POOL_MAX` env). This `max` controls cross-request concurrency; it does **not** make the 9 SELECTs in `getOrCreateWorkspaceSnapshot` parallel. Those SELECTs run on a single `PoolClient` shared by `withTransaction`, and node-postgres serializes queries on the same client. The current 50–270ms cost is accepted; making them parallel requires a structural change (multiple clients sharing a snapshot, or a single JOIN query) that is out of scope for P0+P1.
 
 ## Tooling and Enforcement
 
@@ -234,8 +199,9 @@ Evidence-backed enforcement currently present in the repo:
 
 - **TypeScript strict mode** — `tsconfig.json` sets `"strict": true`
 - **Linting** — `eslint.config.mjs` uses `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`
-- **Automated tests** — `npm test` runs Node tests for `src/lib/*.test.ts`, `src/components/*.test.tsx`, and `src/app/api/*.test.ts`
+- **Automated tests** — `npm test` runs Node tests for `src/lib/*.test.ts`, `src/components/*.test.tsx`, and `src/app/api/*.test.ts` (current report: 302 tests, 300 pass, 2 todo across 80 suites)
 - **CI** — `.github/workflows/ci.yml` runs `npm ci`, `npm run lint`, `npm test`, and `npm run build` on Node 22 and 24
+- **Security headers** — `next.config.ts` ships a strict CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` and `private, no-store` cache headers for `/panel/*` and `/api/*`; versioned WebP assets under `/assets/` and `/team/` get long-lived immutable cache headers
 
 ## Open Questions
 

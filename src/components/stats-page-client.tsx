@@ -18,7 +18,6 @@ import {
 import {
   cloneWorkspace,
   createId,
-  sanitizeWorkspace,
   type Game,
   type InningRecord,
   type Player,
@@ -29,12 +28,11 @@ import {
   createGame,
   deleteGame,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   submitMutationWithRetry,
-  useWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updateGame,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 import { panelNavItems } from "@/lib/routes";
 
 const NAV_ITEMS = panelNavItems("数据中心");
@@ -93,16 +91,8 @@ export function StatsPageClient({
 }: StatsPageClientProps) {
   const toastRef = useRef<ToastHandle | null>(null);
 
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
-  const [version, setVersion] = useState(initialVersion);
-  // Shared workspace cache hook — `mutate` syncs the cache so any
-  // future cross-component / cross-tab dedup can subscribe to it.
-  // The current component still reads from useState above; we call
-  // `refreshWorkspace` after each save to keep both stores in sync.
-  const { mutate: refreshWorkspace } = useWorkspaceSnapshot(
-    initialWorkspace,
-    initialVersion,
-  );
+  const { workspace, version, setWorkspace, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(initialWorkspace, initialVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -147,7 +137,6 @@ export function StatsPageClient({
 
       const optimistic = applyMutation(workspaceRef.current);
       setWorkspace(optimistic);
-      void refreshWorkspace(optimistic, { revalidate: false });
       setIsSaving(true);
       setSaveError(null);
 
@@ -158,23 +147,12 @@ export function StatsPageClient({
           applyMutation,
           submit,
         );
-        setVersion(result.version);
-        setWorkspace(sanitizeWorkspace(result.workspace));
-        void refreshWorkspace(sanitizeWorkspace(result.workspace), {
-          revalidate: false,
-          version: result.version,
-        });
+        applySnapshot(result);
       } catch (error) {
         // On any failure, reload server snapshot to roll back optimistic update
         let reloaded = false;
         try {
-          const snapshot = await loadWorkspaceSnapshot();
-          setVersion(snapshot.version);
-          setWorkspace(sanitizeWorkspace(snapshot.workspace));
-          void refreshWorkspace(sanitizeWorkspace(snapshot.workspace), {
-            revalidate: false,
-            version: snapshot.version,
-          });
+          await refreshWorkspace();
           reloaded = true;
         } catch {
           // If reload also fails, leave current state as-is (best effort)
@@ -197,7 +175,7 @@ export function StatsPageClient({
         savingRef.current = false;
       }
     },
-    [refreshWorkspace],
+    [setWorkspace, applySnapshot, refreshWorkspace],
   );
 
   // ── Player leaderboard ──

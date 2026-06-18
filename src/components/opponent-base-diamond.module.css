@@ -1,0 +1,19 @@
+.container {
+  padding: 4px;
+  background: color-mix(in srgb, var(--theme-accent) 4%, var(--theme-surface-alt));
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+}
+
+.svg {
+  width: 100%;
+  max-width: 140px;
+  aspect-ratio: 1;
+  display: block;
+  margin: 0 auto;
+}
+
+.line {
+  stroke: var(--theme-border);
+  stroke-width: 1.2;
+}

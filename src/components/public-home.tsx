@@ -28,7 +28,7 @@ export function PublicHome() {
       <header className={styles.header}>
         <a className={styles.brand} href="#top" aria-label="哈工大深圳棒球队首页">
           <Image
-            src="/team/team-logo.png"
+            src="/team/team-logo-v1.webp"
             alt=""
             width={74}
             height={74}
@@ -57,7 +57,7 @@ export function PublicHome() {
               {item.label}
             </a>
           ))}
-          <Link className={styles.panelLink} href={PANEL_ROUTES.home}>
+          <Link className={styles.panelLink} href={PANEL_ROUTES.home} prefetch={false}>
             <LockKey size={18} weight="bold" />
             队员入口
           </Link>
@@ -102,7 +102,7 @@ export function PublicHome() {
               加入球队
               <ArrowRight size={22} weight="bold" />
             </a>
-            <Link className={styles.secondaryAction} href={PANEL_ROUTES.home}>
+            <Link className={styles.secondaryAction} href={PANEL_ROUTES.home} prefetch={false}>
               <LockKey size={18} weight="bold" />
               队员入口
             </Link>
@@ -226,10 +226,10 @@ export function PublicHome() {
 
       <footer className={styles.footer}>
         <div>
-          <Image src="/team/team-logo.png" alt="" width={56} height={56} />
+          <Image src="/team/team-logo-v1.webp" alt="" width={56} height={56} />
           <span>哈尔滨工业大学（深圳）棒球队</span>
         </div>
-        <Link href={PANEL_ROUTES.home}>队员控制台</Link>
+        <Link href={PANEL_ROUTES.home} prefetch={false}>队员控制台</Link>
       </footer>
     </main>
   );

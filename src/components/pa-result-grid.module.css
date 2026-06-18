@@ -1,0 +1,120 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.groupLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--theme-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 2px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 4px;
+}
+
+.btn {
+  padding: 10px 6px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  color: var(--theme-fg);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 100ms ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--theme-shadow);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Hit buttons — green tint */
+.btnHit {
+  composes: btn;
+  background: color-mix(in srgb, #2ecc71 18%, var(--theme-surface));
+  border-color: color-mix(in srgb, #2ecc71 40%, var(--theme-border));
+  color: #1a7a42;
+}
+.btnHit:hover:not(:disabled) {
+  background: color-mix(in srgb, #2ecc71 28%, var(--theme-surface));
+  border-color: #2ecc71;
+}
+
+/* HR button — extra emphasis */
+.btnHR {
+  composes: btn;
+  background: color-mix(in srgb, #e74c3c 22%, var(--theme-surface));
+  border-color: color-mix(in srgb, #e74c3c 50%, var(--theme-border));
+  color: #c0392b;
+  font-size: 14px;
+}
+.btnHR:hover:not(:disabled) {
+  background: color-mix(in srgb, #e74c3c 35%, var(--theme-surface));
+  border-color: #e74c3c;
+}
+
+/* Walk buttons — gold tint */
+.btnWalk {
+  composes: btn;
+  background: color-mix(in srgb, #f39c12 18%, var(--theme-surface));
+  border-color: color-mix(in srgb, #f39c12 40%, var(--theme-border));
+  color: #b8730a;
+}
+
+/* Out buttons — neutral */
+.btnOut {
+  composes: btn;
+  background: var(--theme-surface-alt);
+}
+
+/* DP — warning tint */
+.btnDP {
+  composes: btn;
+  background: color-mix(in srgb, #e67e22 15%, var(--theme-surface));
+  border-color: color-mix(in srgb, #e67e22 35%, var(--theme-border));
+  color: #b86a1a;
+}
+
+/* Sacrifice buttons */
+.btnSac {
+  composes: btn;
+  background: color-mix(in srgb, #9b59b6 14%, var(--theme-surface));
+  border-color: color-mix(in srgb, #9b59b6 30%, var(--theme-border));
+  color: #7d3c98;
+}
+
+/* Other buttons */
+.btnOther {
+  composes: btn;
+  background: var(--theme-surface-alt);
+  border-style: dashed;
+}

@@ -23,17 +23,16 @@ import { panelNavItems } from "@/lib/routes";
 import {
   analyzeScenarioWarnings,
   getActiveScenario,
-  sanitizeWorkspace,
   type PositionCode,
   type Workspace,
 } from "@/lib/workspace";
 import {
   activateScenario,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updateScenarioAssignments,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 
 const NAV_ITEMS = panelNavItems("战术场景");
 
@@ -43,8 +42,8 @@ type LineupPageClientProps = {
 };
 
 export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPageClientProps) {
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
-  const [version, setVersion] = useState(initialVersion);
+  const { workspace, version, setWorkspace, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(initialWorkspace, initialVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const toastRef = useRef<ToastHandle | null>(null);
@@ -63,13 +62,10 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
       setIsSaving(true);
       try {
         const result = await submit(updated, version);
-        setWorkspace(sanitizeWorkspace(result.workspace));
-        setVersion(result.version);
+        applySnapshot(result);
       } catch (error) {
         if (isVersionConflict(error)) {
-          const fresh = await loadWorkspaceSnapshot();
-          setWorkspace(sanitizeWorkspace(fresh.workspace));
-          setVersion(fresh.version);
+          await refreshWorkspace();
           toastRef.current?.showToast("工作区已被更新，已刷新到最新版本");
         } else {
           setSaveError("保存失败，请重试");
@@ -78,7 +74,7 @@ export function LineupPageClient({ initialWorkspace, initialVersion }: LineupPag
         setIsSaving(false);
       }
     },
-    [version],
+    [version, setWorkspace, applySnapshot, refreshWorkspace],
   );
 
   function handleAutoAssign() {

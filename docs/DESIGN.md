@@ -70,10 +70,10 @@
 | 用途 | 字体 | 来源 |
 |---|---|---|
 | 正文 / UI / 标题 | Inter | 项目内置本地字体（`src/fonts/`，`next/font/local`） |
-| 中文 | Noto Sans SC（简体子集） | 项目内置本地字体（`src/fonts/`，`next/font/local`） |
+| 中文 | Noto Sans SC Variable | Fontsource variable Unicode-range 分片，自托管并按页面字符加载 |
 | 后备 | ui-monospace / 系统 sans | 本地字体不可用时的回退 |
 
-字体在 `src/app/layout.tsx` 中通过 `next/font/local` 注入，并暴露 `--font-ui`、`--font-body-sc`；`--font-display` 作为 UI 字体别名供标题样式复用。
+Inter 在全局 layout 中通过 `next/font/local` 注入并暴露 `--font-ui`。Noto Sans SC Variable 通过 Fontsource 的 Unicode-range CSS 注入，`--font-body-sc` 指向该字体族；`--font-display` 作为 UI 字体别名供标题样式复用。
 
 ## 配色原则
 
@@ -94,7 +94,7 @@
 
 壳层样式放在 `src/components/app-shell.module.css`，总控区样式放在 `src/components/home-overview.module.css`。首页已不再依赖 legacy DOM 模板或 legacy frame，页面字体与布局完全由 React 壳层控制。
 
-首页赛事指挥台的视觉参考保存在 `public/ui-reference/game-day-command-center.png`，球场底图资产保存在 `public/assets/baseball-field-command-board.png`。球员节点和动作控件必须保持为真实 HTML 控件，不能烘焙进底图。
+首页赛事指挥台保留一份视觉参考。生产球场底图使用版本化 WebP，队徽同样使用版本化 near-lossless WebP；两者通过长期 immutable 缓存发布。球员节点和动作控件必须保持为真实 HTML 控件，不能烘焙进底图。
 
 ## 解锁页特殊设计
 

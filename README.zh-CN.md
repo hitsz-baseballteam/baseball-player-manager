@@ -134,7 +134,8 @@ npm run dev
 
 - 业务规则优先放在 `src/lib/`
 - 数据库访问集中在 `src/lib/db.ts` 和 `src/lib/workspace-store.ts`
-- 客户端数据保存统一走 `src/lib/workspace-client.ts` 和资源化 `/api/*` 路由
+- workspace/version 状态统一走 `src/lib/use-workspace-snapshot.ts`
+- 客户端请求统一走 `src/lib/workspace-client.ts` 和资源化 `/api/*` 路由
 
 ### 8. 推送前先运行检查
 

@@ -14,7 +14,7 @@
   font-family: var(--font-ui), var(--font-body-sc), sans-serif;
   background:
     linear-gradient(color-mix(in srgb, var(--theme-bg) 96%, transparent), color-mix(in srgb, var(--theme-bg) 96%, transparent)),
-    url("/assets/baseball-field-command-board.png") center / cover fixed;
+    url("/assets/baseball-field-command-board-v1.webp") center / cover fixed;
 }
 
 .commandSidebar {

@@ -18,13 +18,13 @@
 | **类型系统** (`workspace.ts` 类型定义) | A | 完整的 TypeScript 类型，常量和标签映射齐全 |
 | **业务逻辑** (`workspace.ts` 纯函数) | B | 测试覆盖 sanitize / auto-assign / warnings / cascade-delete，但部分边缘情况未覆盖 |
 | **数据访问** (`db.ts` + `workspace-store.ts`) | B+ | 乐观并发控制正确；连接层与 `DATABASE_URL` / `pg` 约定保持一致，并补充了 Supabase/Vercel SSL 兼容处理，但缺少连接池失败重试逻辑 |
-| **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；仍是共享口令模型 |
-| **API 路由** (`api/*`) | B | 结构化错误返回，但缺少请求体校验中间件 |
-| **React 组件** (`components/`) | A | `AppShell` 已统一承载控制台首页、名册、战术场景、数据中心、设置、档案页与比赛数据页；球员档案页现已直接链接比赛数据页，`GamesPageClient` 对棒球局数记法、增删改保存与摘要计算都有页面级测试覆盖 |
+| **认证** (`auth.ts` + `proxy.ts`) | B+ | HMAC 签名 + 常量时间比较 + 解锁速率限制；Next.js 16 `proxy.ts` 已活跃生效；仍是共享口令模型 |
+| **API 路由** (`api/*`) | B+ | 结构化错误返回 + Zod 中间件式请求体校验（`readJsonBodyWithLimit` + `parseBody`）；资源写 API 仍受 TD-10 影响（不在 proxy matcher 内） |
+| **React 组件** (`components/`) | A | `AppShell` 已统一承载控制台首页、名册、战术场景、数据中心、设置、档案页、比赛数据页、记分板与名人堂页；球员档案页现已直接链接比赛数据页，`GamesPageClient` 对棒球局数记法、增删改保存与摘要计算都有页面级测试覆盖；`ScoreboardPageClient` 覆盖标准/双模式切换、localStorage 崩溃恢复、PA 推导与守备记录；`HallOfFamePageClient` 覆盖徽章聚合与个人战绩卡 |
 | **旧 DOM 运行时** | A | 首页 legacy runtime 已清退，不再构成当前实现复杂度 |
 | **样式系统** (`globals.css` + CSS Modules) | A | 三套主题完整、变量体系清晰 |
 | **导入导出** | B+ | 已迁入 `export-actions.ts` + 设置页的数据导入导出区；仍缺少 CSV 导入 |
-| 测试 | A- | 当前 `npm test` 报告 216 个测试、213 通过、3 个 todo，覆盖业务逻辑、页面级工作台（控制台首页 / 名册 / 战术场景 / 档案 / 数据中心 / 设置 / 比赛数据）、共享逻辑层、认证/限流与 API 路由；比赛数据页已补上增删改保存、局数记法与摘要计算验证，并覆盖导入路径上的局数清洗 |
+| 测试 | A | 当前 `npm test` 报告 302 个测试、300 通过、2 todo，覆盖业务逻辑、页面级工作台（控制台首页 / 名册 / 战术场景 / 档案 / 数据中心 / 设置 / 比赛数据 / 记分板 / 名人堂）、共享逻辑层、认证/限流、代理路由、迁移脚本与 API 路由；`scoreboard-actions` 14 种打击结果推导 + `proxy.test.ts` 4 个未认证/已认证场景 + `dev-server-output` 断管恢复 + `routes` / `use-workspace-snapshot` 同步语义都有覆盖 |
 
 ## 按架构层级评分
 
@@ -32,10 +32,10 @@
 |---|---|---|
 | Types | A | 完整、一致 |
 | Config | A | 明确、有边界校验 |
-| Repo | B+ | 乐观并发持久化 + 读写边界净化 |
-| Service | B | 核心逻辑有测试，边界覆盖可改进 |
-| Runtime | B+ | API 路由已覆盖主要路径，workspace 读写/冲突/限流与 logout 都有测试，登录入口也有限流 |
-| UI (React) | A | 控制台首页、名册、战术场景、数据中心、设置与档案页都已落入统一 React 壳层并有组件测试；当前主要缺口不再是迁移，而是后续体验深化与视觉回归自动化 |
+| Repo | B+ | 归一化表 + 乐观并发持久化 + 读写边界净化；迁移 V2→V3 已被新表取代，但 `migrate-v2-to-v3.ts` 仍保留为旧数据兜底 |
+| Service | B+ | 核心逻辑有测试，边界覆盖已扩展至 scoreboard-actions、hall-of-fame、panel-server |
+| Runtime | B+ | API 路由已覆盖主要路径，workspace 读写/冲突/限流、logout 与 proxy 都有测试；资源写 API 仍受 TD-10 影响 |
+| UI (React) | A | 控制台首页、名册、战术场景、数据中心、设置、档案、比赛数据、记分板与名人堂都已落入统一 React 壳层并有组件测试；当前主要缺口不再是迁移，而是体验深化与视觉回归自动化 |
 | UI (Legacy DOM) | A | legacy homepage runtime 已清退；当前无活跃 legacy UI 运行路径 |
 
 ## 技术债务影响
@@ -84,3 +84,4 @@
 | 2026-06-12 | P0 修复：`parseImportPayload` 文件名参数化、去掉 route 双重 sanitize、修复测试文件 TS 错误（10→0） | 分数不变 |
 | 2026-06-12 | P1 改进：DB 连接池文档补充、5 个新测试文件（home-overview / field-board / bench-panel / lineup-order / scenario-compare / scenario-list）+ 23 个测试、player-profile-editor 导出 `polarToCartesian`/`formatMetric` 并新增 7 个测试 | 测试 A-→A-、React 组件 A→A |
 | 2026-06-15 | 当前态文档同步 | 分数不变；修正登录链路、`/lineup` 与导入导出位置、已删除主题入口等文档漂移 |
+| 2026-06-18 | Project Review 误判更正 + scoreboard / hall-of-fame 入档 | Runtime B+→B+、UI (React) A→A；移除 PROJECT_REVIEW_2026-06-14 的 “dead proxy” 警告（Next.js 16 已把 `middleware.ts` 重命名为 `proxy.ts`），把剩余风险归位为 TD-10（matcher 范围）；`/panel/scoreboard` 与 `/panel/hall-of-fame` 正式入档；测试数从 216/213/3 刷新为 302/300/2 |

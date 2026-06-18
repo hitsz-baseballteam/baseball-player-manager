@@ -21,7 +21,6 @@ import {
   cloneWorkspace,
   getActiveScenario,
   getPlayer,
-  sanitizeWorkspace,
   type Hand,
   type Player,
   type PlayerStatus,
@@ -34,11 +33,10 @@ import {
   createPlayer,
   deletePlayer as deletePlayerRequest,
   isVersionConflict,
-  loadWorkspaceSnapshot,
-  useWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updatePlayer,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 import { panelNavItems, PANEL_ROUTES } from "@/lib/routes";
 
 const NAV_ITEMS = panelNavItems("名册");
@@ -56,18 +54,8 @@ type RosterDialogState =
   | { type: "bulkDeleteConfirm"; count: number };
 
 export function RosterPageClient(props: RosterPageClientProps) {
-  const [workspace, setWorkspace] = useState(() =>
-    sanitizeWorkspace(props.initialWorkspace),
-  );
-  const [version, setVersion] = useState(props.initialVersion);
-  // Shared workspace cache hook — `mutate` syncs the cache so any
-  // future cross-component / cross-tab dedup can subscribe to it.
-  // The current component still reads from useState above; we call
-  // `refreshWorkspace` after each save to keep both stores in sync.
-  const { mutate: refreshWorkspace } = useWorkspaceSnapshot(
-    props.initialWorkspace,
-    props.initialVersion,
-  );
+  const { workspace, version, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(props.initialWorkspace, props.initialVersion);
   const [statusMessage, setStatusMessage] = useState("名册已连接共享工作区");
   const toastRef = useRef<ToastHandle | null>(null);
   const [filter, setFilter] = useState<PlayerFilterState>({
@@ -99,23 +87,12 @@ export function RosterPageClient(props: RosterPageClientProps) {
 
       try {
         const result = await submit(draft, version);
-        setWorkspace(sanitizeWorkspace(result.workspace));
-        void refreshWorkspace(sanitizeWorkspace(result.workspace), {
-          revalidate: false,
-          version: result.version,
-        });
-        setVersion(result.version);
+        applySnapshot(result);
         setStatusMessage(successMessage);
         toastRef.current?.showToast(successMessage);
       } catch (error) {
         if (isVersionConflict(error)) {
-          const latest = await loadWorkspaceSnapshot();
-          setWorkspace(sanitizeWorkspace(latest.workspace));
-          void refreshWorkspace(sanitizeWorkspace(latest.workspace), {
-            revalidate: false,
-            version: latest.version,
-          });
-          setVersion(latest.version);
+          await refreshWorkspace();
           setSelectedIds(new Set());
           setStatusMessage("数据已被其他会话更新，已刷新最新内容");
           toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容");
@@ -128,7 +105,7 @@ export function RosterPageClient(props: RosterPageClientProps) {
         // save complete
       }
     },
-    [workspace, version, refreshWorkspace],
+    [workspace, version, applySnapshot, refreshWorkspace],
   );
 
   // ── Player upsert (add new) ──

@@ -509,7 +509,7 @@
   inset: 0;
   content: "";
   opacity: 0.12;
-  background-image: url("/team/team-logo.png");
+  background-image: url("/team/team-logo-v1.webp");
   background-position: calc(50% + 420px) 50%;
   background-repeat: no-repeat;
   background-size: 500px;

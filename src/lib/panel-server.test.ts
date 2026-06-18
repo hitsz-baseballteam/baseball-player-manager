@@ -18,6 +18,9 @@ describe("getPanelWorkspaceSnapshot", () => {
 
     mock.module("@/lib/workspace-store", {
       namedExports: {
+        getBootstrapWorkspace: async () => null,
+        getGamesWorkspace: async () => null,
+        getMilestonesWorkspace: async () => null,
         getOrCreateWorkspaceSnapshot: async () => {
           callCount += 1;
           return {
@@ -74,6 +77,9 @@ describe("getPanelWorkspaceSnapshot", () => {
   it("is an async function that returns a WorkspaceSnapshot-like object", async () => {
     mock.module("@/lib/workspace-store", {
       namedExports: {
+        getBootstrapWorkspace: async () => null,
+        getGamesWorkspace: async () => null,
+        getMilestonesWorkspace: async () => null,
         getOrCreateWorkspaceSnapshot: async () => ({
           workspace: {
             version: 1,
