@@ -84,3 +84,5 @@ Plan file naming: `YYYYMMDD-简短描述.md`. Known debt lives in `docs/exec-pla
 2. Read files before editing them.
 3. When docs and code disagree, trust the code, then fix the docs.
 4. Keep changes self-contained: implementation, tests, docs, and verification notes together.
+5. 提交PR时标题需总结写明改动内容，并且有fix/feat/optimise等前缀，例如：fix(scorecard): fix blank page crash from merge conflict；feat: Scoreboard — complete pitch-by-pitch game recording system.
+6. 完成构建/代码改动后，同步对齐相对应的文档。
