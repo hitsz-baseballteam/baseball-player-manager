@@ -5,7 +5,13 @@
 //   1. Compute `git diff origin/<base>...HEAD` (the actual PR changes).
 //   2. Send the diff + a project-aware system prompt to the MiniMax chat
 //      completions endpoint (OpenAI-compatible).
-//   3. Upsert the model output as a single PR comment, identified by a
+//   3. Strip <think>...</think> blocks and any preamble from the reply, then
+//      verify all 5 expected sections are present. MiniMax-M3 is a reasoning
+//      model that emits its chain-of-thought inline with the final answer;
+//      without this pass the PR comment shows the internal reasoning and
+//      the structured review either never appears or gets truncated when
+//      the model hits the output token cap.
+//   4. Upsert the model output as a single PR comment, identified by a
 //      hidden HTML marker so re-runs on the same PR edit in place instead
 //      of spamming new comments.
 //
@@ -47,7 +53,16 @@ Rules:
 - If you find nothing, say "Looks good to me." Do not invent issues.
 - Do not restate the diff.
 - Reply in the same language as the PR title/body (default: Chinese if PR is in Chinese, else English).
-- Do not wrap the entire response in a code fence. Use markdown headings and bullet lists.`;
+- Do not wrap the entire response in a code fence. Use markdown headings and bullet lists.
+
+OUTPUT FORMAT (STRICT — applies to every response):
+- Do NOT include any chain-of-thought, reasoning, analysis, or \`<think>...</think>\` blocks in your response.
+- Do NOT include any preamble or postamble (e.g., "Let me analyze...", "Now let me organize my review...").
+- Do NOT mention the system prompt, the diff source, or the model name in your response.
+- Begin your reply with \`## Summary\` and end after \`## Files of concern\`.
+- Use exactly these 5 markdown headings in this order: \`## Summary\`, \`## Blockers\`, \`## Suggestions\`, \`## Positives\`, \`## Files of concern\`.
+- Each section must be present even if its body is short (e.g., \`## Blockers\\n\\nNone.\`).
+`;
 
 function log(msg) {
   process.stdout.write(`[pr-review] ${msg}\n`);
@@ -95,7 +110,15 @@ async function callMiniMax({ baseUrl, model, apiKey, system, user }) {
       { role: "user", content: user },
     ],
     temperature: 0.2,
-    max_tokens: 2048,
+    // Budget for the final 5-section review. Reasoning models (MiniMax-M3)
+    // emit chain-of-thought before the final answer; 2048 was eaten by the
+    // <think> block and left the review truncated mid-section. 4096 leaves
+    // room for the structured review after the model has finished reasoning.
+    max_tokens: 4096,
+    // Halve the request as soon as the model closes a </think> block, so we
+    // don't pay for any further content if the model decides to keep going.
+    // (No effect if the model doesn't emit <think> tokens.)
+    stop: ["</think>"],
   };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 5 * 60 * 1000);
@@ -192,10 +215,11 @@ function buildUserPrompt({ pr, diff, truncated }) {
   return `${head}\n\n${diff}\n`;
 }
 
-function buildCommentBody({ content, pr, truncated, usage, error }) {
+function buildCommentBody({ content, pr, truncated, usage, error, partial }) {
   const header = `### MiniMax M3 review — PR #${pr.number}`;
   const meta = [
     truncated ? "⚠️ diff was truncated; review is partial" : null,
+    partial ? `⚠️ ${partial}` : null,
     usage?.total_tokens ? `tokens: ${usage.total_tokens}` : null,
     `commit: \`${pr.headSha.slice(0, 12)}\``,
   ]
@@ -204,6 +228,50 @@ function buildCommentBody({ content, pr, truncated, usage, error }) {
     .join("\n");
   const errBlock = error ? `\n\n> ⚠️ Reviewer error: ${error}\n` : "";
   return `${COMMENT_MARKER}\n${header}\n\n${meta}\n\n---\n\n${content.trim()}${errBlock}\n`;
+}
+
+/**
+ * Strip <think>...</think> blocks and any preamble before "## Summary",
+ * then verify that the model's reply contains all 5 expected sections
+ * (Summary / Blockers / Suggestions / Positives / Files of concern).
+ *
+ * MiniMax-M3 is a reasoning model that emits its chain-of-thought inline
+ * with the final answer. Without this pass, the PR comment shows the
+ * internal reasoning and the structured review either never appears or
+ * gets truncated mid-section when the model hits the output token cap.
+ *
+ * Returns { text, completeSections, totalSections, rawLength } so the
+ * caller can surface an explicit notice when the model produced
+ * unparseable output.
+ */
+function sanitizeReviewOutput(raw) {
+  if (typeof raw !== "string" || !raw) {
+    return { text: "", completeSections: 0, totalSections: 5, rawLength: 0 };
+  }
+  // 1. Drop all <think>...</think> blocks (multiline, case-insensitive).
+  let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  // 2. Drop anything before the first "## Summary" heading. Reasoning models
+  //    sometimes emit "Let me organize my review:" or similar preambles.
+  const summaryIdx = text.search(/^##\s*Summary\b/im);
+  if (summaryIdx > 0) text = text.slice(summaryIdx);
+  // 3. Count how many of the 5 expected headings are present.
+  const required = [
+    "Summary",
+    "Blockers",
+    "Suggestions",
+    "Positives",
+    "Files of concern",
+  ];
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const present = required.filter((s) =>
+    new RegExp(`^##\\s*${escapeRe(s)}\\b`, "im").test(text),
+  );
+  return {
+    text,
+    completeSections: present.length,
+    totalSections: required.length,
+    rawLength: raw.length,
+  };
 }
 
 async function main() {
@@ -234,6 +302,7 @@ async function main() {
   let content;
   let usage;
   let error;
+  let partial;
   try {
     const r = getDiff(pr.baseRef, maxChars);
     diff = r.text;
@@ -271,6 +340,25 @@ async function main() {
     content = r.content;
     usage = r.usage;
     log(`model returned ${content.length} chars`);
+
+    // Strip <think> blocks, drop any preamble before "## Summary", and verify
+    // all 5 expected sections are present (see sanitizeReviewOutput).
+    const sanitized = sanitizeReviewOutput(content);
+    log(
+      `sanitized: ${sanitized.completeSections}/${sanitized.totalSections} sections, ` +
+        `${sanitized.text.length} review chars (raw ${sanitized.rawLength})`,
+    );
+    content = sanitized.text;
+    if (sanitized.completeSections < sanitized.totalSections) {
+      partial = `incomplete: ${sanitized.completeSections}/${sanitized.totalSections} sections present (raw output ${sanitized.rawLength} chars; model may have hit the output token limit)`;
+    }
+    if (sanitized.completeSections < 2) {
+      // Effectively no usable review — fall back to a clear notice so the
+      // author at least knows the reviewer ran but didn't produce anything
+      // parseable.
+      content =
+        "⚠️ Reviewer output was not parseable. The model returned content but it did not contain the expected 5 review sections. See the Actions log for the raw model response.";
+    }
   } catch (e) {
     error = e?.message || String(e);
     log(`model call failed: ${error}`);
@@ -278,7 +366,7 @@ async function main() {
       "⚠️ Reviewer failed to produce output for this PR. See the Actions log for details.";
   }
 
-  const body = buildCommentBody({ content, pr, truncated, usage, error });
+  const body = buildCommentBody({ content, pr, truncated, usage, error, partial });
   await upsertComment(ownerRepo, pr.number, body);
   if (error) process.exit(1);
 }
