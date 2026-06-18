@@ -39,6 +39,7 @@
 | ADR-004 | [选择乐观并发而非悲观锁](./adr-004-optimistic-concurrency.md) | 已采纳 | 2026-06-02 |
 | ADR-005 | [选择单表 app_workspace jsonb 存储而非关系表](./adr-005-single-table-jsonb.md) | 已替代 | 2026-06-02 |
 | ADR-006 | [退役首页 legacy workspace，首页收敛为纯 React 总控台](./adr-006-retire-legacy-homepage-workspace.md) | 已采纳 | 2026-06-05 |
+| ADR-007 | [归一化 workspace 存储（替代 ADR-005）](./adr-007-normalized-workspace-storage.md) | 已采纳 | 2026-06-16 |
 
 ## 待记录决策
 

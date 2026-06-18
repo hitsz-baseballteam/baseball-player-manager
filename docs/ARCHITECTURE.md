@@ -18,8 +18,8 @@ Where something is unknown from repository evidence, it is listed under **Open Q
 | Path | What it currently owns |
 |---|---|
 | `src/app/` | Next.js routes, pages, global styles, and API endpoints |
-| `src/components/` | React UI components, including the homepage app shell, command-desk overview, help/toast/guide overlays, roster and scenario workbenches, and player profile editor |
-| `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, and cross-page client helpers |
+| `src/components/` | React UI components, including the homepage app shell, command-desk overview, help/toast/guide overlays, roster / scenario / scoreboard / hall-of-fame workbenches, and player profile editor |
+| `src/lib/` | Shared domain model, pure business logic, database access, auth, rate limiting, scoreboard engine, hall-of-fame computation, panel-server helpers, and cross-page client helpers |
 | `public/` | Static assets shipped by Next.js |
 | `supabase/migrations/` | SQL schema migration for the workspace table |
 | `docs/` | Architecture, design docs, quality notes, and references |
@@ -54,8 +54,13 @@ From `package.json`:
 | `src/app/{roster,scenarios,stats,settings,players/**}/` | Redirect aliases that permanently forward to their `/panel` equivalents |
 | `src/app/lineup/page.tsx` | Compatibility redirect that forwards `/lineup` to `/panel/scenarios` |
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
-| `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint |
-| `src/proxy.ts` | Protects `/panel/*` and `/api/workspace/*` by validating the signed unlock cookie |
+| `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint (GET) and returns `405 method_not_allowed` for PUT |
+| `src/app/api/workspace/{bootstrap,games,milestones,import,reset,preferences}/route.ts` | Resource-shaped workspace sub-routes: bootstrap snapshot, game/milestone slices, full-workspace import/reset, preference updates |
+| `src/app/api/players/route.ts` + `bulk-update` + `bulk-delete` + `[playerId]` | Resource write APIs for player CRUD and bulk edits (currently outside the proxy matcher — see TD-10) |
+| `src/app/api/scenarios/route.ts` + `[scenarioId]` + `.../activate` + `.../assignments` | Resource write APIs for scenario CRUD, activation, and assignment replacement (TD-10) |
+| `src/app/api/games/route.ts` + `[gameId]` | Resource write APIs for game CRUD (TD-10) |
+| `src/app/api/milestones/route.ts` + `[milestoneId]` | Resource write APIs for milestone CRUD (TD-10) |
+| `src/proxy.ts` | Next.js 16 request proxy that protects `/panel/*` and `/api/workspace/*` by validating the signed unlock cookie |
 | `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components
@@ -70,12 +75,25 @@ From `package.json`:
 - `helpers.ts` — domain helpers (getActiveScenario, buildAutoScenario, analyzeScenarioWarnings, prepareImport, formatting)
 - `index.ts` — barrel re-export for backward-compatible `@/lib/workspace` imports
 
+Other shared logic modules in `src/lib/`:
+
+- `roster-actions.ts` — roster CRUD / bulk edits / filter helpers
+- `lineup-actions.ts` — defense/lineup mutations shared by `ScenariosPageClient` and the legacy `LineupPageClient`
+- `export-actions.ts` — JSON import/export and `prepareImport()` for JSON payloads
+- `scoreboard-actions.ts` — live game engine (PA-result derivation, runner advancement, defense, finalize)
+- `hall-of-fame.ts` — career-stats and badge aggregation for the Hall of Fame page
+- `stats.ts` — batting / pitching / fielding line computation
+- `migrate-v2-to-v3.ts` — legacy state migration retained for old data fallback
+- `local-id.ts` — local-only id generator for client-side drafts
+
 ### 2. Persistence and concurrency
 
 Database access is split across:
 
 - `src/lib/db.ts` — lazy `pg.Pool` creation using `DATABASE_URL`, with Supabase-host detection that normalizes `sslmode` handling and enforces strict TLS certificate verification
 - `src/lib/workspace-store.ts` — assembles the shared workspace snapshot from normalized tables and applies transactional version-checked writes
+- `src/lib/panel-server.ts` — `cache()`-wrapped server-side helpers (`getPanelBootstrap`, `getPanelGames`, `getPanelMilestones`, `getPanelWorkspaceSnapshot`) that combine auth check + workspace read in one place so each `/panel/*` page does not duplicate the boilerplate
+- `src/lib/maintenance.ts` — `MAINTENANCE_READ_ONLY=1` switch consumed by the write precondition helper in `_workspace-api.ts`
 
 Observed behavior:
 
@@ -118,9 +136,10 @@ Observed limits and boundaries:
 The legacy homepage runtime has been retired. The current UI is now route-based React throughout.
 
 - `src/components/player-manager-client.tsx` renders the homepage command desk using `AppShell` + `HomeOverview`
-- `src/components/roster-page-client.tsx`, `scenarios-page-client.tsx`, `stats-page-client.tsx`, `settings-page-client.tsx`, `player-profile-page-client.tsx`, and `games-page-client.tsx` each own one dedicated workbench/page surface
+- `src/components/roster-page-client.tsx`, `scenarios-page-client.tsx`, `stats-page-client.tsx`, `settings-page-client.tsx`, `player-profile-page-client.tsx`, `games-page-client.tsx`, `scoreboard-page-client.tsx`, and `hall-of-fame-page-client.tsx` each own one dedicated workbench/page surface
 - `src/components/lineup-page-client.tsx` remains as a standalone extracted lineup-board implementation and test surface, but no live route renders it directly
 - the main clients share `useWorkspaceSnapshot()` for initial snapshot state, successful response application, and conflict refresh
+- `src/components/public-home.tsx` is the public homepage (`/`) and does not use `AppShell`
 - shared business logic is factored into reusable pure modules: `roster-actions.ts`, `lineup-actions.ts`, and `export-actions.ts`
 - `Toast`, `HelpDrawer`, and `GuideOverlay` are reusable adjunct UI layered around the page shells rather than around a DOM manager
 
@@ -164,7 +183,7 @@ Observed SQL behavior:
 These notes are based on current code imports and call sites, not aspirational rules.
 
 - `src/app/**` acts as the runtime boundary: pages and API routes call into `src/lib/**`
-- `src/lib/workspace.ts` is intentionally reused across server and client code for shared types and pure logic
+- `src/lib/workspace/` (the domain barrel `index.ts`) is intentionally reused across server and client code for shared types and pure logic
 - browser code does not import `pg`; database access stays in `db.ts` / `workspace-store.ts`
 - initial page reads happen in Server Components; client-side `GET /api/workspace` is reserved for conflict/failure refresh and retry
 - auth verification happens at the cookie/API boundary, not inside business-rule helpers
@@ -180,8 +199,9 @@ Evidence-backed enforcement currently present in the repo:
 
 - **TypeScript strict mode** — `tsconfig.json` sets `"strict": true`
 - **Linting** — `eslint.config.mjs` uses `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`
-- **Automated tests** — `npm test` runs Node tests for `src/lib/*.test.ts`, `src/components/*.test.tsx`, and `src/app/api/*.test.ts`
+- **Automated tests** — `npm test` runs Node tests for `src/lib/*.test.ts`, `src/components/*.test.tsx`, and `src/app/api/*.test.ts` (current report: 302 tests, 300 pass, 2 todo across 80 suites)
 - **CI** — `.github/workflows/ci.yml` runs `npm ci`, `npm run lint`, `npm test`, and `npm run build` on Node 22 and 24
+- **Security headers** — `next.config.ts` ships a strict CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` and `private, no-store` cache headers for `/panel/*` and `/api/*`; versioned WebP assets under `/assets/` and `/team/` get long-lived immutable cache headers
 
 ## Open Questions
 

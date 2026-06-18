@@ -46,9 +46,14 @@ page.tsx (server)
 | `LineupPageClient` | 独立排阵板实现，保留为抽取后的守位/棒次工作台组件与测试载体；当前生产路由已并入 `ScenariosPageClient` |
 | `ScenariosPageClient` | 场景页状态：CRUD、当前方案切换、对比模式、保存与冲突处理 |
 | `SettingsPageClient` | 设置页状态：工作区状态、导入导出、重置数据、退出登录 |
+| `StatsPageClient` | 数据中心状态：球员统计与比赛记录管理 |
 | `GamesPageClient` | 比赛数据页状态：正式/训练 tab、逐场增删改、合计摘要、保存与冲突处理；IP 使用棒球记法（`.1`=1 出局、`.2`=2 出局） |
 | `PlayerProfilePageClient` | 球员档案页状态：workspace 读写 + 版本冲突处理，并提供跳转到比赛数据页的入口 |
 | `PlayerProfileEditor` | 纯客户端：档案表单 + SVG 雷达图；page 形态在顶部提供“查看比赛数据”链接 |
+| `PublicHome` | 公开球队主页（`/`），独立于 `AppShell`；文案集中在 `public-site-content.ts` |
+| `ScoreboardPageClient` | 记分板页状态：赛前设置 → 实时记分 → 赛后确认；标准/双模式切换、PA 推导、localStorage 崩溃恢复 |
+| `Scorecard` | 记分卡面板：组合 `PitchCounter` / `PaResultGrid` / `RunnerDiamond` / `OpponentBaseDiamond` 完成一次打席记录 |
+| `HallOfFamePageClient` | 名人堂页状态：球员生涯统计聚合、徽章/荣誉列表、个人战绩卡 |
 | `Toast` | Portal 渲染的 toast 通知 |
 | `HelpDrawer` | 帮助抽屉 |
 | `GuideOverlay` | 新手引导浮层 |
@@ -61,18 +66,32 @@ src/components/
 ├── bench-panel.tsx
 ├── field-board.tsx
 ├── games-page-client.tsx
+├── hall-of-fame-page-client.tsx
 ├── home-overview.tsx
 ├── lineup-order.tsx
+├── lineup-page-client.tsx
+├── lineup-strip.tsx
+├── opponent-base-diamond.tsx
+├── pa-result-grid.tsx
+├── pitch-counter.tsx
 ├── player-manager-client.tsx
-├── roster-page-client.tsx
+├── player-profile-editor.tsx
+├── player-profile-page-client.tsx
+├── public-home.tsx
+├── radar-chart.tsx
 ├── roster-overview.tsx
+├── roster-page-client.tsx
+├── runner-diamond.tsx
 ├── scenario-compare.tsx
 ├── scenario-list.tsx
-├── lineup-page-client.tsx
+├── scene-field-board.tsx
 ├── scenarios-page-client.tsx
+├── scoreboard-page-client.tsx
+├── scoreboard-review-dialog.tsx
+├── scoreboard-setup-dialog.tsx
+├── scorecard.tsx
 ├── settings-page-client.tsx
-├── player-profile-page-client.tsx
-├── player-profile-editor.tsx
+├── stats-page-client.tsx
 ├── toast.tsx
 ├── help-drawer.tsx
 └── guide-overlay.tsx
@@ -82,10 +101,25 @@ src/lib/
 ├── db.ts
 ├── dev-server-output.ts
 ├── export-actions.ts
+├── hall-of-fame.ts
 ├── lineup-actions.ts
+├── local-id.ts
+├── maintenance.ts
+├── migrate-v2-to-v3.ts
+├── panel-server.ts
+├── public-site-content.ts
 ├── rate-limiter.ts
 ├── roster-actions.ts
-├── workspace.ts
+├── routes.ts
+├── schemas.ts
+├── scoreboard-actions.ts
+├── stats.ts
+├── workspace/                  # Domain barrel; see src/lib/workspace/index.ts
+│   ├── base.ts
+│   ├── helpers.ts
+│   ├── index.ts
+│   ├── sanitizers.ts
+│   └── types.ts
 ├── workspace-client.ts
 ├── use-workspace-snapshot.ts
 └── workspace-store.ts
@@ -97,7 +131,7 @@ src/lib/
 
 ```text
 Server page.tsx
-  └── getOrCreateWorkspaceSnapshot()
+  └── panel-server.ts (checkPanelAuth + getPanelBootstrap / getPanelGames / getPanelMilestones / getPanelWorkspaceSnapshot)
        ↓
 Client page component
   └── useWorkspaceSnapshot() + 页面交互状态
@@ -106,6 +140,9 @@ workspace-client.ts
   └── 冲突刷新 GET /api/workspace + resource-specific write APIs
        ↓
 API routes + optimistic concurrency
+       ↓
+src/proxy.ts (Next.js 16 代理)
+  └── 守护 /panel/* 与 /api/workspace/*；当前 matcher 之外的资源写 API 归 TD-10 管理
 ```
 
 ### 原则
@@ -148,6 +185,8 @@ API routes + optimistic concurrency
 | `/panel/settings` | Server + Client | 设置页：工作区状态、导入导出、重置数据、退出登录 |
 | `/panel/players/[playerId]/games` | Server + Client | 比赛数据：正式 / 训练双 tab、逐场增删编辑、合计摘要卡，ERA/WHIP 按棒球局数记法计算 |
 | `/panel/players/[playerId]` | Server + Client | 球员档案独立页，页内提供进入比赛数据页的链接 |
+| `/panel/scoreboard` | Server + Client | 实时记分板：标准 / 双模式切换、PA 结果自动推导统计、localStorage 崩溃恢复、赛后确认弹窗 |
+| `/panel/hall-of-fame` | Server + Client | 名人堂：球员生涯统计聚合、徽章/荣誉列表、个人战绩卡 |
 | `/roster` `/scenarios` `/stats` `/settings` | Redirect | 永久重定向到对应 `/panel/*` 页面 |
 | `/players/[playerId]` `/players/[playerId]/games` | Redirect | 永久重定向到对应 `/panel/*` 页面 |
 | `/lineup` | Redirect | 兼容入口，重定向到 `/panel/scenarios` |
