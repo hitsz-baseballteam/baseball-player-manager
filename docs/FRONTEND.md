@@ -141,7 +141,7 @@ API routes + optimistic concurrency
 | `/panel` | Server + Client | 控制台首页：提醒、快捷动作、方案摘要、阵容概览 |
 | `/panel/roster` | Server + Client | 名册工作台：筛选、批量操作、档案入口 |
 | `/panel/scenarios` | Server + Client | 战术场景工作台：方案 CRUD、守备图、棒次、对比视图 |
-| `/panel/stats` | Server + Client | 数据中心：球员统计与比赛记录管理 |
+| `/panel/stats` | Server + Client | 数据中心：球员统计与比赛记录管理；主导航主动预取该动态路由，并提供路由级加载骨架以缩短首次点击等待感 |
 | `/panel/settings` | Server + Client | 设置页：工作区状态、导入导出、重置数据、退出登录 |
 | `/panel/players/[playerId]/games` | Server + Client | 比赛数据：正式 / 训练双 tab、逐场增删编辑、合计摘要卡，ERA/WHIP 按棒球局数记法计算 |
 | `/panel/players/[playerId]` | Server + Client | 球员档案独立页，页内提供进入比赛数据页的链接 |

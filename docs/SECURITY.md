@@ -6,7 +6,7 @@
 
 - **方法**：共享口令哈希 + 独立 `AUTH_SECRET` 签名 cookie
 - **公开边界**：`/` 为公开球队主页，不读取或渲染私有 Workspace 数据
-- **受保护边界**：`/panel/*` 与私有 workspace API（`/api/workspace/*`、`/api/players/*`、`/api/scenarios/*`、`/api/games/*`、`/api/milestones/*`）
+- **受保护边界**：`/panel/*` 与私有 API（`/api/workspace/*`、`/api/players/*`、`/api/scenarios/*`、`/api/games/*`、`/api/milestones/*`、`/api/telemetry/*`）
 - **无用户系统**：单一管理员 passcode，无多用户、无 RBAC
 - **无外部认证提供商**：不使用 Supabase Auth、OAuth、JWT
 
@@ -40,7 +40,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 `src/proxy.ts` 作为 Next.js 请求代理保护控制台和私有 workspace API：
 
 ```
-每个请求到 /panel/* 或私有 workspace API
+每个请求到 /panel/* 或私有 API
   → 读取 cookie "baseball_manager_unlock"
   → isUnlockCookieValid(cookie)
   → 页面无效：302 到 /panel/login?next=原路径
@@ -50,6 +50,7 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 
 `/panel/login` 及其 server action 提交路径、`/api/logout` 都不受 `src/proxy.ts` 保护。
 
+性能遥测端点只接受指标白名单、数值、评级、导航类型和 `/panel` 路由，不接受球员、工作区、cookie 或口令数据，并按来源 IP 限制为每分钟 120 次。
 登录回跳通过 `normalizePanelNextPath()` 限定在 `/panel` 命名空间内，并拒绝登录页自身，避免开放重定向和回跳循环。
 
 ### 登出

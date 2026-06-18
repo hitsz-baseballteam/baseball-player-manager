@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { reportDataCenterReady } from "@/components/panel-performance-telemetry";
 import { ToastProvider, type ToastHandle } from "@/components/toast";
 import styles from "@/components/stats-page-client.module.css";
 import {
@@ -104,6 +105,10 @@ export function StatsPageClient({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    reportDataCenterReady();
+  }, []);
 
   // Refs to avoid stale closures in async save handler and prevent concurrent saves
   const workspaceRef = useRef(workspace);
