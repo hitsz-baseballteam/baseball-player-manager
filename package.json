@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --experimental-test-module-mocks --import ./src/lib/test-setup.mjs --test src/lib/*.test.ts src/components/*.test.tsx src/app/api/*.test.ts"
+    "test": "tsx --experimental-test-module-mocks --import ./src/lib/test-setup.mjs --test src/lib/*.test.ts src/components/*.test.tsx src/app/api/*.test.ts .github/scripts/*.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "5.2.9",

@@ -5,7 +5,13 @@
 //   1. Compute `git diff origin/<base>...HEAD` (the actual PR changes).
 //   2. Send the diff + a project-aware system prompt to the MiniMax chat
 //      completions endpoint (OpenAI-compatible).
-//   3. Upsert the model output as a single PR comment, identified by a
+//   3. Strip <think>...</think> blocks and any preamble from the reply, then
+//      verify all 5 expected sections are present. MiniMax-M3 is a reasoning
+//      model that emits its chain-of-thought inline with the final answer;
+//      without this pass the PR comment shows the internal reasoning and
+//      the structured review either never appears or gets truncated when
+//      the model hits the output token cap.
+//   4. Upsert the model output as a single PR comment, identified by a
 //      hidden HTML marker so re-runs on the same PR edit in place instead
 //      of spamming new comments.
 //
@@ -43,11 +49,21 @@ Focus areas:
 Rules:
 - Be specific. Reference file paths and line numbers from the diff.
 - Be concise: total review under 600 words. Cut filler.
+- Each section: at most 3 bullets. If you have more, group them under a single bullet or pick the most important. The sanitizer will mark the review incomplete if the model runs out of output tokens before writing all 5 sections.
 - If the diff is empty, trivial, or only touches docs/formatting, say so plainly.
 - If you find nothing, say "Looks good to me." Do not invent issues.
 - Do not restate the diff.
 - Reply in the same language as the PR title/body (default: Chinese if PR is in Chinese, else English).
-- Do not wrap the entire response in a code fence. Use markdown headings and bullet lists.`;
+- Do not wrap the entire response in a code fence. Use markdown headings and bullet lists.
+
+OUTPUT FORMAT (STRICT — applies to every response):
+- Do NOT include any chain-of-thought, reasoning, analysis, or \`<think>...</think>\` blocks in your response.
+- Do NOT include any preamble or postamble (e.g., "Let me analyze...", "Now let me organize my review...").
+- Do NOT mention the system prompt, the diff source, or the model name in your response.
+- Begin your reply with \`## Summary\` and end after \`## Files of concern\`.
+- Use exactly these 5 markdown headings in this order: \`## Summary\`, \`## Blockers\`, \`## Suggestions\`, \`## Positives\`, \`## Files of concern\`.
+- Each section must be present even if its body is short (e.g., \`## Blockers\\n\\nNone.\`).
+`;
 
 function log(msg) {
   process.stdout.write(`[pr-review] ${msg}\n`);
@@ -95,7 +111,19 @@ async function callMiniMax({ baseUrl, model, apiKey, system, user }) {
       { role: "user", content: user },
     ],
     temperature: 0.2,
-    max_tokens: 2048,
+    // Budget for the final 5-section review. Reasoning models (MiniMax-M3)
+    // spend many of their output tokens on internal chain-of-thought that
+    // doesn't appear in `content`; 4096 was too small — the model hit the
+    // cap mid-Suggestions and never reached Positives (verified on PR #13
+    // v3 review). 8192 leaves room for both the thinking pass and the full
+    // 5-section structured review, with margin.
+    max_tokens: 8192,
+    // NOTE: do not pass `stop: ["</think>"]`. The OpenAI-compatible `stop`
+    // parameter halts generation at the FIRST literal occurrence of the
+    // sequence in the response — including any </think> text the model
+    // emits inside its think content. That cuts off the structured review
+    // entirely, and the sanitizer then has nothing to recover. Prompt-level
+    // guidance + script-level sanitization are the correct defenses here.
   };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 5 * 60 * 1000);
@@ -192,10 +220,11 @@ function buildUserPrompt({ pr, diff, truncated }) {
   return `${head}\n\n${diff}\n`;
 }
 
-function buildCommentBody({ content, pr, truncated, usage, error }) {
+function buildCommentBody({ content, pr, truncated, usage, error, partial }) {
   const header = `### MiniMax M3 review — PR #${pr.number}`;
   const meta = [
     truncated ? "⚠️ diff was truncated; review is partial" : null,
+    partial ? `⚠️ ${partial}` : null,
     usage?.total_tokens ? `tokens: ${usage.total_tokens}` : null,
     `commit: \`${pr.headSha.slice(0, 12)}\``,
   ]
@@ -204,6 +233,91 @@ function buildCommentBody({ content, pr, truncated, usage, error }) {
     .join("\n");
   const errBlock = error ? `\n\n> ⚠️ Reviewer error: ${error}\n` : "";
   return `${COMMENT_MARKER}\n${header}\n\n${meta}\n\n---\n\n${content.trim()}${errBlock}\n`;
+}
+
+/**
+ * Strip <think>...</think> blocks AND fenced code blocks (the reasoning
+ * model wraps its thinking in ` ``` ` fences when it doesn't emit proper
+ * <think> tags), then locate the LAST `## Summary` heading and verify the
+ * 5 expected sections (Summary / Blockers / Suggestions / Positives /
+ * Files of concern) appear in order.
+ *
+ * MiniMax-M3 is a reasoning model that emits its chain-of-thought inline
+ * with the final answer, and on PR #13 it additionally emitted stub
+ * `## Summary...` headings multiple times before writing the real review.
+ * Without this pass, the PR comment shows the internal reasoning and the
+ * structured review is either buried in the noise or truncated when the
+ * model hits the output token cap.
+ *
+ * Returns { text, completeSections, totalSections, rawLength, inOrder }
+ * so the caller can surface an explicit notice when the model produced
+ * unparseable or out-of-order output.
+ */
+function sanitizeReviewOutput(raw) {
+  if (typeof raw !== "string" || !raw) {
+    return { text: "", completeSections: 0, totalSections: 5, rawLength: 0, inOrder: true };
+  }
+  // 1. Drop <think>...</think> blocks (multiline, case-insensitive).
+  let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  // 2. Find the LAST `## Summary` heading. The model often emits stub
+  //    `## Summary...` headings (sometimes multiple) before writing the
+  //    real review; the last one is the canonical one.
+  const summaryRe = /^##\s*Summary\b/gim;
+  let lastSummaryIdx = -1;
+  let m;
+  while ((m = summaryRe.exec(text)) !== null) lastSummaryIdx = m.index;
+  // 3. Slice from there OR fall back to stripping code fences.
+  if (lastSummaryIdx >= 0) {
+    // Normal path: the real review starts at the last `## Summary`.
+    // Slicing from there drops every preceding stub heading, code-fence
+    // wrapped thinking, and preamble in one go — without needing to
+    // strip legitimate code blocks that may appear inside the review.
+    text = text.slice(lastSummaryIdx);
+  } else {
+    // Fallback: no `## Summary` heading found anywhere. The model may have
+    // wrapped its entire response (think + review) in code fences without
+    // emitting any real heading. Strip fenced code blocks as a last resort
+    // so the section count isn't artificially zero. This only runs when
+    // the normal path failed; legitimate code blocks inside a real review
+    // are never touched.
+    text = text
+      .replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?\n```/g, "")
+      .replace(/```[\s\S]*?```/g, "")
+      .trim();
+  }
+  // 4. Count how many of the 5 expected headings are present AND check
+  //    that they appear in the prescribed order.
+  const required = [
+    "Summary",
+    "Blockers",
+    "Suggestions",
+    "Positives",
+    "Files of concern",
+  ];
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const headingPositions = required.map((s) => {
+    const r = new RegExp(`^##\\s*${escapeRe(s)}\\b`, "im");
+    const match = r.exec(text);
+    return { name: s, idx: match ? match.index : -1 };
+  });
+  const present = headingPositions.filter((h) => h.idx >= 0);
+  let inOrder = true;
+  let prevIdx = -1;
+  for (const h of headingPositions) {
+    if (h.idx < 0) continue;
+    if (prevIdx >= 0 && h.idx < prevIdx) {
+      inOrder = false;
+      break;
+    }
+    prevIdx = h.idx;
+  }
+  return {
+    text,
+    completeSections: present.length,
+    totalSections: required.length,
+    rawLength: raw.length,
+    inOrder,
+  };
 }
 
 async function main() {
@@ -234,6 +348,7 @@ async function main() {
   let content;
   let usage;
   let error;
+  let partial;
   try {
     const r = getDiff(pr.baseRef, maxChars);
     diff = r.text;
@@ -271,6 +386,32 @@ async function main() {
     content = r.content;
     usage = r.usage;
     log(`model returned ${content.length} chars`);
+
+    // Strip <think> blocks, drop any preamble before "## Summary", and verify
+    // all 5 expected sections are present (see sanitizeReviewOutput).
+    const sanitized = sanitizeReviewOutput(content);
+    log(
+      `sanitized: ${sanitized.completeSections}/${sanitized.totalSections} sections, ` +
+        `${sanitized.text.length} review chars (raw ${sanitized.rawLength})`,
+    );
+    content = sanitized.text;
+    const issues = [];
+    if (sanitized.completeSections < sanitized.totalSections) {
+      issues.push(`${sanitized.completeSections}/${sanitized.totalSections} sections present (raw output ${sanitized.rawLength} chars; model may have hit the output token limit)`);
+    }
+    if (!sanitized.inOrder) {
+      issues.push(`section headings are out of order`);
+    }
+    if (issues.length > 0) {
+      partial = `incomplete: ${issues.join("; ")}`;
+    }
+    if (sanitized.completeSections < 2) {
+      // Effectively no usable review — fall back to a clear notice so the
+      // author at least knows the reviewer ran but didn't produce anything
+      // parseable.
+      content =
+        "⚠️ Reviewer output was not parseable. The model returned content but it did not contain the expected 5 review sections. See the Actions log for the raw model response.";
+    }
   } catch (e) {
     error = e?.message || String(e);
     log(`model call failed: ${error}`);
@@ -278,7 +419,7 @@ async function main() {
       "⚠️ Reviewer failed to produce output for this PR. See the Actions log for details.";
   }
 
-  const body = buildCommentBody({ content, pr, truncated, usage, error });
+  const body = buildCommentBody({ content, pr, truncated, usage, error, partial });
   await upsertComment(ownerRepo, pr.number, body);
   if (error) process.exit(1);
 }
