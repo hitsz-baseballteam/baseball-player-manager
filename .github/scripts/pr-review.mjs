@@ -115,10 +115,12 @@ async function callMiniMax({ baseUrl, model, apiKey, system, user }) {
     // <think> block and left the review truncated mid-section. 4096 leaves
     // room for the structured review after the model has finished reasoning.
     max_tokens: 4096,
-    // Halve the request as soon as the model closes a </think> block, so we
-    // don't pay for any further content if the model decides to keep going.
-    // (No effect if the model doesn't emit <think> tokens.)
-    stop: ["</think>"],
+    // NOTE: do not pass `stop: ["</think>"]`. The OpenAI-compatible `stop`
+    // parameter halts generation at the FIRST literal occurrence of the
+    // sequence in the response — including any </think> text the model
+    // emits inside its think content. That cuts off the structured review
+    // entirely, and the sanitizer then has nothing to recover. Prompt-level
+    // guidance + script-level sanitization are the correct defenses here.
   };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 5 * 60 * 1000);
@@ -231,30 +233,47 @@ function buildCommentBody({ content, pr, truncated, usage, error, partial }) {
 }
 
 /**
- * Strip <think>...</think> blocks and any preamble before "## Summary",
- * then verify that the model's reply contains all 5 expected sections
- * (Summary / Blockers / Suggestions / Positives / Files of concern).
+ * Strip <think>...</think> blocks AND fenced code blocks (the reasoning
+ * model wraps its thinking in ` ``` ` fences when it doesn't emit proper
+ * <think> tags), then locate the LAST `## Summary` heading and verify the
+ * 5 expected sections (Summary / Blockers / Suggestions / Positives /
+ * Files of concern) appear in order.
  *
  * MiniMax-M3 is a reasoning model that emits its chain-of-thought inline
- * with the final answer. Without this pass, the PR comment shows the
- * internal reasoning and the structured review either never appears or
- * gets truncated mid-section when the model hits the output token cap.
+ * with the final answer, and on PR #13 it additionally emitted stub
+ * `## Summary...` headings multiple times before writing the real review.
+ * Without this pass, the PR comment shows the internal reasoning and the
+ * structured review is either buried in the noise or truncated when the
+ * model hits the output token cap.
  *
- * Returns { text, completeSections, totalSections, rawLength } so the
- * caller can surface an explicit notice when the model produced
- * unparseable output.
+ * Returns { text, completeSections, totalSections, rawLength, inOrder }
+ * so the caller can surface an explicit notice when the model produced
+ * unparseable or out-of-order output.
  */
 function sanitizeReviewOutput(raw) {
   if (typeof raw !== "string" || !raw) {
-    return { text: "", completeSections: 0, totalSections: 5, rawLength: 0 };
+    return { text: "", completeSections: 0, totalSections: 5, rawLength: 0, inOrder: true };
   }
-  // 1. Drop all <think>...</think> blocks (multiline, case-insensitive).
+  // 1. Drop <think>...</think> blocks (multiline, case-insensitive).
   let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-  // 2. Drop anything before the first "## Summary" heading. Reasoning models
-  //    sometimes emit "Let me organize my review:" or similar preambles.
-  const summaryIdx = text.search(/^##\s*Summary\b/im);
-  if (summaryIdx > 0) text = text.slice(summaryIdx);
-  // 3. Count how many of the 5 expected headings are present.
+  // 2. Drop ALL fenced code blocks. Reasoning models wrap their internal
+  //    thinking in ``` ... ``` blocks (verified on PR #13 where the model
+  //    emitted two thinking blocks inside code fences). The 5-section
+  //    review format does not use code fences, so removing them is safe.
+  text = text
+    .replace(/```[a-zA-Z0-9_-]*\n[\s\S]*?\n```/g, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .trim();
+  // 3. Find the LAST `## Summary` heading and slice from there. The model
+  //    often emits stub `## Summary...` headings (sometimes multiple) before
+  //    writing the real review; the last one is the canonical one.
+  const summaryRe = /^##\s*Summary\b/gim;
+  let lastSummaryIdx = -1;
+  let m;
+  while ((m = summaryRe.exec(text)) !== null) lastSummaryIdx = m.index;
+  if (lastSummaryIdx > 0) text = text.slice(lastSummaryIdx);
+  // 4. Count how many of the 5 expected headings are present AND check
+  //    that they appear in the prescribed order.
   const required = [
     "Summary",
     "Blockers",
@@ -263,14 +282,28 @@ function sanitizeReviewOutput(raw) {
     "Files of concern",
   ];
   const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const present = required.filter((s) =>
-    new RegExp(`^##\\s*${escapeRe(s)}\\b`, "im").test(text),
-  );
+  const headingPositions = required.map((s) => {
+    const r = new RegExp(`^##\\s*${escapeRe(s)}\\b`, "im");
+    const match = r.exec(text);
+    return { name: s, idx: match ? match.index : -1 };
+  });
+  const present = headingPositions.filter((h) => h.idx >= 0);
+  let inOrder = true;
+  let prevIdx = -1;
+  for (const h of headingPositions) {
+    if (h.idx < 0) continue;
+    if (prevIdx >= 0 && h.idx < prevIdx) {
+      inOrder = false;
+      break;
+    }
+    prevIdx = h.idx;
+  }
   return {
     text,
     completeSections: present.length,
     totalSections: required.length,
     rawLength: raw.length,
+    inOrder,
   };
 }
 
@@ -349,8 +382,15 @@ async function main() {
         `${sanitized.text.length} review chars (raw ${sanitized.rawLength})`,
     );
     content = sanitized.text;
+    const issues = [];
     if (sanitized.completeSections < sanitized.totalSections) {
-      partial = `incomplete: ${sanitized.completeSections}/${sanitized.totalSections} sections present (raw output ${sanitized.rawLength} chars; model may have hit the output token limit)`;
+      issues.push(`${sanitized.completeSections}/${sanitized.totalSections} sections present (raw output ${sanitized.rawLength} chars; model may have hit the output token limit)`);
+    }
+    if (!sanitized.inOrder) {
+      issues.push(`section headings are out of order`);
+    }
+    if (issues.length > 0) {
+      partial = `incomplete: ${issues.join("; ")}`;
     }
     if (sanitized.completeSections < 2) {
       // Effectively no usable review — fall back to a clear notice so the
