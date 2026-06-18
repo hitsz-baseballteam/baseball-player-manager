@@ -15,11 +15,11 @@ This document describes the current HTTP API exposed by the Next.js app.
 The app uses a shared-passcode session backed by a signed `httpOnly` cookie.
 
 - Protected UI: `/panel/*`
-- Protected API routes: `/api/workspace/:path*`, `/api/players/:path*`, `/api/scenarios/:path*`, `/api/games/:path*`, `/api/milestones/:path*`
+- Protected API routes: `/api/workspace/:path*`, `/api/players/:path*`, `/api/scenarios/:path*`, `/api/games/:path*`, `/api/milestones/:path*`, `/api/telemetry/:path*`
 
 Current code evidence:
 
-- `src/proxy.ts` explicitly matches `/panel/:path*` plus every private workspace API namespace above
+- `src/proxy.ts` explicitly matches `/panel/:path*` plus every private API namespace above
 - browser clients call mutation routes with `credentials: "same-origin"`
 
 ## Shared Response Shape
@@ -67,6 +67,7 @@ Validation errors may include a `details` object produced by Zod.
 | `GET /api/workspace` | 120 requests / 60 seconds |
 | Workspace mutation routes | 30 requests / 60 seconds |
 | `POST /api/logout` | 20 requests / 60 seconds |
+| `POST /api/telemetry/performance` | 120 requests / 60 seconds |
 
 Workspace limits are keyed by IP plus session id when present.
 
@@ -226,6 +227,24 @@ Request body:
 Responses:
 
 - `204 No Content` on success
+- `429 { "error": "rate_limited" }`
+
+### `POST /api/telemetry/performance`
+
+Receives authenticated panel performance measurements and emits a structured
+`panel_performance_metric` entry to the deployment runtime log. It accepts only
+the Web Vitals names `CLS`, `FCP`, `INP`, `LCP`, `TTFB` and the custom
+`DATA_CENTER_READY` measurement. Values are bounded to five minutes and routes
+must remain under `/panel`; no player, session, or workspace data is accepted.
+
+Success response:
+
+- `204 No Content`
+
+Errors:
+
+- `400 { "error": "invalid_json" | "invalid_metric" }`
+- `401 { "error": "unauthorized" }`
 - `429 { "error": "rate_limited" }`
 
 ### `GET /api/workspace`

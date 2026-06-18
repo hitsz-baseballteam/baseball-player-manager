@@ -82,6 +82,18 @@ HTTP 状态码（当前代码显式返回的部分）：
 | 恢复时间 | < 1 小时 | 通过 JSON 导入/导出恢复 |
 | 部署回滚 | < 5 分钟 | Next.js 单体应用，回滚即重新部署旧版本 |
 
+## 生产性能观测
+
+控制台在生产构建中通过 Next.js `useReportWebVitals()` 上报 `CLS`、`FCP`、`INP`、`LCP` 和 `TTFB`。点击数据中心导航时额外记录起点，页面客户端挂载后上报 `DATA_CENTER_READY`，用于衡量用户实际感受到的“点击到可用”耗时。
+
+`POST /api/telemetry/performance` 校验指标白名单并限流，然后向 Vercel Runtime Logs 输出 `event=panel_performance_metric` 的结构化 JSON。数据中心 Server Component 同时输出 `event=data_center_server_read`，包含成功/失败状态和服务端读取耗时。两类事件结合可区分：
+
+- `DATA_CENTER_READY` 高、`data_center_server_read.durationMs` 低：更可能是网络或客户端 bundle/hydration 问题
+- 两者都高：更可能是函数冷启动、数据库连接或查询问题
+- `TTFB` 高且服务端读取低：检查代理、部署区域和平台排队
+
+埋点不需要新增环境变量；`VERCEL_ENV` 由部署平台自动提供。指标只包含路由、耗时、评级、导航类型和环境，不包含业务数据或用户标识。当前数据保留与聚合依赖 Vercel Runtime Logs 套餐能力，如需长期趋势和告警，应增加 Log Drain 或外部指标平台。
+
 ## 备份与恢复
 
 - **导出**：前端提供 JSON 导出功能（workspace 完整导出 / 单 scenario 导出）

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { PanelPerformanceTelemetry } from "@/components/panel-performance-telemetry";
+
 export const metadata: Metadata = {
   title: "队员控制台",
   robots: {
@@ -12,5 +14,10 @@ export const metadata: Metadata = {
 export default function PanelLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return children;
+  return (
+    <>
+      {children}
+      <PanelPerformanceTelemetry />
+    </>
+  );
 }

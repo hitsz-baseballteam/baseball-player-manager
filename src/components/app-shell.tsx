@@ -21,6 +21,7 @@ type NavItem = {
   active?: boolean;
   disabled?: boolean;
   status?: string;
+  prefetch?: boolean;
 };
 
 type SummaryTone = "neutral" | "accent" | "warm" | "cool";
@@ -94,7 +95,7 @@ export function AppShell({
               }
 
               return (
-                <Link key={item.label} href={item.href} className={className}>
+                <Link key={item.label} href={item.href} prefetch={item.prefetch} className={className}>
                   <Icon size={25} weight={item.active ? "fill" : "duotone"} aria-hidden="true" />
                   <span>{item.label}</span>
                 </Link>
@@ -172,7 +173,7 @@ export function AppShell({
               }
 
               return (
-                <Link key={item.label} href={item.href} className={className}>
+                <Link key={item.label} href={item.href} prefetch={item.prefetch} className={className}>
                   <span>{item.label}</span>
                   {item.status ? (
                     <span className={styles.navStatus}>{item.status}</span>

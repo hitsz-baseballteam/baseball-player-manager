@@ -45,6 +45,13 @@ describe("proxy", () => {
     assert.equal(milestoneResponse.status, 401);
   });
 
+  it("returns 401 for unauthenticated telemetry requests", () => {
+    const response = proxy(
+      new NextRequest("http://localhost/api/telemetry/performance"),
+    );
+    assert.equal(response.status, 401);
+  });
+
   it("allows authenticated panel and workspace requests", () => {
     const cookie = `${"baseball_manager_unlock"}=${createUnlockCookieValue()}`;
     const panelResponse = proxy(
@@ -69,6 +76,7 @@ describe("proxy", () => {
       "/api/scenarios/:path*",
       "/api/games/:path*",
       "/api/milestones/:path*",
+      "/api/telemetry/:path*",
     ]);
     assert.deepEqual(config.matcher, ["/panel/:path*", ...PROTECTED_API_MATCHERS]);
   });

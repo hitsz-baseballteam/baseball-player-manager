@@ -10,6 +10,7 @@ export const PROTECTED_API_MATCHERS = [
   "/api/scenarios/:path*",
   "/api/games/:path*",
   "/api/milestones/:path*",
+  "/api/telemetry/:path*",
 ] as const;
 
 export function proxy(request: NextRequest) {
@@ -44,5 +45,6 @@ export const config = {
     "/api/scenarios/:path*",
     "/api/games/:path*",
     "/api/milestones/:path*",
+    "/api/telemetry/:path*",
   ],
 };
