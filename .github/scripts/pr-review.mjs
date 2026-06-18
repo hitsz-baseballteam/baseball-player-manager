@@ -266,6 +266,7 @@ function sanitizeReviewOutput(raw) {
   let lastSummaryIdx = -1;
   let m;
   while ((m = summaryRe.exec(text)) !== null) lastSummaryIdx = m.index;
+  // 3. Slice from there OR fall back to stripping code fences.
   if (lastSummaryIdx >= 0) {
     // Normal path: the real review starts at the last `## Summary`.
     // Slicing from there drops every preceding stub heading, code-fence
