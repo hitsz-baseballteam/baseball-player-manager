@@ -201,11 +201,10 @@ The panel reads/writes traverse four layered caches. Each layer invalidates the 
                                     |  PostgreSQL            |
                                     |  (9 SELECTs in one     |
                                     |   withTransaction;     |
-                                    |   writes are 9 for-    |
-                                    |   loop INSERTs —       |
-                                    |   unnest migration     |
-                                    |   tracked as TD-10     |
-                                    |   P1-1 follow-up)      |
+                                    |   writes use 9 batch   |
+                                    |   unnest INSERTs via   |
+                                    |   insertRowsWithUnnest |
+                                    |   → prepareUnnestArgs) |
                                     +------------------------+
 ```
 
