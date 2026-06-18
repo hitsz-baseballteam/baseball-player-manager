@@ -1,5 +1,5 @@
 import { GamesPageClient } from "@/components/games-page-client";
-import { getPanelWorkspaceSnapshot } from "@/lib/panel-server";
+import { getPanelGames } from "@/lib/panel-server";
 import { PANEL_ROUTES } from "@/lib/routes";
 
 export default async function PanelPlayerGamesPage({
@@ -8,7 +8,7 @@ export default async function PanelPlayerGamesPage({
   params: Promise<{ playerId: string }>;
 }) {
   const { playerId } = await params;
-  const snapshot = await getPanelWorkspaceSnapshot(
+  const snapshot = await getPanelGames(
     PANEL_ROUTES.playerGames(playerId),
   );
 

@@ -1,9 +1,9 @@
 import { ScoreboardPageClient } from "@/components/scoreboard-page-client";
-import { getPanelWorkspaceSnapshot } from "@/lib/panel-server";
+import { getPanelBootstrap } from "@/lib/panel-server";
 import { PANEL_ROUTES } from "@/lib/routes";
 
 export default async function ScoreboardPage() {
-  const snapshot = await getPanelWorkspaceSnapshot(PANEL_ROUTES.scoreboard);
+  const snapshot = await getPanelBootstrap(PANEL_ROUTES.scoreboard);
 
   return (
     <ScoreboardPageClient
