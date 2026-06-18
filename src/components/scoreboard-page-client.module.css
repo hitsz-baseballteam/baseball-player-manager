@@ -1,0 +1,199 @@
+.saveBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 20px 8px;
+}
+
+.saveStatus {
+  font-size: 12px;
+  color: var(--theme-muted);
+}
+
+.saveError {
+  font-size: 12px;
+  color: var(--theme-danger);
+  font-weight: 600;
+}
+
+/* ── Grid layouts ── */
+
+.singleGrid {
+  padding: 16px 20px;
+}
+
+.dualGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+@media (max-width: 900px) {
+  .dualGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Mode selection ── */
+
+.modeSelect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 40px 20px;
+}
+
+.modeTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--theme-fg);
+}
+
+.modeSubtitle {
+  margin: -16px 0 0;
+  font-size: 13px;
+  color: var(--theme-muted);
+  text-align: center;
+}
+
+.modeCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  max-width: 560px;
+  width: 100%;
+}
+
+.modeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 20px;
+  border: 2px solid var(--theme-border);
+  border-radius: 12px;
+  background: var(--theme-surface);
+  cursor: pointer;
+  transition: all 150ms ease;
+  font-family: inherit;
+  color: var(--theme-fg);
+}
+.modeCard:hover {
+  border-color: var(--theme-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--theme-shadow);
+}
+
+.modeIcon { font-size: 36px; }
+
+.modeLabel {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.modeDesc {
+  font-size: 12px;
+  color: var(--theme-muted);
+  text-align: center;
+}
+
+/* ── Action bar ── */
+
+.actionBar {
+  display: flex;
+  justify-content: center;
+  padding: 8px 20px 16px;
+}
+
+.btnBack {
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  color: var(--theme-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btnBack:hover { color: var(--theme-fg); }
+
+.btnDanger {
+  padding: 6px 16px;
+  border: 1px solid var(--theme-danger);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-danger);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btnDanger:hover {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+}
+
+/* ── Timer bar ── */
+
+.timerBar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 16px; margin: 8px 16px;
+  border-radius: 8px;
+  background: var(--theme-surface-alt);
+  border: 1px solid var(--theme-border);
+  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.timerBarWarn {
+  background: color-mix(in srgb, #f39c12 12%, var(--theme-surface));
+  border-color: #f39c12;
+  color: #e67e22;
+}
+
+.timerBarExpired {
+  background: color-mix(in srgb, var(--theme-danger) 12%, var(--theme-surface));
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
+  animation: timerPulse 1s infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Time expired dialog ── */
+
+.dialogOverlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+
+.dialogBox {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  padding: 24px; max-width: 360px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.dialogBox h3 { margin: 0 0 8px; font-size: 18px; }
+
+.dialogBox p { margin: 0; font-size: 13px; color: var(--theme-muted); line-height: 1.5; }
+
+.btnSecondary {
+  padding: 8px 16px; border: 1px solid var(--theme-border);
+  border-radius: 6px; background: var(--theme-surface-alt);
+  color: var(--theme-fg); font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  padding: 8px 16px; border: none; border-radius: 6px;
+  background: var(--theme-accent); color: white;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}

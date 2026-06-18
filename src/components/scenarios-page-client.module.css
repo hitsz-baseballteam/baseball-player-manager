@@ -128,10 +128,10 @@
   font-weight: 600;
 }
 
-/* ── Lineup board ── */
+/* ── Lineup board (3 columns: Field | Lineup | Bench) ── */
 .board {
   display: grid;
-  grid-template-columns: minmax(440px, 1fr) clamp(280px, 30vw, 340px);
+  grid-template-columns: minmax(380px, 1.2fr) minmax(180px, 280px) minmax(200px, 340px);
   gap: 0;
   min-height: clamp(620px, 70vh, 820px);
   height: clamp(620px, 70vh, 820px);
@@ -140,59 +140,140 @@
 }
 
 .boardField {
-  min-width: 0;
-  min-height: 0;
-  background: var(--theme-bg);
-}
-
-.sideRail {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-width: 0;
-  min-height: 0;
-  border-left: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-}
-
-.sideTop {
-  min-height: 0;
-  border-bottom: 1px solid var(--theme-border);
-}
-
-.sideBottom {
-  min-height: 0;
+  min-width: 0; min-height: 0;
   overflow: hidden;
 }
 
-@media (max-width: 1180px) {
+.boardLineup {
+  min-width: 0; min-height: 0;
+  border-left: 1px solid var(--theme-border);
+  border-right: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  overflow-y: auto;
+}
+
+.boardBench {
+  min-width: 0; min-height: 0;
+  background: var(--theme-surface);
+  overflow: hidden;
+}
+
+/* ── Scene field board (overview-style) ── */
+
+.sceneFieldBoard {
+  position: relative;
+  min-height: 540px;
+  height: 100%;
+  background:
+    linear-gradient(color-mix(in srgb, var(--theme-fg) 3%, transparent), transparent),
+    url("/assets/baseball-field-command-board.png") center / cover no-repeat;
+  isolation: isolate;
+}
+
+.scenePosNode {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 5px rgba(10, 35, 22, 0.3));
+  transition: transform 160ms ease;
+  z-index: 2;
+}
+.scenePosNode:hover { transform: translate(-50%, -50%) scale(1.04); z-index: 4; }
+.scenePosNodeDragOver { transform: translate(-50%, -50%) scale(1.08); z-index: 5; }
+
+.scenePosCode {
+  display: grid; place-items: center;
+  width: 34px; height: 34px;
+  margin-bottom: -6px;
+  border: 3px solid #f9f5e9;
+  border-radius: 50%;
+  background: #0b4b32;
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 14px; font-weight: 900;
+}
+
+.scenePosPlayer {
+  display: grid;
+  grid-template-columns: auto minmax(48px, auto);
+  align-items: center; gap: 6px;
+  min-height: 30px;
+  padding: 3px 9px;
+  border: 1px solid rgba(18, 56, 37, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 252, 239, 0.94);
+  color: #153625;
+  box-shadow: 0 3px 10px rgba(16, 45, 29, 0.15);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.scenePosPlayer strong { color: #0b4b32; font-family: var(--font-mono); font-size: 11px; }
+.scenePosPlayer span { font-weight: 800; }
+.scenePosEmpty { color: var(--theme-muted); font-weight: 600; font-size: 11px; }
+
+/* ── Scene position picker ── */
+
+.scenePickerBackdrop { position: fixed; inset: 0; z-index: 50; }
+
+.scenePicker {
+  position: fixed; z-index: 51;
+  transform: translate(8px, 8px);
+  min-width: 180px; max-height: 320px;
+  overflow-y: auto;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px var(--theme-shadow-strong);
+  padding: 6px;
+}
+
+.scenePickerTitle { font-size: 11px; font-weight: 700; color: var(--theme-muted); padding: 6px 10px 4px; }
+
+.scenePickerList { display: grid; gap: 2px; }
+
+.scenePickerBtn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border: none; border-radius: 6px;
+  background: transparent; color: var(--theme-fg);
+  font: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: left;
+}
+.scenePickerBtn:hover { background: var(--theme-surface-alt); }
+
+.scenePickerNum { color: var(--theme-accent); font-family: var(--font-mono); font-size: 11px; min-width: 28px; }
+.scenePickerHand { color: var(--theme-muted); font-size: 10px; margin-left: auto; }
+
+.scenePickerClear {
+  display: block; width: 100%; margin-top: 4px;
+  padding: 5px; border: 1px solid var(--theme-danger); border-radius: 6px;
+  background: transparent; color: var(--theme-danger);
+  font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 1080px) {
   .board {
-    grid-template-columns: minmax(360px, 1.1fr) minmax(280px, 0.9fr);
+    grid-template-columns: minmax(320px, 1fr) minmax(160px, 240px) minmax(180px, 280px);
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 800px) {
   .board {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
-    min-height: auto;
-    height: auto;
-    overflow: visible;
-    border-top: 1px solid var(--theme-border);
+    min-height: auto; height: auto; overflow: visible;
   }
-
-  .sideRail {
-    display: contents;
-    border-left: none;
-    background: transparent;
-  }
-
-  .sideTop {
-    border-bottom: none;
-  }
-
-  .sideBottom {
-    overflow: visible;
-  }
+  .boardLineup { border-left: none; border-right: none; border-top: 1px solid var(--theme-border); }
+  .boardBench { border-top: 1px solid var(--theme-border); }
+  .sceneFieldBoard { min-height: 420px; }
 }
 
 /* ── Dialog ── */
@@ -267,6 +348,107 @@
   background: var(--theme-bg);
   color: var(--theme-fg);
 }
+
+/* ── DH toggle button ── */
+
+.btnDHToggleActive {
+  display: inline-flex; align-items: center;
+  min-height: 34px; padding: 0 14px;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  border: 2px solid var(--theme-accent); border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-accent) 15%, transparent);
+  color: var(--theme-accent); cursor: pointer;
+}
+.btnDHToggleActive:hover { background: color-mix(in srgb, var(--theme-accent) 25%, transparent); }
+
+/* ── DH position node on field ── */
+
+.sceneDHNode {
+  z-index: 3;
+}
+
+.sceneDHCode {
+  background: #6c3483;
+  border-color: #e8daef;
+  font-size: 11px;
+  width: 30px; height: 30px;
+}
+
+/* ── Bench header + edit button ── */
+
+.benchHeader {
+  display: flex; justify-content: flex-end;
+  padding: 8px 10px 4px;
+}
+
+.btnSmall {
+  padding: 4px 10px; border: 1px solid var(--theme-border); border-radius: 6px;
+  background: var(--theme-surface); color: var(--theme-fg);
+  font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.btnSmall:hover { border-color: var(--theme-accent); color: var(--theme-accent); }
+
+/* ── Roster status editor ── */
+
+.rosterEditor {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 101; width: min(92vw, 420px); max-height: 80vh; overflow-y: auto;
+  background: var(--theme-surface); border: 1px solid var(--theme-border);
+  border-radius: 12px; box-shadow: 0 16px 48px var(--theme-shadow-strong);
+}
+
+.rosterFilter {
+  display: flex; gap: 4px; padding: 8px 16px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.rosterFilterBtn {
+  padding: 3px 10px; border: 1px solid var(--theme-border); border-radius: 6px;
+  background: transparent; color: var(--theme-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+
+.rosterFilterActive {
+  composes: rosterFilterBtn;
+  background: var(--theme-accent); color: #fff; border-color: var(--theme-accent);
+}
+
+.rosterEmpty {
+  text-align: center; padding: 24px; color: var(--theme-muted); font-size: 12px;
+}
+
+.rosterList { display: grid; gap: 2px; padding: 8px 12px; max-height: 300px; overflow-y: auto; }
+
+.rosterItem {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: none; border-radius: 6px;
+  background: transparent; color: var(--theme-fg);
+  font: inherit; font-size: 13px; cursor: pointer; text-align: left;
+}
+.rosterItem:hover { background: var(--theme-surface-alt); }
+.rosterItemActive { background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface)); }
+
+.rosterTagInjured {
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px;
+  background: color-mix(in srgb, var(--theme-warn) 15%, transparent); color: var(--theme-warn);
+}
+.rosterTagGraduated {
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px;
+  background: color-mix(in srgb, var(--theme-muted) 15%, transparent); color: var(--theme-muted);
+}
+
+.rosterName { font-weight: 700; flex: 1; }
+.rosterNum { color: var(--theme-accent); font-size: 11px; }
+.rosterPos { color: var(--theme-muted); font-size: 10px; }
+
+.rosterActions {
+  padding: 12px 16px; border-top: 1px solid var(--theme-border);
+  background: var(--theme-surface-alt);
+}
+
+.rosterActionHint { margin: 0 0 8px; font-size: 12px; color: var(--theme-muted); }
+
+.rosterActionBtns { display: flex; gap: 6px; flex-wrap: wrap; }
 .dialogInput:focus {
   outline: none;
   border-color: var(--theme-accent);

@@ -14,12 +14,17 @@ type PickerState = {
 type LineupOrderProps = {
   players: Player[];
   lineup: Array<string | null>;
+  defense?: Record<string, string | null>;
   onAssign: (index: number, playerId: string) => void;
   onClear: (index: number) => void;
   onMove: (fromIndex: number, toIndex: number) => void;
 };
 
-export function LineupOrder({ players, lineup, onAssign, onClear, onMove }: LineupOrderProps) {
+const POS_LABELS: Record<string, string> = {
+  P: "P", C: "C", "1B": "1B", "2B": "2B", "3B": "3B", SS: "SS", LF: "LF", CF: "CF", RF: "RF",
+};
+
+export function LineupOrder({ players, lineup, defense = {}, onAssign, onClear, onMove }: LineupOrderProps) {
   const [picker, setPicker] = useState<PickerState>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragSourceIdx, setDragSourceIdx] = useState<number | null>(null);
@@ -115,6 +120,12 @@ export function LineupOrder({ players, lineup, onAssign, onClear, onMove }: Line
                   <>
                     <span className={styles.slotBadge}>{player.number}</span>
                     <span className={styles.slotName}>{player.name}</span>
+                    {(() => {
+                      const defPos = Object.entries(defense).find(([, id]) => id === player.id)?.[0];
+                      return defPos ? (
+                        <span className={styles.slotPos}>{POS_LABELS[defPos] ?? defPos}</span>
+                      ) : null;
+                    })()}
                   </>
                 ) : (
                   <span className={styles.slotEmpty}>空</span>
