@@ -15,12 +15,12 @@
 
 | ID | 严重程度 | 描述 | 影响域 | 计划 |
 |---|---|---|---|---|
-| TD-10 | 高 | 资源写 API (`/api/players/*`、`/api/scenarios/*`、`/api/games/*`、`/api/milestones/*`) 不在当前 proxy matcher 内 | 安全, API | 扩展统一认证边界并补充未认证写请求测试 |
 
 ## 已解决债务
 
 | ID | 描述 | 解决日期 | 解决方案 |
 |---|---|---|---|
+| TD-10 | 资源写 API 与性能遥测端点不在统一认证边界内 | 2026-06-19 | 扩展 proxy matcher 覆盖 players/scenarios/games/milestones/telemetry，并补充未认证请求测试 |
 | TD-09 | Node 22 CI 的 test loader/module mock 组合失败，且 `codex/*` 分支 push 不触发 workflow | 2026-06-16 | 改用 `tsx` + ESM test setup，并将 push branch glob 改为 `**`；Node 22/24 和分支触发已验证 |
 | TD-08 | 首页 legacy runtime 仍依赖 `player-manager-dom.ts` / `legacy-bridge.ts` / `legacy-template.ts` / `index.html` | 2026-06-05 | 首页收敛为纯 React command desk，删除 legacy homepage runtime chain，并将首页动作改为共享逻辑或显式导航 |
 | TD-01 | DOM 管理器过大（1525 行单文件） | 2026-06-02 | 提取到 4 个模块（dom-renderers/dom-dialogs/dom-io/dom-scenario-ops），主文件 1525→841 行（-45%） |

@@ -7,6 +7,7 @@ import type {
   Workspace,
 } from "@/lib/workspace";
 import type { BulkEditInput } from "@/lib/roster-actions";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type WorkspaceSnapshot = {
   workspace: Workspace;
@@ -67,6 +68,146 @@ export async function loadWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
   }
 
   return response.json();
+}
+
+/**
+ * SWR key shared by every page in the app. Multiple mounts with this
+ * key share a single fetch and a single cache, so switching tabs and
+ * re-mounting the workspace consumer costs 0 round-trips.
+ *
+ * Exported for test isolation (callers can use a per-test key to
+ * avoid global cache collisions).
+ */
+export const WORKSPACE_SWR_KEY = "workspace-snapshot";
+
+export type WorkspaceSnapshotMutateOptions = {
+  revalidate?: boolean;
+};
+
+/**
+ * Client-side workspace cache.
+ *
+ * Designed to mirror the SWR hook contract (`{ data, mutate, isLoading }`)
+ * so callers can swap to SWR later for cross-tab dedup. For now we use
+ * a simple `useState` + manual `mutate` to keep test isolation trivial
+ * and avoid the global cache collisions SWR introduces.
+ *
+ * - `initial` is the SSR-provided workspace; first render shows it
+ *   without a loading state.
+ * - `mutate()` re-fetches via `loadWorkspaceSnapshot()`.
+ * - `mutate(newData, { revalidate: false })` is the optimistic-update
+ *   shape: skip the fetch and apply `newData` directly.
+ */
+export type WorkspaceSnapshotMutateResult = {
+  workspace: Workspace;
+  version: number;
+};
+
+export function useWorkspaceSnapshot(
+  initial?: Workspace,
+  initialVersion: number = 0,
+): {
+  data: Workspace | undefined;
+  version: number;
+  isLoading: boolean;
+  isValidating: boolean;
+  error: Error | undefined;
+  mutate: (
+    newData?: Workspace | Promise<Workspace>,
+    opts?: WorkspaceSnapshotMutateOptions & { version?: number },
+  ) => Promise<WorkspaceSnapshotMutateResult | undefined>;
+} {
+  const [data, setData] = useState<Workspace | undefined>(initial);
+  const [version, setVersion] = useState<number>(initialVersion);
+  const [isLoading, setIsLoading] = useState<boolean>(initial === undefined);
+  const [error, setError] = useState<Error | undefined>(undefined);
+  const dataRef = useRef<Workspace | undefined>(initial);
+  const versionRef = useRef<number>(initialVersion);
+
+  const mutate = useCallback(
+    async (
+      newData?: Workspace | Promise<Workspace>,
+      opts: WorkspaceSnapshotMutateOptions & { version?: number } = {},
+    ): Promise<WorkspaceSnapshotMutateResult | undefined> => {
+      if (newData !== undefined) {
+        const resolved = newData instanceof Promise ? await newData : newData;
+        setData(resolved);
+        dataRef.current = resolved;
+        setError(undefined);
+        if (opts.version !== undefined) {
+          setVersion(opts.version);
+          versionRef.current = opts.version;
+        }
+        if (opts.revalidate === false) {
+          return {
+            workspace: resolved,
+            version: opts.version ?? versionRef.current,
+          };
+        }
+      }
+
+      if (opts.revalidate === false) {
+        const currentData = dataRef.current;
+        return currentData
+          ? { workspace: currentData, version: versionRef.current }
+          : undefined;
+      }
+
+      setIsLoading(true);
+      setError(undefined);
+      try {
+        const snapshot = await loadWorkspaceSnapshot();
+        setData(snapshot.workspace);
+        dataRef.current = snapshot.workspace;
+        setVersion(snapshot.version);
+        versionRef.current = snapshot.version;
+        return { workspace: snapshot.workspace, version: snapshot.version };
+      } catch (caughtError) {
+        const nextError =
+          caughtError instanceof Error
+            ? caughtError
+            : new Error("Failed to load workspace");
+        setError(nextError);
+        throw nextError;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    dataRef.current = data;
+    versionRef.current = version;
+  }, [data, version]);
+
+  useEffect(() => {
+    if (initial !== undefined || data !== undefined) {
+      return;
+    }
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+
+      void mutate().catch(() => undefined);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data, initial, mutate]);
+
+  return {
+    data,
+    version,
+    isLoading,
+    isValidating: isLoading,
+    error,
+    mutate,
+  };
 }
 
 export async function createPlayer(player: Player, version: number) {

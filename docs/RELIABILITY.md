@@ -92,6 +92,18 @@ HTTP 状态码（当前代码显式返回的部分）：
 | 恢复时间 | < 1 小时 | 通过 JSON 导入/导出恢复 |
 | 部署回滚 | < 5 分钟 | Next.js 单体应用，回滚即重新部署旧版本 |
 
+## 生产性能观测
+
+控制台在生产构建中通过 Next.js `useReportWebVitals()` 上报 `CLS`、`FCP`、`INP`、`LCP` 和 `TTFB`。点击数据中心导航时额外记录起点，页面客户端挂载后上报 `DATA_CENTER_READY`，用于衡量用户实际感受到的“点击到可用”耗时。
+
+`POST /api/telemetry/performance` 校验指标白名单并限流，然后向 Vercel Runtime Logs 输出 `event=panel_performance_metric` 的结构化 JSON。数据中心 Server Component 同时输出 `event=data_center_server_read`，包含成功/失败状态和服务端读取耗时。两类事件结合可区分：
+
+- `DATA_CENTER_READY` 高、`data_center_server_read.durationMs` 低：更可能是网络或客户端 bundle/hydration 问题
+- 两者都高：更可能是函数冷启动、数据库连接或查询问题
+- `TTFB` 高且服务端读取低：检查代理、部署区域和平台排队
+
+埋点不需要新增环境变量；`VERCEL_ENV` 由部署平台自动提供。指标只包含路由、耗时、评级、导航类型和环境，不包含业务数据或用户标识。当前数据保留与聚合依赖 Vercel Runtime Logs 套餐能力，如需长期趋势和告警，应增加 Log Drain 或外部指标平台。
+
 ## 备份与恢复
 
 - **导出**：前端提供 JSON 导出功能（workspace 完整导出 / 单 scenario 导出）
@@ -106,3 +118,39 @@ HTTP 状态码（当前代码显式返回的部分）：
 | 乐观冲突循环 | 用户操作被反复拒绝 | 自动重试路径先重放 3 次；仍失败时刷新最新数据并提示用户 |
 | 归一化表与 legacy JSON 双存期间出现偏差 | 回滚/排障复杂度上升 | cutover 后只读 legacy 表并保留回滚窗口；稳定后再考虑移除 |
 | passcode 泄露 | 数据可被任意访问 | passcode 只在环境变量中，不写死代码 |
+
+## 性能基线（2026-06-17，TD-10 关闭时）
+
+测试环境：本地 dev server（Turbopack）+ 本地 PostgreSQL 16 + 小型演示数据集（12 球员 / 3 方案 / 0 比赛）。中等规模（~20 球员 / 50 比赛）下数字会更高；下面所有值只覆盖该测试集。
+
+| 指标 | 测量值 | 数据来源 | 备注 |
+|---|---|---|---|
+| 首次 `GET /api/workspace`（冷） | ~280ms | dev log: `next.js: 241ms, app: 34ms` | 9 个 SELECT 串行在同一 `PoolClient` 上排队；首次含 Turbopack 编译 |
+| 重复 `GET /api/workspace`（5s 内） | 5–7ms | dev log: `next.js: <1ms, app: 1–2ms` | 命中 `unstable_cache` 10s 短窗口 |
+| 客户端切 tab（5 个 panel 页面） | 0 RTT | 浏览器实测：0 `/api/workspace` 请求 | 客户端 `useWorkspaceSnapshot` + SSR 注入初始数据 |
+| 服务端页面渲染冷（`/panel` 首次） | 200–290ms | dev log | 含 React `cache()` 同请求去重 + DB 查询 |
+| 服务端页面渲染热（10s 内重访） | 21–32ms | dev log: `next.js: <2ms, app: 19–32ms` | 命中 `unstable_cache` |
+| 单球员 `PATCH /api/players/:id` 写 | 20–25ms（热） | dev log: `app: 19–22ms` | 12 球员工作区下的小数据集结果；当时生产写路径仍是逐行 INSERT，不能外推出中等规模表现 |
+| 首次写（Turbopack 冷编译） | 628ms | dev log: `next.js: 606ms` | 框架编译成本，不是应用代码 |
+| 409 版本冲突 | 5–13ms | dev log: `app: 5ms` | 单纯版本检查 + `FOR UPDATE` |
+| `Cache-Control` 头（`/api/workspace`） | `private, no-store, max-age=0` | `curl -I` | 浏览器与 CDN 不缓存私有 workspace 响应；性能依赖服务端 `unstable_cache` |
+
+### 已知不在范围内的优化
+
+- 9 个 SELECT 串行化（~50–270ms）需要架构改动（多 client 共享 MVCC snapshot 或单 SQL JOIN）才能并行；当前 `max: 1/5` 池大小与之无关（串行因共享 `PoolClient` 而排队）
+- 中等规模（~20 球员 / 50 比赛）工作区写延迟：当前测试集无法验证，且批量 `unnest` 写入尚未接入 `writeNormalizedWorkspace()` 主路径
+- 浏览器 HTTP 缓存不在当前策略内：`/api/workspace` 明确 `no-store`，以上热读收益来自服务端 `unstable_cache`
+
+### 验证方法
+
+```bash
+# 读冷热
+curl -sI -H "Cookie: baseball_manager_unlock=$COOKIE" http://127.0.0.1:3210/api/workspace
+
+# 写延迟（小型数据集）
+time curl -X PATCH -H "Cookie: baseball_manager_unlock=$COOKIE" \
+  -H "content-type: application/json" \
+  -d '{"player":...,"version":N}' http://127.0.0.1:3210/api/players/p-01
+```
+
+更详细的背景见 `docs/exec-plans/active/20260616-latency-optimization.md`。

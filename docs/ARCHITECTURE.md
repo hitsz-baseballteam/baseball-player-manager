@@ -56,11 +56,11 @@ From `package.json`:
 | `src/app/api/logout/route.ts` | Clears the unlock cookie |
 | `src/app/api/workspace/route.ts` | Reads the shared workspace snapshot bootstrap endpoint (GET) and returns `405 method_not_allowed` for PUT |
 | `src/app/api/workspace/{bootstrap,games,milestones,import,reset,preferences}/route.ts` | Resource-shaped workspace sub-routes: bootstrap snapshot, game/milestone slices, full-workspace import/reset, preference updates |
-| `src/app/api/players/route.ts` + `bulk-update` + `bulk-delete` + `[playerId]` | Resource write APIs for player CRUD and bulk edits (currently outside the proxy matcher — see TD-10) |
-| `src/app/api/scenarios/route.ts` + `[scenarioId]` + `.../activate` + `.../assignments` | Resource write APIs for scenario CRUD, activation, and assignment replacement (TD-10) |
-| `src/app/api/games/route.ts` + `[gameId]` | Resource write APIs for game CRUD (TD-10) |
-| `src/app/api/milestones/route.ts` + `[milestoneId]` | Resource write APIs for milestone CRUD (TD-10) |
-| `src/proxy.ts` | Next.js 16 request proxy that protects `/panel/*` and `/api/workspace/*` by validating the signed unlock cookie |
+| `src/app/api/players/route.ts` + `bulk-update` + `bulk-delete` + `[playerId]` | Protected resource write APIs for player CRUD and bulk edits |
+| `src/app/api/scenarios/route.ts` + `[scenarioId]` + `.../activate` + `.../assignments` | Protected resource write APIs for scenario CRUD, activation, and assignment replacement |
+| `src/app/api/games/route.ts` + `[gameId]` | Protected resource write APIs for game CRUD |
+| `src/app/api/milestones/route.ts` + `[milestoneId]` | Protected resource write APIs for milestone CRUD |
+| `src/proxy.ts` | Next.js 16 request proxy that protects `/panel/*` and all private API namespaces by validating the signed unlock cookie |
 | `scripts/next-dev.ts` | Wrapper around `next dev` that mirrors logs to `.next/dev/logs/next-dev-wrapper.log` and tolerates broken stdout/stderr pipes |
 
 ## Major Components

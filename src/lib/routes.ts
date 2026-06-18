@@ -18,7 +18,7 @@ const PANEL_NAV_BASE = [
   { label: "名册", href: PANEL_ROUTES.roster },
   { label: "战术场景", href: PANEL_ROUTES.scenarios },
   { label: "记分板", href: PANEL_ROUTES.scoreboard },
-  { label: "数据中心", href: PANEL_ROUTES.stats },
+  { label: "数据中心", href: PANEL_ROUTES.stats, prefetch: true },
   { label: "名人堂", href: PANEL_ROUTES.hallOfFame },
   { label: "设置", href: PANEL_ROUTES.settings },
 ] as const;

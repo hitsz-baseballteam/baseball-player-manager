@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it, mock } from "node:test";
+import { act, cleanup, renderHook } from "@testing-library/react";
+
+import { WORKSPACE_SWR_KEY } from "@/lib/workspace-client";
 
 import { createDefaultWorkspace } from "@/lib/workspace";
 import {
@@ -109,5 +112,118 @@ describe("workspace client", () => {
         ),
       VersionConflictError,
     );
+  });
+});
+
+describe("useWorkspaceSnapshot", () => {
+  afterEach(async () => {
+    mock.restoreAll();
+    cleanup();
+    // The custom hook is per-instance state, but the SWR key constant
+    // is exported for tests that want to assert against it. Nothing to
+    // reset at this level.
+    void WORKSPACE_SWR_KEY;
+  });
+
+  it("returns the initial workspace synchronously on first render", async () => {
+    // useWorkspaceSnapshot does not exist yet — this test will fail with
+    // TypeError when trying to call the undefined import (TDD red phase).
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+    const initial = createDefaultWorkspace(false);
+
+    const { result } = renderHook(() => useWorkspaceSnapshot(initial));
+
+    assert.deepEqual(result.current.data, initial);
+    assert.equal(result.current.isLoading, false);
+  });
+
+  it("re-fetches after a successful mutation via mutate()", async () => {
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+    const initial = createDefaultWorkspace(false);
+    const updated = createDefaultWorkspace(false);
+    updated.preferences.helpDismissed = true;
+
+    mock.method(globalThis, "fetch", async () => {
+      return new Response(
+        JSON.stringify({
+          workspace: updated,
+          version: 2,
+          updatedAt: "2026-06-17T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    const { result } = renderHook(() => useWorkspaceSnapshot(initial));
+
+    await act(async () => {
+      await result.current.mutate();
+    });
+
+    assert.ok(result.current.data);
+    assert.equal(result.current.data.preferences.helpDismissed, true);
+  });
+
+  it("exposes a stable mutate function in the return value", async () => {
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+    const initial = createDefaultWorkspace(false);
+
+    const { result, rerender } = renderHook(() => useWorkspaceSnapshot(initial));
+
+    const firstMutate = result.current.mutate;
+    rerender();
+    assert.equal(result.current.mutate, firstMutate);
+  });
+
+  it("accepts new data via optimistic mutation without re-fetch", async () => {
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+    const initial = createDefaultWorkspace(false);
+    const optimistic = createDefaultWorkspace(false);
+    optimistic.preferences.helpDismissed = true;
+
+    const { result } = renderHook(() => useWorkspaceSnapshot(initial));
+
+    await act(async () => {
+      await result.current.mutate(optimistic, { revalidate: false });
+    });
+
+    assert.ok(result.current.data);
+    assert.equal(result.current.data.preferences.helpDismissed, true);
+  });
+
+  it("returns isLoading=true during the initial fetch when fallbackData is not provided", async () => {
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+
+    const { result } = renderHook(() => useWorkspaceSnapshot());
+
+    assert.equal(result.current.isLoading, true);
+  });
+
+  it("auto-loads the workspace when fallbackData is not provided", async () => {
+    const { useWorkspaceSnapshot } = await import("@/lib/workspace-client");
+    const loaded = createDefaultWorkspace(false);
+    loaded.preferences.helpDismissed = true;
+
+    mock.method(globalThis, "fetch", async () => {
+      return new Response(
+        JSON.stringify({
+          workspace: loaded,
+          version: 3,
+          updatedAt: "2026-06-17T00:00:00.000Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    const { result } = renderHook(() => useWorkspaceSnapshot());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    assert.deepEqual(result.current.data, loaded);
+    assert.equal(result.current.version, 3);
+    assert.equal(result.current.isLoading, false);
+    assert.equal(result.current.error, undefined);
   });
 });

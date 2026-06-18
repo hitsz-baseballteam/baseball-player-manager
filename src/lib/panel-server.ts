@@ -34,7 +34,29 @@ async function loadPanelBootstrap(pathname: string) {
 
 async function loadPanelGames(pathname: string) {
   await checkPanelAuth(pathname);
-  return getGamesWorkspace();
+  const startedAt = Date.now();
+
+  try {
+    const snapshot = await getGamesWorkspace();
+    console.log(JSON.stringify({
+      level: "info",
+      event: "data_center_server_read",
+      status: "success",
+      durationMs: Date.now() - startedAt,
+      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+    }));
+    return snapshot;
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: "error",
+      event: "data_center_server_read",
+      status: "failure",
+      durationMs: Date.now() - startedAt,
+      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+      error: error instanceof Error ? error.message : "unknown",
+    }));
+    throw error;
+  }
 }
 
 async function loadPanelMilestones(pathname: string) {

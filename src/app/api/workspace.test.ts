@@ -40,6 +40,14 @@ describe("workspace route", () => {
   it("GET returns workspace snapshot", async () => {
     const response = await GET(new Request("http://localhost/api/workspace"));
     assert.equal(response.status, 200);
+    assert.equal(
+      response.headers.get("Cache-Control"),
+      "private, no-store, max-age=0",
+    );
+    assert.equal(
+      response.headers.get("Cloudflare-CDN-Cache-Control"),
+      "no-store",
+    );
     const body = await response.json();
     assert.equal(body.version, 5);
     assert.ok(Array.isArray(body.workspace.players));
