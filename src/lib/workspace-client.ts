@@ -69,42 +69,6 @@ export async function loadWorkspaceSnapshot(): Promise<WorkspaceSnapshot> {
   return response.json();
 }
 
-export async function loadBootstrapSnapshot(): Promise<WorkspaceSnapshot> {
-  const response = await fetch("/api/workspace/bootstrap", {
-    credentials: "same-origin",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load workspace bootstrap: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-export async function loadGamesSnapshot(): Promise<WorkspaceSnapshot> {
-  const response = await fetch("/api/workspace/games", {
-    credentials: "same-origin",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load workspace games: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-export async function loadMilestonesSnapshot(): Promise<WorkspaceSnapshot> {
-  const response = await fetch("/api/workspace/milestones", {
-    credentials: "same-origin",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load workspace milestones: ${response.status}`);
-  }
-
-  return response.json();
-}
-
 export async function createPlayer(player: Player, version: number) {
   return sendWorkspaceRequest("/api/players", "POST", { player, version });
 }

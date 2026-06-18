@@ -20,7 +20,6 @@ import {
 import { panelNavItems } from "@/lib/routes";
 import {
   cloneWorkspace,
-  sanitizeWorkspace,
   type Game,
   type Workspace,
 } from "@/lib/workspace";
@@ -28,9 +27,9 @@ import type { WorkspaceSnapshot } from "@/lib/workspace-client";
 import {
   createGame,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   submitMutationWithRetry,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 import styles from "./scoreboard-page-client.module.css";
 
 const NAV_ITEMS = panelNavItems("记分板");
@@ -52,8 +51,8 @@ export function ScoreboardPageClient({
 }: ScoreboardPageClientProps) {
   const toastRef = useRef<ToastHandle | null>(null);
 
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
-  const [version, setVersion] = useState(initialVersion);
+  const { workspace, version, setWorkspace, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(initialWorkspace, initialVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [phase, setPhase] = useState<PhaseState>({ type: "setup" });
@@ -116,14 +115,11 @@ export function ScoreboardPageClient({
           applyMutation,
           submit,
         );
-        setVersion(result.version);
-        setWorkspace(sanitizeWorkspace(result.workspace));
+        applySnapshot(result);
       } catch (error) {
         let reloaded = false;
         try {
-          const snapshot = await loadWorkspaceSnapshot();
-          setVersion(snapshot.version);
-          setWorkspace(sanitizeWorkspace(snapshot.workspace));
+          await refreshWorkspace();
           reloaded = true;
         } catch { /* ignore */ }
 
@@ -144,7 +140,7 @@ export function ScoreboardPageClient({
         savingRef.current = false;
       }
     },
-    [],
+    [setWorkspace, applySnapshot, refreshWorkspace],
   );
 
   // ── Phase transitions ──

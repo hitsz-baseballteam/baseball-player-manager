@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "@fontsource-variable/noto-sans-sc/wght.css";
 import "./globals.css";
 
 const inter = localFont({
@@ -24,28 +25,6 @@ const inter = localFont({
   ],
 });
 
-const notoSansSc = localFont({
-  variable: "--font-body-sc",
-  display: "swap",
-  src: [
-    {
-      path: "../fonts/noto-sans-sc-chinese-simplified-400-normal.woff2",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../fonts/noto-sans-sc-chinese-simplified-500-normal.woff2",
-      weight: "500",
-      style: "normal",
-    },
-    {
-      path: "../fonts/noto-sans-sc-chinese-simplified-700-normal.woff2",
-      weight: "700",
-      style: "normal",
-    },
-  ],
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://hitsz-baseball.online"),
   title: {
@@ -63,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${inter.variable} ${notoSansSc.variable}`}
+      className={inter.variable}
     >
       <body>{children}</body>
     </html>

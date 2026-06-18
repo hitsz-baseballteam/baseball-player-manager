@@ -30,7 +30,6 @@ import {
   analyzeScenarioWarnings,
   getActiveScenario,
   POSITIONS,
-  sanitizeWorkspace,
   type Player,
   type PositionCode,
   type Workspace,
@@ -40,12 +39,12 @@ import {
   createScenario,
   deleteScenario,
   isVersionConflict,
-  loadWorkspaceSnapshot,
   type WorkspaceSnapshot,
   updatePlayer,
   updateScenario,
   updateScenarioAssignments,
 } from "@/lib/workspace-client";
+import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 
 const NAV_ITEMS = panelNavItems("战术场景");
 
@@ -65,8 +64,8 @@ export function ScenariosPageClient({
   initialWorkspace,
   initialVersion,
 }: ScenariosPageClientProps) {
-  const [workspace, setWorkspace] = useState(() => sanitizeWorkspace(initialWorkspace));
-  const [version, setVersion] = useState(initialVersion);
+  const { workspace, version, setWorkspace, applySnapshot, refreshWorkspace } =
+    useWorkspaceSnapshot(initialWorkspace, initialVersion);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<ScenarioDialogState>({ type: "closed" });
@@ -96,13 +95,10 @@ export function ScenariosPageClient({
       setIsSaving(true);
       try {
         const result = await submit(updated, version);
-        setWorkspace(sanitizeWorkspace(result.workspace));
-        setVersion(result.version);
+        applySnapshot(result);
       } catch (error) {
         if (isVersionConflict(error)) {
-          const fresh = await loadWorkspaceSnapshot();
-          setWorkspace(sanitizeWorkspace(fresh.workspace));
-          setVersion(fresh.version);
+          await refreshWorkspace();
           toastRef.current?.showToast("工作区已被更新，已刷新到最新版本");
         } else {
           setSaveError("保存失败，请重试");
@@ -111,7 +107,7 @@ export function ScenariosPageClient({
         setIsSaving(false);
       }
     },
-    [version],
+    [version, setWorkspace, applySnapshot, refreshWorkspace],
   );
 
 
@@ -256,8 +252,7 @@ export function ScenariosPageClient({
     const updated: Player = { ...player, status: "available" };
     try {
       const result = await updatePlayer(updated, version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
-      setVersion(result.version);
+      applySnapshot(result);
       toastRef.current?.showToast(`${player.name} 已恢复，加入替补名单`);
     } catch {
       toastRef.current?.showToast("状态更新失败，请重试");
@@ -279,8 +274,7 @@ export function ScenariosPageClient({
     }
     try {
       const result = await updatePlayer(updated, version);
-      setWorkspace(sanitizeWorkspace(result.workspace));
-      setVersion(result.version);
+      applySnapshot(result);
       toastRef.current?.showToast(`${player.name} 已临时加入替补名单`);
     } catch {
       toastRef.current?.showToast("状态更新失败，请重试");

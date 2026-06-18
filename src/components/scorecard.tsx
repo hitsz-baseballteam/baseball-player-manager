@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { OpponentBaseDiamond } from "@/components/opponent-base-diamond";
 import { PAResultGrid } from "@/components/pa-result-grid";
@@ -20,6 +20,7 @@ import {
   type PlateAppearance,
   type ScoreboardGame,
 } from "@/lib/scoreboard-actions";
+import { nextLocalId } from "@/lib/local-id";
 import type { PositionCode, Workspace } from "@/lib/workspace";
 import styles from "./scorecard.module.css";
 
@@ -75,8 +76,13 @@ export function Scorecard({
 
   // ── Runner advancement picker (for 1B/2B with runners on base) ──
   const [showAdvancePicker, setShowAdvancePicker] = useState(false);
-  const pendingAdvanceResultRef = useRef<PAResult | null>(null);
   const pendingAdvanceFielderRef = useRef<PositionCode | null>(null);
+  // ── Live "selected fielder" for ROE picker (state, not ref) ──
+  // Reading ref.current inside JSX violates react-hooks/refs, so this is
+  // promoted to state. The popup re-renders as soon as the fielder is set.
+  const [pendingROEFielder, setPendingROEFielder] = useState<PositionCode | null>(null);
+  // ── Live "advance result type" (1B / 2B / ROE) for the picker title ──
+  const [pendingAdvanceResult, setPendingAdvanceResult] = useState<PAResult | null>(null);
   const [runnerTargets, setRunnerTargets] = useState<Record<string, "score" | "stay" | 2 | 3>>({});
 
   // ── PB ball/strike chooser ──
@@ -89,7 +95,8 @@ export function Scorecard({
   // ── ROE error type picker ──
   const [showErrorTypePicker, setShowErrorTypePicker] = useState(false);
   const pendingROEResultRef = useRef<PAResult | null>(null);
-  const pendingROEFielderRef = useRef<PositionCode | null>(null);
+  // `pendingROEFielderRef` was promoted to state above so JSX can read it
+  // without violating react-hooks/refs.
 
   // ── FC runner picker (fielder's choice — select which runner is out) ──
   const [showFCRunnerPicker, setShowFCRunnerPicker] = useState(false);
@@ -100,28 +107,9 @@ export function Scorecard({
     setBalls(0); setStrikes(0); setFouls(0);
   }
 
-  // Auto-trigger on full count (via effect to avoid setState during render).
-  // We use refs to keep the effect deps stable while still accessing latest values.
-  const fieldingRef = useRef(fieldingGame);
-  const activeRef = useRef(isActive);
-  fieldingRef.current = fieldingGame;
-  activeRef.current = isActive;
-
-  useEffect(() => {
-    if (!fieldingRef.current || !activeRef.current) return;
-    if (balls >= 4) {
-      handleResult("BB");
-      resetCount();
-    }
-  }, [balls]);
-
-  useEffect(() => {
-    if (!fieldingRef.current || !activeRef.current) return;
-    if (strikes >= 3) {
-      handleResult("SO");
-      resetCount();
-    }
-  }, [strikes]);
+  // BB / SO auto-trigger logic moved into `handleBall` / `handleStrike`
+  // (see below) so it runs as part of the click event instead of from a
+  // useEffect that would either call setState or access refs during render.
 
   // ═══ Early return after all hooks ═══
   if (!battingGame && !fieldingGame) return null;
@@ -169,7 +157,7 @@ export function Scorecard({
 
     if (result === "ROE" && fielder) {
       pendingROEResultRef.current = result;
-      pendingROEFielderRef.current = fielder;
+      setPendingROEFielder(fielder);
       setShowErrorTypePicker(true);
       return;
     }
@@ -189,7 +177,7 @@ export function Scorecard({
         targets[r.playerId] = targetBase >= 4 ? "score" : targetBase as 2 | 3;
       }
       setRunnerTargets(targets);
-      pendingAdvanceResultRef.current = result;
+      setPendingAdvanceResult(result);
       pendingAdvanceFielderRef.current = fielder;
       setShowAdvancePicker(true);
       return;
@@ -263,7 +251,7 @@ export function Scorecard({
       const g = battingGame ?? fieldingGame!;
       const runner = g.runners.find((r) => r.playerId === playerId);
       if (!runner) return prev;
-      const maxAdv = pendingAdvanceResultRef.current === "2B" ? 2 : 1;
+      const maxAdv = pendingAdvanceResult === "2B" ? 2 : 1;
       const baseAfter1 = runner.base + 1 >= 4 ? "score" as const : (runner.base + 1) as 2 | 3;
       const baseAfter2 = runner.base + 2 >= 4 ? "score" as const : (runner.base + 2) as 2 | 3;
       if (current === "score") return { ...prev, [playerId]: "stay" as const };
@@ -273,16 +261,12 @@ export function Scorecard({
     });
   }
 
-  function createLocalId(): string {
-    return `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
-
   function confirmAdvancement() {
     setShowAdvancePicker(false);
-    const result = pendingAdvanceResultRef.current;
+    const result = pendingAdvanceResult;
     const fielder = pendingAdvanceFielderRef.current;
     if (!result) return;
-    pendingAdvanceResultRef.current = null;
+    setPendingAdvanceResult(null);
     pendingAdvanceFielderRef.current = null;
 
     // ROE with runners: use custom handler
@@ -313,7 +297,7 @@ export function Scorecard({
 
     // Build custom PA
     const pa: PlateAppearance = {
-      id: createLocalId(),
+      id: nextLocalId("pa"),
       batterId,
       result,
       runsScored: runs,
@@ -377,8 +361,8 @@ export function Scorecard({
   function handleErrorType(type: "fielding" | "throwing") {
     setShowErrorTypePicker(false);
     const g = battingGame ?? fieldingGame!;
-    const fielder = pendingROEFielderRef.current;
-    pendingROEFielderRef.current = null;
+    const fielder = pendingROEFielder;
+    setPendingROEFielder(null);
     pendingROEResultRef.current = null;
 
     // If runners on base, show advancement picker
@@ -390,7 +374,7 @@ export function Scorecard({
         targets[r.playerId] = targetBase >= 4 ? "score" : targetBase as 2 | 3;
       }
       setRunnerTargets(targets);
-      pendingAdvanceResultRef.current = "ROE";
+      setPendingAdvanceResult("ROE");
       pendingAdvanceFielderRef.current = fielder;
       setShowAdvancePicker(true);
       return;
@@ -404,7 +388,7 @@ export function Scorecard({
     const g = battingGame ?? fieldingGame!;
     const batterId = g.lineup[g.currentBatterIndex] ?? "__BATTER__";
     const pa: PlateAppearance = {
-      id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: nextLocalId("pa"),
       batterId,
       result: "ROE",
       runsScored: 0, rbi: 0,
@@ -434,7 +418,7 @@ export function Scorecard({
     // Generic opponent ROE: batter reaches 1B, no specific fielder credited
     const batterId = g.lineup[g.currentBatterIndex] ?? "__BATTER__";
     const pa: PlateAppearance = {
-      id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: nextLocalId("pa"),
       batterId,
       result: "ROE",
       runsScored: 0, rbi: 0,
@@ -501,7 +485,7 @@ export function Scorecard({
     if (action === "caught") {
       // K: batter out, +1 out
       const pa: PlateAppearance = {
-        id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: nextLocalId("pa"),
         batterId: g.lineup[g.currentBatterIndex] ?? "__BATTER__",
         result: "SO",
         runsScored: 0, rbi: 0,
@@ -530,7 +514,7 @@ export function Scorecard({
     // "safe": K + WP, batter to 1B
     const batterId = g.lineup[g.currentBatterIndex] ?? "__BATTER__";
     const pa: PlateAppearance = {
-      id: `pa-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: nextLocalId("pa"),
       batterId,
       result: "SO", // counts as SO for stats
       runsScored: 0, rbi: 0,
@@ -588,8 +572,25 @@ export function Scorecard({
 
   // ── Controls ──
 
-  function handleBall() { if (balls < 4) { setBalls(b => b + 1); setTotalPitches(t => t + 1); } }
-  function handleStrike() { if (strikes < 3) { setStrikes(s => s + 1); setTotalPitches(t => t + 1); } }
+  function handleBall() {
+    if (balls >= 4) return;
+    setBalls((b) => b + 1);
+    setTotalPitches((t) => t + 1);
+    // BB trigger when balls reaches 4 — moved out of useEffect to avoid
+    // setState-in-effect and "handleResult accessed before declared".
+    if (balls + 1 >= 4 && fieldingGame && isActive && !showFieldPicker) {
+      handleResult("BB");
+    }
+  }
+  function handleStrike() {
+    if (strikes >= 3) return;
+    setStrikes((s) => s + 1);
+    setTotalPitches((t) => t + 1);
+    // SO trigger when strikes reaches 3 — see handleBall for rationale.
+    if (strikes + 1 >= 3 && fieldingGame && isActive && !showFieldPicker) {
+      handleResult("SO");
+    }
+  }
   function handleFoul() {
     setFouls(f => f + 1);
     setTotalPitches(t => t + 1);
@@ -1024,7 +1025,7 @@ export function Scorecard({
           <div className={styles.runDialog} style={{ minWidth: 260 }}>
             <p className={styles.runQuestion}>野手失误 — 失误类型</p>
             <p style={{ fontSize: 11, color: "var(--theme-muted)", marginTop: -4, marginBottom: 10 }}>
-              已选位置：{pendingROEFielderRef.current ?? "—"}
+              已选位置：{pendingROEFielder ?? "—"}
             </p>
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className={styles.uncaughtBtn}
@@ -1112,7 +1113,7 @@ export function Scorecard({
         <div className={styles.runOverlay}>
           <div className={styles.runDialog} style={{ minWidth: 320 }}>
             <p className={styles.runQuestion}>
-              {pendingAdvanceResultRef.current === "2B" ? "二垒安打" : "一垒安打"} — 跑者推进
+              {pendingAdvanceResult === "2B" ? "二垒安打" : "一垒安打"} — 跑者推进
             </p>
             <p style={{ fontSize: 11, color: "var(--theme-muted)", marginTop: -4, marginBottom: 8 }}>
               点击每个跑者切换：得分 → 停留 → 进一垒 → 进二垒
@@ -1140,7 +1141,7 @@ export function Scorecard({
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className={styles.btnPrimary} onClick={confirmAdvancement}>确认</button>
               <button type="button" className={styles.btnSecondary}
-                onClick={() => { setShowAdvancePicker(false); pendingAdvanceResultRef.current = null; }}>取消</button>
+                onClick={() => { setShowAdvancePicker(false); setPendingAdvanceResult(null); }}>取消</button>
             </div>
           </div>
         </div>

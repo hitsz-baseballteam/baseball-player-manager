@@ -168,7 +168,7 @@
   min-height: 540px;
   background:
     linear-gradient(color-mix(in srgb, var(--theme-fg) 3%, transparent), transparent),
-    url("/assets/baseball-field-command-board.png") center / cover no-repeat;
+    url("/assets/baseball-field-command-board-v1.webp") center / cover no-repeat;
   isolation: isolate;
 }
 

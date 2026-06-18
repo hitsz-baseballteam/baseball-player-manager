@@ -73,7 +73,12 @@ export function AppShell({
     return (
       <div className={styles.commandShell}>
         <aside className={styles.commandSidebar}>
-          <Link href={PANEL_ROUTES.home} className={styles.commandCrest} aria-label="Baseball Player Manager 首页">
+          <Link
+            href={PANEL_ROUTES.home}
+            prefetch={false}
+            className={styles.commandCrest}
+            aria-label="Baseball Player Manager 首页"
+          >
             <Baseball size={34} weight="duotone" aria-hidden="true" />
           </Link>
 
@@ -94,7 +99,7 @@ export function AppShell({
               }
 
               return (
-                <Link key={item.label} href={item.href} className={className}>
+                <Link key={item.label} href={item.href} prefetch={false} className={className}>
                   <Icon size={25} weight={item.active ? "fill" : "duotone"} aria-hidden="true" />
                   <span>{item.label}</span>
                 </Link>
@@ -172,7 +177,7 @@ export function AppShell({
               }
 
               return (
-                <Link key={item.label} href={item.href} className={className}>
+                <Link key={item.label} href={item.href} prefetch={false} className={className}>
                   <span>{item.label}</span>
                   {item.status ? (
                     <span className={styles.navStatus}>{item.status}</span>
@@ -184,7 +189,7 @@ export function AppShell({
         ) : null}
 
         <div className={styles.actions}>
-          <Link href={PANEL_ROUTES.home} className={styles.backButton}>
+          <Link href={PANEL_ROUTES.home} prefetch={false} className={styles.backButton}>
             <ArrowLeft size={16} weight="bold" aria-hidden="true" />
             <span>返回首页</span>
           </Link>

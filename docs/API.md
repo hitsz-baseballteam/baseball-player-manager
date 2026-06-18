@@ -711,9 +711,11 @@ Success response:
 
 ## Client Usage Notes
 
-The browser client in [`src/lib/workspace-client.ts`](/Users/kennywang/app/baseball-player-manager/src/lib/workspace-client.ts):
+Server pages provide the initial snapshot. Interactive clients use `useWorkspaceSnapshot()` to keep workspace and version updates paired.
 
-- reads via `loadWorkspaceSnapshot()`
+The browser request layer in `workspace-client.ts`:
+
+- uses `loadWorkspaceSnapshot()` for conflict/failure refresh and retry, not for initial page bootstrap
 - writes through resource-specific helpers such as `createPlayer()`, `updateScenarioAssignments()`, and `importWorkspaceSnapshot()`
 - treats `409` as a retryable version conflict
 - treats `503` as maintenance-mode freeze

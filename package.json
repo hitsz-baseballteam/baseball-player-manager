@@ -12,6 +12,7 @@
     "test": "tsx --experimental-test-module-mocks --import ./src/lib/test-setup.mjs --test src/lib/*.test.ts src/components/*.test.tsx src/app/api/*.test.ts"
   },
   "dependencies": {
+    "@fontsource-variable/noto-sans-sc": "5.2.9",
     "@phosphor-icons/react": "^2.1.10",
     "next": "16.2.6",
     "pg": "^8.21.0",

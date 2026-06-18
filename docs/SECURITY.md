@@ -50,6 +50,8 @@ baseball_manager_unlock = "<base64url-session-json>.<hex-signature>"
 
 `/panel/login` 及其 server action 提交路径、`/api/logout` 都不受 `src/proxy.ts` 保护。
 
+当前 proxy matcher 也不覆盖 `/api/players/*`、`/api/scenarios/*`、`/api/games/*` 和 `/api/milestones/*`。这些资源写路由虽然由 Panel 客户端使用，但仓库代码尚未在统一请求边界验证 unlock cookie；扩展 matcher 或在 route 内增加认证属于待解决的安全缺口。
+
 登录回跳通过 `normalizePanelNextPath()` 限定在 `/panel` 命名空间内，并拒绝登录页自身，避免开放重定向和回跳循环。
 
 ### 登出

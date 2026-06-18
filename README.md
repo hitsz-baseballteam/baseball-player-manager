@@ -134,7 +134,8 @@ As a rule:
 
 - put business rules in `src/lib/`
 - keep database access in `src/lib/db.ts` and `src/lib/workspace-store.ts`
-- keep client persistence going through `src/lib/workspace-client.ts` and the resource-oriented `/api/*` routes
+- keep snapshot state in `src/lib/use-workspace-snapshot.ts`
+- keep client requests going through `src/lib/workspace-client.ts` and the resource-oriented `/api/*` routes
 
 ### 8. Run checks before pushing
 

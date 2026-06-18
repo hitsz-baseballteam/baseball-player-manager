@@ -48,6 +48,6 @@ The ESM setup also defines JSDOM globals with `Object.defineProperty`, because n
 - [x] Ran `npm run build`
 - [x] Confirmed GitHub Actions runs on `codex/*` branch push
 
-## Follow-Up
+## Completion
 
-Move this plan to `docs/exec-plans/completed/` after the fix lands and CI passes on GitHub Actions.
+The fix landed, local Node 22/24 verification passed, and GitHub Actions branch triggering was confirmed. This plan is complete.

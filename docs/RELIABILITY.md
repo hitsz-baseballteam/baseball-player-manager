@@ -13,11 +13,11 @@ FROM app_workspace_meta
 WHERE slug = $slug AND version = $currentVersion
 FOR UPDATE;
 
--- 写入 players / scenarios / games / milestones 等归一化表
-UPDATE app_workspace_meta
-SET version = version + 1, updated_at = now()
-WHERE id = $workspaceId;
+-- 计算 next workspace / next version
+-- upsert app_workspace_meta，然后清空并集合式重写归一化子表
 COMMIT;
+
+-- commit 成功后失效 workspace server-cache tag
 ```
 
 - 每次写入必须携带当前 `version`
@@ -30,6 +30,16 @@ COMMIT;
 - **原子性**：每个资源写接口都在显式 SQL 事务中完成，包含版本校验、子表写入、版本递增
 - **隔离性**：通过 `FOR UPDATE` 锁住 `app_workspace_meta` 当前版本行，避免并发写穿透
 - **无分布式事务**：仍是单数据库事务，不需要两阶段提交
+- **固定写入往返上限**：子表通过 `jsonb_to_recordset()` 集合式写入，往返次数不再随记录数线性增长
+- **提交后失效**：只有成功提交的写入才失效 full/bootstrap/games/milestones 的共享缓存 tag；冲突和失败不会清除缓存
+
+### 读取一致性与缓存
+
+- full、bootstrap、games、milestones reader 各自在一个 `REPEATABLE READ READ ONLY` 事务内读取
+- 单次读取只使用一个 checked-out `PoolClient`，不会跨连接拼装关联表
+- React `cache()` 负责同一次 Server Component 请求内去重
+- `unstable_cache()` 负责跨请求复用，四类 reader 共享同一个 workspace 失效 tag
+- 浏览器/API 响应仍为 `private, no-store`；服务端缓存不依赖浏览器缓存
 
 ## 连接池策略
 

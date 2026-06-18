@@ -92,6 +92,32 @@ const nextConfig: NextConfig = {
 
     return [
       {
+        source: "/assets/:path*.webp",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+          {
+            key: "Cloudflare-CDN-Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/team/:path*.webp",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+          {
+            key: "Cloudflare-CDN-Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
         source: "/:path*",
         headers: privateHeaders.filter((header) => header.key !== "Cache-Control" && header.key !== "Cloudflare-CDN-Cache-Control"),
       },
