@@ -39,6 +39,7 @@ type WorkspaceMetaRow = {
   version: number;
   active_scenario_id: string | null;
   help_dismissed: boolean;
+  public_home_config: unknown;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -265,7 +266,7 @@ async function selectWorkspaceMeta(
 ): Promise<WorkspaceMetaRow | null> {
   const result = await client.query<WorkspaceMetaRow>(
     `
-      select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+      select id, slug, version, active_scenario_id, help_dismissed, public_home_config, created_at, updated_at
       from public.app_workspace_meta
       where slug = $1
       limit 1
@@ -460,6 +461,7 @@ function buildWorkspaceFromRows(args: {
     milestones,
     preferences: {
       helpDismissed: args.meta.help_dismissed,
+      publicHomeConfig: args.meta.public_home_config,
     },
   });
 }
@@ -625,14 +627,15 @@ async function writeNormalizedWorkspace(params: {
   await client.query(
     `
       insert into public.app_workspace_meta (
-        id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+        id, slug, version, active_scenario_id, help_dismissed, public_home_config, created_at, updated_at
       )
-      values ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz)
+      values ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz)
       on conflict (id) do update
       set slug = excluded.slug,
           version = excluded.version,
           active_scenario_id = excluded.active_scenario_id,
           help_dismissed = excluded.help_dismissed,
+          public_home_config = excluded.public_home_config,
           updated_at = excluded.updated_at
     `,
     [
@@ -641,6 +644,7 @@ async function writeNormalizedWorkspace(params: {
       version,
       safeWorkspace.activeScenarioId,
       safeWorkspace.preferences.helpDismissed,
+      JSON.stringify(safeWorkspace.preferences.publicHomeConfig ?? {}),
       createdAtValue,
       updatedAtValue,
     ],
@@ -969,7 +973,7 @@ async function readBootstrapWorkspaceIfExists(
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
   const metaResult = await client.query<WorkspaceMetaRow>(
-    `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+    `select id, slug, version, active_scenario_id, help_dismissed, public_home_config, created_at, updated_at
      from public.app_workspace_meta where slug = $1 limit 1`,
     [slug],
   );
@@ -1070,7 +1074,7 @@ async function readBootstrapWorkspaceIfExists(
       ? meta.active_scenario_id : scenarios[0]?.id ?? "",
     games: [],
     milestones: [],
-    preferences: { helpDismissed: meta.help_dismissed },
+    preferences: { helpDismissed: meta.help_dismissed, publicHomeConfig: meta.public_home_config as unknown as Workspace["preferences"]["publicHomeConfig"] },
   };
 
   return {
@@ -1085,7 +1089,7 @@ async function readGamesWorkspaceIfExists(
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
   const metaResult = await client.query<WorkspaceMetaRow>(
-    `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+    `select id, slug, version, active_scenario_id, help_dismissed, public_home_config, created_at, updated_at
      from public.app_workspace_meta where slug = $1 limit 1`,
     [slug],
   );
@@ -1186,7 +1190,7 @@ async function readGamesWorkspaceIfExists(
     activeScenarioId: "",
     games,
     milestones: [],
-    preferences: { helpDismissed: meta.help_dismissed },
+    preferences: { helpDismissed: meta.help_dismissed, publicHomeConfig: meta.public_home_config as unknown as Workspace["preferences"]["publicHomeConfig"] },
   };
 
   return {
@@ -1201,7 +1205,7 @@ async function readMilestonesWorkspaceIfExists(
   slug: string,
 ): Promise<WorkspaceSnapshot | null> {
   const metaResult = await client.query<WorkspaceMetaRow>(
-    `select id, slug, version, active_scenario_id, help_dismissed, created_at, updated_at
+    `select id, slug, version, active_scenario_id, help_dismissed, public_home_config, created_at, updated_at
      from public.app_workspace_meta where slug = $1 limit 1`,
     [slug],
   );
@@ -1303,7 +1307,7 @@ async function readMilestonesWorkspaceIfExists(
     activeScenarioId: "",
     games,
     milestones,
-    preferences: { helpDismissed: meta.help_dismissed },
+    preferences: { helpDismissed: meta.help_dismissed, publicHomeConfig: meta.public_home_config as unknown as Workspace["preferences"]["publicHomeConfig"] },
   };
 
   return {

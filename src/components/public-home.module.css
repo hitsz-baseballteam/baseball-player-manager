@@ -475,6 +475,235 @@
   text-align: right;
 }
 
+.trainingCard {
+  margin-top: 32px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.trainingRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.trainingRow span {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.trainingRow strong {
+  font-weight: 800;
+  text-align: right;
+}
+
+.trainingNote {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.history {
+  display: grid;
+  min-height: 720px;
+  grid-template-columns: 0.85fr 1.15fr;
+  color: var(--public-ink);
+  background: var(--public-cream);
+}
+
+.historyPanel {
+  align-self: center;
+  padding: 70px clamp(28px, 6vw, 90px);
+}
+
+.historyPanel h2 {
+  margin: 0;
+  font-size: clamp(42px, 6vw, 78px);
+  letter-spacing: -0.07em;
+  line-height: 1;
+}
+
+.historyStory {
+  max-width: 560px;
+  margin: 28px 0 0;
+  color: #506273;
+  font-size: 17px;
+  line-height: 1.9;
+}
+
+.awardsList {
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.awardsList li {
+  position: relative;
+  padding: 12px 0 12px 28px;
+  border-bottom: 1px solid rgba(6, 45, 79, 0.12);
+  font-weight: 700;
+}
+
+.awardsList li::before {
+  position: absolute;
+  left: 0;
+  content: "🏆";
+}
+
+.historyPhoto {
+  position: relative;
+  min-height: 620px;
+}
+
+.historyPhoto img {
+  object-fit: cover;
+}
+
+.faqSection {
+  padding: 120px clamp(24px, 6vw, 96px);
+  background: var(--public-paper);
+}
+
+.faqSection .sectionHeading {
+  margin: 0 auto 54px;
+}
+
+.newsSection {
+  padding: 110px clamp(24px, 6vw, 96px);
+  background: white;
+}
+
+.newsList {
+  display: grid;
+  max-width: 1080px;
+  gap: 18px;
+  margin: 0 auto;
+}
+
+.newsItem {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  padding: 22px 26px;
+  border-left: 4px solid var(--public-orange);
+  background: var(--public-cream);
+  box-shadow: 6px 6px 0 rgba(6, 45, 79, 0.08);
+}
+
+.newsItem h3 {
+  grid-column: 2;
+  margin: 0;
+  color: var(--public-navy);
+  font-size: 20px;
+}
+
+.newsItem p {
+  grid-column: 2;
+  margin: 6px 0 0;
+  color: #506273;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.newsDate {
+  color: var(--public-orange);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.gamesSection {
+  padding: 110px clamp(24px, 6vw, 96px);
+  background: var(--public-paper);
+}
+
+.gamesList {
+  display: grid;
+  max-width: 1080px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin: 0 auto;
+}
+
+.gameItem {
+  display: grid;
+  gap: 6px;
+  padding: 22px 24px;
+  color: var(--public-navy);
+  background: white;
+  box-shadow: 6px 6px 0 rgba(6, 45, 79, 0.08);
+}
+
+.gameItem svg {
+  color: var(--public-orange);
+}
+
+.gameDate {
+  color: #506273;
+  font-family: var(--font-ui), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.gameItem small {
+  color: #506273;
+  font-size: 13px;
+}
+
+.faqList {
+  display: grid;
+  max-width: 840px;
+  gap: 14px;
+  margin: 0 auto;
+}
+
+.faqItem {
+  border: 1px solid rgba(6, 45, 79, 0.14);
+  background: white;
+  box-shadow: 6px 6px 0 rgba(6, 45, 79, 0.08);
+}
+
+.faqSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  color: var(--public-navy);
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faqSummary::-webkit-details-marker {
+  display: none;
+}
+
+.faqSummary::after {
+  content: "+";
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.faqItem[open] .faqSummary::after {
+  content: "−";
+}
+
+.faqAnswer {
+  margin: 0;
+  padding: 0 26px 24px;
+  color: #506273;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
 .gallery {
   display: grid;
   min-height: 720px;
@@ -536,17 +765,20 @@
   position: relative;
   display: grid;
   max-width: 1040px;
-  grid-template-columns: minmax(320px, 1fr) minmax(280px, 360px);
-  gap: 24px;
   margin: 0 auto;
   align-items: stretch;
 }
 
-.contact {
+.contactCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.contactCard {
   position: relative;
   display: grid;
-  min-width: 0;
-  gap: 7px;
+  gap: 18px;
   padding: 26px;
   color: white;
   background: var(--public-navy);
@@ -554,27 +786,33 @@
   text-align: left;
 }
 
-.contact strong {
-  font-size: 24px;
-}
-
-.contactNote {
-  margin: 12px 0 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 15px;
-  line-height: 1.7;
-}
-
-.qrCard {
-  position: relative;
-  display: grid;
+.contactHeader {
+  display: flex;
+  align-items: flex-start;
   gap: 14px;
-  margin: 0;
-  padding: 20px;
-  color: var(--public-navy);
-  background: var(--public-paper);
-  box-shadow: 9px 9px 0 rgba(6, 45, 79, 0.22);
-  text-align: left;
+}
+
+.contactHeader svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.contactLabel {
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+}
+
+.contactValue {
+  display: block;
+  color: white;
+  font-size: 22px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.contactValue:hover {
+  text-decoration: underline;
 }
 
 .qrFrame {
@@ -586,12 +824,6 @@
   display: block;
   width: 100%;
   height: auto;
-}
-
-.qrCard figcaption {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.7;
 }
 
 .footer {
@@ -799,6 +1031,45 @@
     padding: 20px 22px 76px;
   }
 
+  .trainingCard {
+    padding: 18px;
+  }
+
+  .trainingRow {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .trainingRow strong {
+    text-align: left;
+  }
+
+  .history {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .historyPanel {
+    padding: 76px 22px;
+  }
+
+  .historyPhoto {
+    min-height: 380px;
+  }
+
+  .faqSection {
+    padding: 76px 22px;
+  }
+
+  .faqSummary {
+    padding: 18px 20px;
+    font-size: 16px;
+  }
+
+  .faqAnswer {
+    padding: 0 20px 20px;
+  }
+
   .gallery {
     min-height: auto;
     grid-template-columns: 1fr;
@@ -875,16 +1146,12 @@
     min-height: 330px;
   }
 
-  .contact {
-    min-width: 0;
+  .contactCard {
+    padding: 20px;
   }
 
-  .contact strong {
-    font-size: 19px;
-  }
-
-  .qrCard {
-    padding: 16px;
+  .contactValue {
+    font-size: 18px;
   }
 
   .footer {

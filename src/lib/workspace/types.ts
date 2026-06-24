@@ -133,6 +133,43 @@ export type Scenario = {
   updatedAt: string;
 };
 
+export type PublicHomeConfig = {
+  training: {
+    schedule: string;
+    location: string;
+    whatToBring: string[];
+    whatWeProvide: string[];
+    note: string;
+  };
+  contacts: Array<{
+    type: "wechat-group" | "email" | "social";
+    label: string;
+    value: string;
+    href?: string;
+    qrImage?: string;
+  }>;
+  faq: Array<{
+    question: string;
+    answer: string;
+  }>;
+  history: {
+    foundedYear: number | null;
+    story: string;
+    awards: string[];
+  };
+  feeds: {
+    milestones: {
+      enabled: boolean;
+      maxCount: number;
+    };
+    games: {
+      enabled: boolean;
+      maxCount: number;
+      gameTypes: Array<"official" | "training">;
+    };
+  };
+};
+
 export type Workspace = {
   version: 3;
   players: Player[];
@@ -142,6 +179,7 @@ export type Workspace = {
   milestones: Milestone[];
   preferences: {
     helpDismissed: boolean;
+    publicHomeConfig: PublicHomeConfig;
   };
 };
 

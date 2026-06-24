@@ -18,6 +18,7 @@ import {
   importWorkspaceSnapshot,
   isVersionConflict,
   resetWorkspace,
+  updateWorkspacePreferences,
 } from "@/lib/workspace-client";
 import { useWorkspaceSnapshot } from "@/lib/use-workspace-snapshot";
 
@@ -399,8 +400,199 @@ export function SettingsPageClient({
                 </button>
               </div>
             </section>
+
+            <PublicHomeConfigCard
+              workspace={workspace}
+              version={version}
+              isSaving={isSaving}
+              onSaved={(snapshot) => applySnapshot(snapshot)}
+              onError={async (error) => {
+                if (isVersionConflict(error)) {
+                  await refreshWorkspace();
+                  toastRef.current?.showToast("数据已被其他会话更新，已刷新最新内容。");
+                } else {
+                  setSaveError("保存失败，请稍后重试。");
+                }
+              }}
+              onSavingChange={setIsSaving}
+            />
           </div>
         </AppShell>
     </ToastProvider>
+  );
+}
+
+// ── Public homepage configuration card ──
+
+type PublicHomeConfigCardProps = {
+  workspace: Workspace;
+  version: number;
+  isSaving: boolean;
+  onSaved: (snapshot: WorkspaceSnapshot) => void;
+  onError: (error: unknown) => void | Promise<void>;
+  onSavingChange: (saving: boolean) => void;
+};
+
+type WorkspaceSnapshot = {
+  workspace: Workspace;
+  version: number;
+  updatedAt: string;
+};
+
+function PublicHomeConfigCard({
+  workspace,
+  version,
+  isSaving,
+  onSaved,
+  onError,
+  onSavingChange,
+}: PublicHomeConfigCardProps) {
+  const [schedule, setSchedule] = useState(workspace.preferences.publicHomeConfig.training.schedule);
+  const [location, setLocation] = useState(workspace.preferences.publicHomeConfig.training.location);
+  const [note, setNote] = useState(workspace.preferences.publicHomeConfig.training.note);
+  const [feedMilestonesEnabled, setFeedMilestonesEnabled] = useState(
+    workspace.preferences.publicHomeConfig.feeds.milestones.enabled,
+  );
+  const [feedMilestonesMax, setFeedMilestonesMax] = useState(
+    String(workspace.preferences.publicHomeConfig.feeds.milestones.maxCount),
+  );
+  const [feedGamesEnabled, setFeedGamesEnabled] = useState(
+    workspace.preferences.publicHomeConfig.feeds.games.enabled,
+  );
+  const [feedGamesMax, setFeedGamesMax] = useState(
+    String(workspace.preferences.publicHomeConfig.feeds.games.maxCount),
+  );
+
+  const dirty =
+    schedule !== workspace.preferences.publicHomeConfig.training.schedule ||
+    location !== workspace.preferences.publicHomeConfig.training.location ||
+    note !== workspace.preferences.publicHomeConfig.training.note ||
+    feedMilestonesEnabled !== workspace.preferences.publicHomeConfig.feeds.milestones.enabled ||
+    feedMilestonesMax !== String(workspace.preferences.publicHomeConfig.feeds.milestones.maxCount) ||
+    feedGamesEnabled !== workspace.preferences.publicHomeConfig.feeds.games.enabled ||
+    feedGamesMax !== String(workspace.preferences.publicHomeConfig.feeds.games.maxCount);
+
+  async function handleSave() {
+    onSavingChange(true);
+    try {
+      const updatedConfig = {
+        ...workspace.preferences.publicHomeConfig,
+        training: {
+          ...workspace.preferences.publicHomeConfig.training,
+          schedule,
+          location,
+          note,
+        },
+        feeds: {
+          milestones: {
+            enabled: feedMilestonesEnabled,
+            maxCount: Number.parseInt(feedMilestonesMax, 10) || 0,
+          },
+          games: {
+            enabled: feedGamesEnabled,
+            maxCount: Number.parseInt(feedGamesMax, 10) || 0,
+            gameTypes: workspace.preferences.publicHomeConfig.feeds.games.gameTypes,
+          },
+        },
+      };
+      const result = await updateWorkspacePreferences(
+        { publicHomeConfig: updatedConfig },
+        version,
+      );
+      onSaved(result);
+    } catch (error) {
+      await onError(error);
+    } finally {
+      onSavingChange(false);
+    }
+  }
+
+  return (
+    <section className={styles.card} aria-label="主页展示设置区">
+      <p className={styles.eyebrow}>Public Homepage</p>
+      <h2 className={styles.title}>主页展示设置</h2>
+      <p className={styles.description}>
+        配置公开主页的训练信息文案、动态内容开关。修改后会立即在公开主页生效。
+      </p>
+
+      <div className={styles.configGroup}>
+        <h3 className={styles.configGroupTitle}>训练信息</h3>
+        <label className={styles.milestoneField}>
+          <span>训练时间</span>
+          <input
+            value={schedule}
+            onChange={(e) => setSchedule(e.target.value)}
+            maxLength={200}
+            placeholder="例如：每周二、五 18:30–21:00"
+          />
+        </label>
+        <label className={styles.milestoneField}>
+          <span>训练地点</span>
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            maxLength={200}
+            placeholder="例如：大学城体育中心棒球场"
+          />
+        </label>
+        <label className={styles.milestoneField}>
+          <span>注意事项</span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={500}
+            rows={2}
+            placeholder="例如：雨天会提前在群里通知是否改室内训练"
+          />
+        </label>
+      </div>
+
+      <div className={styles.configGroup}>
+        <h3 className={styles.configGroupTitle}>动态内容</h3>
+        <label className={styles.toggleRow}>
+          <input
+            type="checkbox"
+            checked={feedMilestonesEnabled}
+            onChange={(e) => setFeedMilestonesEnabled(e.target.checked)}
+          />
+          <span>显示最新里程碑/动态</span>
+          <input
+            type="number"
+            min={0}
+            max={20}
+            value={feedMilestonesMax}
+            onChange={(e) => setFeedMilestonesMax(e.target.value)}
+            className={styles.numInput}
+          />
+        </label>
+        <label className={styles.toggleRow}>
+          <input
+            type="checkbox"
+            checked={feedGamesEnabled}
+            onChange={(e) => setFeedGamesEnabled(e.target.checked)}
+          />
+          <span>显示近期比赛</span>
+          <input
+            type="number"
+            min={0}
+            max={20}
+            value={feedGamesMax}
+            onChange={(e) => setFeedGamesMax(e.target.value)}
+            className={styles.numInput}
+          />
+        </label>
+      </div>
+
+      <div className={styles.actionRow}>
+        <button
+          className={styles.btnPrimary}
+          type="button"
+          onClick={handleSave}
+          disabled={!dirty || isSaving}
+        >
+          保存主页配置
+        </button>
+      </div>
+    </section>
   );
 }

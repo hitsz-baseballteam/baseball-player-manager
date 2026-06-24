@@ -1,6 +1,9 @@
 // ── Input sanitization ──
 
 import {
+  createDefaultPublicHomeConfig,
+} from "./base";
+import {
   POSITIONS,
   POSITION_CODES,
   STATUS_LABELS,
@@ -262,6 +265,133 @@ export function sanitizeAssignments(
 
 // ── Workspace sanitizers ──
 
+export function sanitizePublicHomeConfig(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"] {
+  const defaults = createDefaultPublicHomeConfig();
+  if (!value || typeof value !== "object") {
+    return defaults;
+  }
+
+  const source = value as Record<string, unknown>;
+
+  return {
+    training: sanitizeTrainingInfo(source.training),
+    contacts: sanitizeContacts(source.contacts),
+    faq: sanitizeFaq(source.faq),
+    history: sanitizeHistory(source.history),
+    feeds: sanitizeFeeds(source.feeds),
+  };
+}
+
+function sanitizeTrainingInfo(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"]["training"] {
+  const defaults = createDefaultPublicHomeConfig().training;
+  if (!value || typeof value !== "object") {
+    return defaults;
+  }
+  const source = value as Record<string, unknown>;
+  return {
+    schedule: typeof source.schedule === "string" ? source.schedule : defaults.schedule,
+    location: typeof source.location === "string" ? source.location : defaults.location,
+    whatToBring: Array.isArray(source.whatToBring)
+      ? source.whatToBring.filter((item): item is string => typeof item === "string")
+      : defaults.whatToBring,
+    whatWeProvide: Array.isArray(source.whatWeProvide)
+      ? source.whatWeProvide.filter((item): item is string => typeof item === "string")
+      : defaults.whatWeProvide,
+    note: typeof source.note === "string" ? source.note : defaults.note,
+  };
+}
+
+function sanitizeContacts(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"]["contacts"] {
+  const defaults = createDefaultPublicHomeConfig().contacts;
+  if (!Array.isArray(value)) {
+    return defaults;
+  }
+  return value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === "object")
+    .map((item) => ({
+      type: ["wechat-group", "email", "social"].includes(String(item.type))
+        ? (String(item.type) as "wechat-group" | "email" | "social")
+        : "social",
+      label: typeof item.label === "string" ? item.label : "联系方式",
+      value: typeof item.value === "string" ? item.value : "",
+      href: typeof item.href === "string" ? item.href : undefined,
+      qrImage: typeof item.qrImage === "string" ? item.qrImage : undefined,
+    }));
+}
+
+function sanitizeFaq(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"]["faq"] {
+  const defaults = createDefaultPublicHomeConfig().faq;
+  if (!Array.isArray(value)) {
+    return defaults;
+  }
+  return value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === "object")
+    .map((item) => ({
+      question: typeof item.question === "string" ? item.question : "",
+      answer: typeof item.answer === "string" ? item.answer : "",
+    }))
+    .filter((item) => item.question.length > 0 && item.answer.length > 0);
+}
+
+function sanitizeHistory(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"]["history"] {
+  const defaults = createDefaultPublicHomeConfig().history;
+  if (!value || typeof value !== "object") {
+    return defaults;
+  }
+  const source = value as Record<string, unknown>;
+  const foundedYear = typeof source.foundedYear === "number" ? source.foundedYear : null;
+  return {
+    foundedYear: foundedYear === null || Number.isFinite(foundedYear) ? foundedYear : null,
+    story: typeof source.story === "string" ? source.story : defaults.story,
+    awards: Array.isArray(source.awards)
+      ? source.awards.filter((item): item is string => typeof item === "string")
+      : defaults.awards,
+  };
+}
+
+function sanitizeFeeds(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"]["feeds"] {
+  const defaults = createDefaultPublicHomeConfig().feeds;
+  if (!value || typeof value !== "object") {
+    return defaults;
+  }
+  const source = value as Record<string, unknown>;
+  const milestones = source.milestones && typeof source.milestones === "object"
+    ? source.milestones as Record<string, unknown>
+    : {};
+  const games = source.games && typeof source.games === "object"
+    ? source.games as Record<string, unknown>
+    : {};
+  return {
+    milestones: {
+      enabled: typeof milestones.enabled === "boolean" ? milestones.enabled : defaults.milestones.enabled,
+      maxCount: typeof milestones.maxCount === "number" && Number.isFinite(milestones.maxCount)
+        ? Math.max(0, Math.min(20, Math.trunc(milestones.maxCount)))
+        : defaults.milestones.maxCount,
+    },
+    games: {
+      enabled: typeof games.enabled === "boolean" ? games.enabled : defaults.games.enabled,
+      maxCount: typeof games.maxCount === "number" && Number.isFinite(games.maxCount)
+        ? Math.max(0, Math.min(20, Math.trunc(games.maxCount)))
+        : defaults.games.maxCount,
+      gameTypes: Array.isArray(games.gameTypes)
+        ? games.gameTypes.filter((t): t is "official" | "training" => t === "official" || t === "training")
+        : defaults.games.gameTypes,
+    },
+  };
+}
+
 export function sanitizeWorkspace(value: unknown): Workspace {
   const fallback = createDefaultWorkspace(false);
   if (!value || typeof value !== "object") {
@@ -302,6 +432,9 @@ export function sanitizeWorkspace(value: unknown): Workspace {
     milestones,
     preferences: {
       helpDismissed: Boolean(source.preferences?.helpDismissed),
+      publicHomeConfig: sanitizePublicHomeConfig(
+        (source.preferences as Record<string, unknown> | undefined)?.publicHomeConfig,
+      ),
     },
   };
 }
