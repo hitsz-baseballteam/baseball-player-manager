@@ -15,6 +15,7 @@ import {
   type ScenarioAssignments,
   type Workspace,
 } from "./types";
+import { PUBLIC_SITE_CONTENT } from "../public-site-content";
 
 export function createId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -148,6 +149,19 @@ export function createScenario(
   };
 }
 
+export function createDefaultPublicHomeConfig(): Workspace["preferences"]["publicHomeConfig"] {
+  return {
+    training: structuredClone(PUBLIC_SITE_CONTENT.training),
+    contacts: structuredClone(PUBLIC_SITE_CONTENT.contacts),
+    faq: structuredClone(PUBLIC_SITE_CONTENT.faq),
+    history: structuredClone(PUBLIC_SITE_CONTENT.history),
+    feeds: {
+      milestones: { enabled: true, maxCount: 3 },
+      games: { enabled: true, maxCount: 3, gameTypes: ["official"] },
+    },
+  };
+}
+
 export function createDefaultWorkspace(helpDismissed: boolean): Workspace {
   const scenario = createScenario(
     "默认方案",
@@ -168,6 +182,7 @@ export function createDefaultWorkspace(helpDismissed: boolean): Workspace {
     milestones: [],
     preferences: {
       helpDismissed,
+      publicHomeConfig: createDefaultPublicHomeConfig(),
     },
   };
 }

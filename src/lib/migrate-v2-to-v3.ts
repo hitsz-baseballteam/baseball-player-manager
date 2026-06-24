@@ -8,6 +8,7 @@
  */
 
 import type { Game, Player, PlayerGameStatLine, Workspace } from "./workspace/types";
+import { createDefaultPublicHomeConfig } from "./workspace/base";
 
 type GameRecord = {
   id: string;
@@ -117,6 +118,7 @@ export function migrateV2toV3(raw: unknown): Workspace | null {
     milestones: [],
     preferences: {
       helpDismissed: Boolean((v2.preferences as Record<string, boolean> | undefined)?.helpDismissed),
+      publicHomeConfig: createDefaultPublicHomeConfig(),
     },
   };
 }

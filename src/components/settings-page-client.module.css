@@ -232,3 +232,41 @@
     grid-template-columns: 1fr;
   }
 }
+
+.configGroup {
+  margin: 18px 0 24px;
+  padding: 18px 20px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-alt);
+}
+
+.configGroupTitle {
+  margin: 0 0 14px;
+  color: var(--theme-accent);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+  color: var(--theme-fg);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toggleRow input[type="checkbox"] {
+  flex-shrink: 0;
+}
+
+.numInput {
+  width: 70px;
+  margin-left: auto;
+  padding: 6px 10px;
+  border: 1px solid var(--theme-border);
+  background: white;
+  font-size: 14px;
+  text-align: right;
+}

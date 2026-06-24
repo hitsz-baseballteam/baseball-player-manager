@@ -87,8 +87,8 @@ You need a PostgreSQL database with the project schema.
 
 There are two common team workflows:
 
-1. Use a shared development database managed by the organization and set its connection string as `DATABASE_URL`.
-2. Create your own local PostgreSQL database and apply the migrations in `supabase/migrations/`.
+1. **Production / shared server**: use the Supabase-managed PostgreSQL connection string as `DATABASE_URL`.
+2. **Local development**: use your own local PostgreSQL database (recommended: `postgresql://localhost:5432/baseball_manager`) and apply the migrations in `supabase/migrations/`.
 
 For a fresh local database, apply at least:
 
@@ -100,6 +100,19 @@ If you are upgrading an older database that already has `public.app_workspace`, 
 - [supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql)
 
 The current runtime reads from normalized tables. The legacy `public.app_workspace` row is retained as a rollback/import source during the cutover window.
+
+A practical local setup is:
+
+```bash
+createdb baseball_manager
+for f in supabase/migrations/*.sql; do psql -d baseball_manager -f "$f"; done
+```
+
+Then set in `.env.local`:
+
+```bash
+DATABASE_URL=postgresql://localhost:5432/baseball_manager
+```
 
 ### 5. Start the app
 

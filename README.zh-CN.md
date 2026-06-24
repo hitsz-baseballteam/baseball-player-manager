@@ -87,8 +87,8 @@ npm run auth:env -- "your-local-passcode"
 
 团队内通常有两种方式：
 
-1. 使用组织维护的共享开发库，并将其连接串配置到 `DATABASE_URL`
-2. 自己创建本地 PostgreSQL 数据库，并手动应用 `supabase/migrations/` 下的迁移
+1. **生产 / 共享服务端**：使用 Supabase 托管的 PostgreSQL 连接串作为 `DATABASE_URL`
+2. **本地开发**：使用自己的本地 PostgreSQL 数据库（推荐：`postgresql://localhost:5432/baseball_manager`），并手动应用 `supabase/migrations/` 下的迁移
 
 对于全新本地库，至少需要应用：
 
@@ -100,6 +100,19 @@ npm run auth:env -- "your-local-passcode"
 - [supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql](/Users/kennywang/app/baseball-player-manager/supabase/migrations/20260616223000_backfill_normalized_workspace_storage.sql)
 
 当前运行时已经从归一化分表读取。旧的 `public.app_workspace` 会在切换窗口内保留，用于回滚或 bootstrap。
+
+一个实用的本地初始化方式是：
+
+```bash
+createdb baseball_manager
+for f in supabase/migrations/*.sql; do psql -d baseball_manager -f "$f"; done
+```
+
+然后在 `.env.local` 中设置：
+
+```bash
+DATABASE_URL=postgresql://localhost:5432/baseball_manager
+```
 
 ### 5. 启动应用
 

@@ -317,9 +317,12 @@ export async function deleteWorkspaceMilestone(milestoneId: string, version: num
   });
 }
 
-export async function updateWorkspacePreferences(helpDismissed: boolean, version: number) {
+export async function updateWorkspacePreferences(
+  payload: { helpDismissed?: boolean; publicHomeConfig?: unknown },
+  version: number,
+) {
   return sendWorkspaceRequest("/api/workspace/preferences", "PATCH", {
-    helpDismissed,
+    ...payload,
     version,
   });
 }
