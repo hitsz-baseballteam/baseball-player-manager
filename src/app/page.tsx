@@ -10,14 +10,14 @@ import type {
 } from "@/lib/public-site-data";
 
 export const metadata: Metadata = {
-  title: "哈工大深圳棒球队 | HITSZ Baseball",
-  description: "哈尔滨工业大学（深圳）棒球队官网。2026 秋季招新，零基础也欢迎。",
+  title: "哈工深小熊猫棒球队 | HITSZ Red Pandas Baseball Team",
+  description: "哈工深小熊猫棒球队官方主页。记录球队从 2026 年春天出发、首次正式比赛与持续训练的校园棒球故事。",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "哈工大深圳棒球队",
-    description: "下一球，等你上场。2026 秋季招新，零基础也欢迎。",
+    title: "哈工深小熊猫棒球队",
+    description: "从零起步，向省赛进发。哈工深小熊猫棒球队官方主页。",
     url: "https://hitsz-baseball.online",
-    siteName: "HITSZ Baseball",
+    siteName: "HITSZ Red Pandas Baseball Team",
     locale: "zh_CN",
     type: "website",
     images: [{ url: "/team/team-fence.jpg", width: 1920, height: 1280 }],
@@ -36,12 +36,14 @@ function buildJsonLd(
   const organization = {
     "@context": "https://schema.org",
     "@type": "SportsOrganization",
-    name: "哈尔滨工业大学（深圳）棒球队",
-    alternateName: "HITSZ Baseball",
+    name: "哈工深小熊猫棒球队",
+    alternateName: "HITSZ Red Pandas Baseball Team",
     url: "https://hitsz-baseball.online",
-    logo: "https://hitsz-baseball.online/team/team-logo-v1.webp",
-    description: "哈尔滨工业大学（深圳）棒球队，面向全校学生的大学棒球队。",
-    foundingDate: history.foundedYear ? String(history.foundedYear) : undefined,
+    logo: "https://hitsz-baseball.online/team/team-logo-v2.webp",
+    description: "成立于 2026 年春天的哈尔滨工业大学（深圳）校园棒球队。",
+    foundingDate: history.foundedYear === 2026
+      ? "2026-04"
+      : history.foundedYear ? String(history.foundedYear) : undefined,
     sport: "Baseball",
     location: {
       "@type": "Place",
@@ -84,7 +86,7 @@ function buildJsonLd(
           ? {
               result: {
                 "@type": "SportsTeam",
-                name: "HITSZ Baseball",
+                name: "HITSZ Red Pandas Baseball Team",
                 score: String(game.ourScore),
               },
             }

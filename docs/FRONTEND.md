@@ -50,7 +50,7 @@ page.tsx (server)
 | `GamesPageClient` | 比赛数据页状态：正式/训练 tab、逐场增删改、合计摘要、保存与冲突处理；IP 使用棒球记法（`.1`=1 出局、`.2`=2 出局） |
 | `PlayerProfilePageClient` | 球员档案页状态：workspace 读写 + 版本冲突处理，并提供跳转到比赛数据页的入口 |
 | `PlayerProfileEditor` | 纯客户端：档案表单 + SVG 雷达图；page 形态在顶部提供“查看比赛数据”链接 |
-| `PublicHome` | 公开球队主页（`/`），独立于 `AppShell`；文案集中在 `public-site-content.ts` |
+| `PublicHome` | 公开球队展示主页（`/`），独立于 `AppShell`；文案集中在 `public-site-content.ts`，包含队史、首战、训练、背号墙、相册与轻量加入入口 |
 | `ScoreboardPageClient` | 记分板页状态：赛前设置 → 实时记分 → 赛后确认；标准/双模式切换、PA 推导、localStorage 崩溃恢复 |
 | `Scorecard` | 记分卡面板：组合 `PitchCounter` / `PaResultGrid` / `RunnerDiamond` / `OpponentBaseDiamond` 完成一次打席记录 |
 | `HallOfFamePageClient` | 名人堂页状态：球员生涯统计聚合、徽章/荣誉列表、个人战绩卡 |
@@ -176,7 +176,7 @@ src/proxy.ts (Next.js 16 代理)
 
 | 路由 | 类型 | 功能 |
 |---|---|---|
-| `/` | Server + Client | 公开球队主页：品牌、招新、球队信息 |
+| `/` | Server + Client | 公开球队展示主页：球队身份、队史开端、首次出征、训练文化、背号墙、相册、FAQ 与轻量加入入口 |
 | `/panel/login` | Server + Server Action | 共享口令登录页；表单提交到 `unlockAction` |
 | `/panel` | Server + Client | 控制台首页：提醒、快捷动作、方案摘要、阵容概览 |
 | `/panel/roster` | Server + Client | 名册工作台：筛选、批量操作、档案入口 |

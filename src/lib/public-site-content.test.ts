@@ -7,17 +7,19 @@ describe("PUBLIC_SITE_CONTENT", () => {
     const labels = PUBLIC_SITE_CONTENT.navigation.map((item) => item.label);
     assert.deepEqual(labels, [
       "认识球队",
-      "训练日常",
-      "球队历史",
-      "常见问题",
+      "队史",
+      "首战",
+      "训练",
+      "成员",
+      "相册",
       "加入我们",
     ]);
     assert.equal(
-      PUBLIC_SITE_CONTENT.navigation.find((item) => item.label === "常见问题")?.href,
-      "#faq",
+      PUBLIC_SITE_CONTENT.navigation.find((item) => item.label === "相册")?.href,
+      "#gallery",
     );
     assert.equal(
-      PUBLIC_SITE_CONTENT.navigation.find((item) => item.label === "球队历史")?.href,
+      PUBLIC_SITE_CONTENT.navigation.find((item) => item.label === "队史")?.href,
       "#history",
     );
   });
