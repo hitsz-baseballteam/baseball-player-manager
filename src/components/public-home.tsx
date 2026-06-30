@@ -488,6 +488,7 @@ export function PublicHome(props: PublicHomeProps) {
               <span className={styles.jerseyRole}>{member.role}</span>
               <strong>{member.number}</strong>
               <h3>{member.name}</h3>
+              {member.nickname && <span className={styles.jerseyNickname}>{member.nickname}</span>}
               <p>{member.note}</p>
             </article>
           ))}
