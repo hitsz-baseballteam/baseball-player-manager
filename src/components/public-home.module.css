@@ -958,7 +958,7 @@
 
 .jersey {
   position: relative;
-  min-height: 280px;
+  min-height: 230px;
   padding: 18px;
   overflow: hidden;
   border: 1px solid rgba(8, 50, 79, 0.14);
@@ -992,16 +992,25 @@
 
 .jersey strong {
   display: block;
-  margin-top: 30px;
+  margin-top: 24px;
   font-family: var(--font-ui), sans-serif;
-  font-size: clamp(62px, 7vw, 108px);
+  font-size: clamp(54px, 6vw, 92px);
   font-weight: 950;
   line-height: 0.9;
 }
 
 .jersey h3 {
-  margin: 20px 0 0;
+  margin: 18px 0 0;
   font-size: 20px;
+}
+
+.jerseyNickname {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .jersey p {

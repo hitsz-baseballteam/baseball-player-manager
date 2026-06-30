@@ -39,10 +39,16 @@ describe("PublicHome", () => {
     assert.ok(screen.getByText("HITSZ Red Pandas Baseball Team"));
     assert.ok(screen.getByText("从零起步，向省赛进发。"));
     assert.ok(screen.getAllByText("2026.04").length >= 1);
-    assert.ok(screen.getByText("20+"));
+    assert.ok(screen.getAllByText("30").length >= 1);
     assert.ok(screen.getAllByText("2026.05.30").length >= 1);
     assert.ok(screen.getByRole("heading", { name: "得物王牌棒球赛，第一次站上竞技赛场。" }));
     assert.ok(screen.getByRole("heading", { name: "人是球队最重要的内容。" }));
+    assert.ok(screen.getByRole("heading", { name: "范张晨" }));
+    assert.ok(screen.getByText("81"));
+    assert.ok(screen.getByText("FAN"));
+    assert.ok(screen.getByRole("heading", { name: "Thabang Mathaba" }));
+    assert.ok(screen.getByText("99"));
+    assert.ok(screen.getByText("高兴"));
     assert.equal(screen.queryByText("球队经理——陶YF"), null);
     assert.equal(screen.queryByText("微信 t90507002fyt"), null);
     assert.equal(

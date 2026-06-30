@@ -63,4 +63,43 @@ describe("PUBLIC_SITE_CONTENT", () => {
     assert.ok(PUBLIC_SITE_CONTENT.history.story.length > 0);
     assert.ok(PUBLIC_SITE_CONTENT.history.awards.length > 0);
   });
+
+  it("publishes the complete homepage jersey-number wall", () => {
+    assert.equal(PUBLIC_SITE_CONTENT.members.length, 30);
+    assert.deepEqual(
+      PUBLIC_SITE_CONTENT.members.map((member) => [member.name, member.number, member.nickname]),
+      [
+        ["范张晨", "81", "FAN"],
+        ["林承业", "27", "AYE"],
+        ["王薪源", "32", "YUAN"],
+        ["鲍亦青", "2", "BOB"],
+        ["陈家辉", "6", "Frank"],
+        ["程思远", "42", "Arcsin"],
+        ["赵伯豪", "88", "ZHAO"],
+        ["陈菲娅", "7", "BanBan"],
+        ["李雨杭", "15", "Apostle"],
+        ["姚智宇", "44", "HuaLIN"],
+        ["周轩", "91", "Jiang"],
+        ["刘渝川", "8", "LYC"],
+        ["王婵", "3", "Chan"],
+        ["王哲鹏", "24", "Jim"],
+        ["向子鑫", "11", "Zachary"],
+        ["陶怡帆", "59", "MIZUKI"],
+        ["贾云博", "10", "Safridi"],
+        ["丁舒杰", "31", "D.SHUJIE"],
+        ["朱兆磊", "13", "ZZL"],
+        ["Jonathan Fenly", "26", "Autumn"],
+        ["常悦", "45", "Chang Yue"],
+        ["周承臻", "77", "S"],
+        ["王翰林", "75", "Tiamo"],
+        ["郑海冰", "66", "ZHB"],
+        ["韦语丝", "22", "CLAW"],
+        ["jorge", "33", "holuhe"],
+        ["陈靖韡", "30", "Venokos"],
+        ["Thabang Mathaba", "99", "高兴"],
+        ["徐玙航", "12", "YUAN"],
+        ["Loki", "9", "LOKI"],
+      ],
+    );
+  });
 });

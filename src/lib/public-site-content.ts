@@ -74,6 +74,7 @@ export type PublicSiteContent = {
   members: Array<{
     number: string;
     name: string;
+    nickname?: string;
     role: string;
     note: string;
     tone: "captain" | "vice" | "manager" | "active" | "open";
@@ -117,7 +118,7 @@ export const PUBLIC_SITE_CONTENT: PublicSiteContent = {
     title: "一支从 2026 年春天出发的校园棒球队。",
     body: [
       "哈工深小熊猫棒球队成立于 2026 年 4 月，是一支由哈尔滨工业大学（深圳）学生组成的校园棒球队。球队希望通过棒球训练、校际交流和赛事参与，为同学们提供一个充实生活、锻炼身体、建立团队连接的运动空间。",
-      "作为一支新队伍，我们珍惜每一次训练，也认真记录每一次比赛。球队目前拥有 20+ 名成员，并以团结奋进的姿态，向省级赛事舞台迈进。",
+      "作为一支新队伍，我们珍惜每一次训练，也认真记录每一次比赛。球队目前拥有 30 名成员，并以团结奋进的姿态，向省级赛事舞台迈进。",
     ],
     tags: ["校园球队", "团结奋进", "向省赛进发", "新手友好"],
   },
@@ -130,8 +131,8 @@ export const PUBLIC_SITE_CONTENT: PublicSiteContent = {
     },
     {
       label: "现役成员",
-      value: "20+",
-      detail: "以大一为主，覆盖研一至博五，也有毕业学长回到训练场。",
+      value: "30",
+      detail: "号码墙记录 30 位队员的姓名、背号与昵称。",
       tone: "green",
     },
     {
@@ -208,12 +209,36 @@ export const PUBLIC_SITE_CONTENT: PublicSiteContent = {
     { title: "训后复盘", detail: "通过讨论总结配合、守备、打击和跑垒问题，让训练沉淀为进步。" },
   ],
   members: [
-    { number: "1", name: "贾云博", role: "首任队长", note: "球队发起人之一，负责训练与比赛组织。", tone: "captain" },
-    { number: "7", name: "丁舒杰", role: "副队长", note: "协助训练安排与赛事协调。", tone: "vice" },
-    { number: "10", name: "陶怡帆", role: "经理", note: "负责后勤、招新与对外联络。", tone: "manager" },
-    { number: "3", name: "现役队员", role: "20+ 成员", note: "号码墙持续记录球队成长。", tone: "active" },
-    { number: "11", name: "现役队员", role: "新生力量", note: "从基础动作开始，逐步进入实战。", tone: "active" },
-    { number: "+", name: "更多队员", role: "正在加入", note: "下一件队服，等待新的背号。", tone: "open" },
+    { number: "81", name: "范张晨", nickname: "FAN", role: "队员", note: "Nickname · FAN", tone: "active" },
+    { number: "27", name: "林承业", nickname: "AYE", role: "队员", note: "Nickname · AYE", tone: "active" },
+    { number: "32", name: "王薪源", nickname: "YUAN", role: "队员", note: "Nickname · YUAN", tone: "active" },
+    { number: "2", name: "鲍亦青", nickname: "BOB", role: "队员", note: "Nickname · BOB", tone: "active" },
+    { number: "6", name: "陈家辉", nickname: "Frank", role: "队员", note: "Nickname · Frank", tone: "active" },
+    { number: "42", name: "程思远", nickname: "Arcsin", role: "队员", note: "Nickname · Arcsin", tone: "active" },
+    { number: "88", name: "赵伯豪", nickname: "ZHAO", role: "队员", note: "Nickname · ZHAO", tone: "active" },
+    { number: "7", name: "陈菲娅", nickname: "BanBan", role: "队员", note: "Nickname · BanBan", tone: "active" },
+    { number: "15", name: "李雨杭", nickname: "Apostle", role: "队员", note: "Nickname · Apostle", tone: "active" },
+    { number: "44", name: "姚智宇", nickname: "HuaLIN", role: "队员", note: "Nickname · HuaLIN", tone: "active" },
+    { number: "91", name: "周轩", nickname: "Jiang", role: "队员", note: "Nickname · Jiang", tone: "active" },
+    { number: "8", name: "刘渝川", nickname: "LYC", role: "队员", note: "Nickname · LYC", tone: "active" },
+    { number: "3", name: "王婵", nickname: "Chan", role: "队员", note: "Nickname · Chan", tone: "active" },
+    { number: "24", name: "王哲鹏", nickname: "Jim", role: "队员", note: "Nickname · Jim", tone: "active" },
+    { number: "11", name: "向子鑫", nickname: "Zachary", role: "队员", note: "Nickname · Zachary", tone: "active" },
+    { number: "59", name: "陶怡帆", nickname: "MIZUKI", role: "队员", note: "Nickname · MIZUKI", tone: "active" },
+    { number: "10", name: "贾云博", nickname: "Safridi", role: "队员", note: "Nickname · Safridi", tone: "active" },
+    { number: "31", name: "丁舒杰", nickname: "D.SHUJIE", role: "队员", note: "Nickname · D.SHUJIE", tone: "active" },
+    { number: "13", name: "朱兆磊", nickname: "ZZL", role: "队员", note: "Nickname · ZZL", tone: "active" },
+    { number: "26", name: "Jonathan Fenly", nickname: "Autumn", role: "队员", note: "Nickname · Autumn", tone: "active" },
+    { number: "45", name: "常悦", nickname: "Chang Yue", role: "队员", note: "Nickname · Chang Yue", tone: "active" },
+    { number: "77", name: "周承臻", nickname: "S", role: "队员", note: "Nickname · S", tone: "active" },
+    { number: "75", name: "王翰林", nickname: "Tiamo", role: "队员", note: "Nickname · Tiamo", tone: "active" },
+    { number: "66", name: "郑海冰", nickname: "ZHB", role: "队员", note: "Nickname · ZHB", tone: "active" },
+    { number: "22", name: "韦语丝", nickname: "CLAW", role: "队员", note: "Nickname · CLAW", tone: "active" },
+    { number: "33", name: "jorge", nickname: "holuhe", role: "队员", note: "Nickname · holuhe", tone: "active" },
+    { number: "30", name: "陈靖韡", nickname: "Venokos", role: "队员", note: "Nickname · Venokos", tone: "active" },
+    { number: "99", name: "Thabang Mathaba", nickname: "高兴", role: "队员", note: "Nickname · 高兴", tone: "active" },
+    { number: "12", name: "徐玙航", nickname: "YUAN", role: "队员", note: "Nickname · YUAN", tone: "active" },
+    { number: "9", name: "Loki", nickname: "LOKI", role: "队员", note: "Nickname · LOKI", tone: "active" },
   ],
   gallery: [
     {
