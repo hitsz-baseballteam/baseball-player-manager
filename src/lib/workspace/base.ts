@@ -155,6 +155,7 @@ export function createDefaultPublicHomeConfig(): Workspace["preferences"]["publi
     contacts: structuredClone(PUBLIC_SITE_CONTENT.contacts),
     faq: structuredClone(PUBLIC_SITE_CONTENT.faq),
     history: structuredClone(PUBLIC_SITE_CONTENT.history),
+    members: structuredClone(PUBLIC_SITE_CONTENT.members),
     feeds: {
       milestones: { enabled: true, maxCount: 3 },
       games: { enabled: true, maxCount: 3, gameTypes: ["official"] },

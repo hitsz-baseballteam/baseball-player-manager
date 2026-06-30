@@ -14,6 +14,7 @@ import { sanitizePublicHomeConfig } from "@/lib/workspace/sanitizers";
 import type { Workspace } from "@/lib/workspace";
 
 const contactTypeSchema = z.enum(["wechat-group", "email", "social"]);
+const memberToneSchema = z.enum(["captain", "vice", "manager", "active", "open"]);
 
 const trainingInfoSchema = z.object({
   schedule: z.string().max(200),
@@ -42,6 +43,15 @@ const historySchema = z.object({
   awards: z.array(z.string().max(200)).max(50),
 });
 
+const memberSchema = z.object({
+  number: z.string().max(4),
+  name: z.string().max(48),
+  nickname: z.string().max(32).optional(),
+  role: z.string().max(24),
+  note: z.string().max(120),
+  tone: memberToneSchema,
+});
+
 const feedsSchema = z.object({
   milestones: z.object({
     enabled: z.boolean(),
@@ -59,6 +69,7 @@ const publicHomeConfigSchema = z.object({
   contacts: z.array(contactSchema).max(20),
   faq: z.array(faqSchema).max(30),
   history: historySchema,
+  members: z.array(memberSchema).max(60),
   feeds: feedsSchema,
 });
 

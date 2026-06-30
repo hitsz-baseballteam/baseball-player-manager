@@ -133,6 +133,17 @@ export type Scenario = {
   updatedAt: string;
 };
 
+export type PublicHomeMemberTone = "captain" | "vice" | "manager" | "active" | "open";
+
+export type PublicHomeMember = {
+  number: string;
+  name: string;
+  nickname?: string;
+  role: string;
+  note: string;
+  tone: PublicHomeMemberTone;
+};
+
 export type PublicHomeConfig = {
   training: {
     schedule: string;
@@ -157,6 +168,7 @@ export type PublicHomeConfig = {
     story: string;
     awards: string[];
   };
+  members: PublicHomeMember[];
   feeds: {
     milestones: {
       enabled: boolean;

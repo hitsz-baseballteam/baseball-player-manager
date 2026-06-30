@@ -100,6 +100,43 @@ describe("SettingsPageClient", () => {
     assert.equal(fetchCalls[0]?.init?.method, "POST");
   });
 
+  it("saves homepage member edits through workspace preferences", async () => {
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      fetchCalls.push({ input: String(input), init });
+      const body = JSON.parse(String(init?.body ?? "{}"));
+      return Response.json({
+        workspace: {
+          ...workspace,
+          preferences: {
+            ...workspace.preferences,
+            publicHomeConfig: body.publicHomeConfig,
+          },
+        },
+        version: 8,
+        updatedAt: "2026-06-30T00:00:00.000Z",
+      });
+    }) as typeof fetch;
+
+    render(
+      <SettingsPageClient
+        initialWorkspace={workspace}
+        initialVersion={7}
+      />,
+    );
+
+    await act(async () => {
+      fireEvent.change(screen.getAllByLabelText("昵称")[0], { target: { value: "CMS" } });
+      fireEvent.click(screen.getByRole("button", { name: "保存主页配置" }));
+    });
+
+    assert.equal(fetchCalls.length, 1);
+    assert.equal(fetchCalls[0]?.input, "/api/workspace/preferences");
+    assert.equal(fetchCalls[0]?.init?.method, "PATCH");
+    const payload = JSON.parse(String(fetchCalls[0]?.init?.body ?? "{}"));
+    assert.equal(payload.version, 7);
+    assert.equal(payload.publicHomeConfig.members[0].nickname, "CMS");
+  });
+
   it("clicking 重新播放引导 is no longer a settings-page action", () => {
     render(
       <SettingsPageClient

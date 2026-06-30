@@ -192,7 +192,8 @@
 }
 
 .milestoneField input,
-.milestoneField textarea {
+.milestoneField textarea,
+.milestoneField select {
   padding: 8px 10px;
   border: 1px solid var(--theme-border);
   border-radius: 6px;
@@ -203,7 +204,8 @@
 }
 
 .milestoneField input:focus,
-.milestoneField textarea:focus {
+.milestoneField textarea:focus,
+.milestoneField select:focus {
   outline: none;
   border-color: var(--theme-accent);
 }
@@ -228,7 +230,8 @@
     grid-template-columns: 1fr;
   }
 
-  .stats {
+  .stats,
+  .memberEditorGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -245,6 +248,40 @@
   color: var(--theme-accent);
   font-size: 16px;
   font-weight: 800;
+}
+
+.memberEditorList {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.memberEditor {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+}
+
+.memberEditor legend {
+  padding: 0 6px;
+  color: var(--theme-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.memberEditorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.memberActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .toggleRow {

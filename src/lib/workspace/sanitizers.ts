@@ -22,6 +22,8 @@ import {
   type Player,
   type PlayerProfile,
   type PlayerStatus,
+  type PublicHomeMember,
+  type PublicHomeMemberTone,
   type PositionCode,
   type Scenario,
   type ScenarioAssignments,
@@ -280,8 +282,49 @@ export function sanitizePublicHomeConfig(
     contacts: sanitizeContacts(source.contacts),
     faq: sanitizeFaq(source.faq),
     history: sanitizeHistory(source.history),
+    members: sanitizePublicHomeMembers(source.members),
     feeds: sanitizeFeeds(source.feeds),
   };
+}
+
+const PUBLIC_HOME_MEMBER_TONES: PublicHomeMemberTone[] = [
+  "captain",
+  "vice",
+  "manager",
+  "active",
+  "open",
+];
+
+function sanitizePublicHomeMembers(
+  value: unknown,
+): Workspace["preferences"]["publicHomeConfig"]["members"] {
+  const defaults = createDefaultPublicHomeConfig().members;
+  if (!Array.isArray(value)) {
+    return defaults;
+  }
+
+  const members = value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === "object")
+    .map((item): PublicHomeMember => {
+      const nickname = typeof item.nickname === "string"
+        ? item.nickname.trim().slice(0, 32)
+        : "";
+      const tone = PUBLIC_HOME_MEMBER_TONES.includes(item.tone as PublicHomeMemberTone)
+        ? (item.tone as PublicHomeMemberTone)
+        : "active";
+      return {
+        number: String(item.number ?? "").trim().slice(0, 4),
+        name: String(item.name ?? "").trim().slice(0, 48),
+        ...(nickname ? { nickname } : {}),
+        role: String(item.role ?? "队员").trim().slice(0, 24) || "队员",
+        note: String(item.note ?? "").trim().slice(0, 120),
+        tone,
+      };
+    })
+    .filter((member) => Boolean(member.number && member.name))
+    .slice(0, 60);
+
+  return members.length > 0 ? members : defaults;
 }
 
 function sanitizeTrainingInfo(
