@@ -10,6 +10,8 @@ import {
   createMilestone,
   timestampFilePart,
   type PendingImport,
+  type PublicHomeMember,
+  type PublicHomeMemberTone,
   type Workspace,
 } from "@/lib/workspace";
 import {
@@ -462,6 +464,11 @@ function PublicHomeConfigCard({
   const [feedGamesMax, setFeedGamesMax] = useState(
     String(workspace.preferences.publicHomeConfig.feeds.games.maxCount),
   );
+  const [members, setMembers] = useState<PublicHomeMember[]>(() =>
+    workspace.preferences.publicHomeConfig.members.map((member) => ({ ...member })),
+  );
+
+  const membersDirty = JSON.stringify(members) !== JSON.stringify(workspace.preferences.publicHomeConfig.members);
 
   const dirty =
     schedule !== workspace.preferences.publicHomeConfig.training.schedule ||
@@ -470,7 +477,37 @@ function PublicHomeConfigCard({
     feedMilestonesEnabled !== workspace.preferences.publicHomeConfig.feeds.milestones.enabled ||
     feedMilestonesMax !== String(workspace.preferences.publicHomeConfig.feeds.milestones.maxCount) ||
     feedGamesEnabled !== workspace.preferences.publicHomeConfig.feeds.games.enabled ||
-    feedGamesMax !== String(workspace.preferences.publicHomeConfig.feeds.games.maxCount);
+    feedGamesMax !== String(workspace.preferences.publicHomeConfig.feeds.games.maxCount) ||
+    membersDirty;
+
+  function updateMember(index: number, patch: Partial<PublicHomeMember>) {
+    setMembers((current) => current.map((member, memberIndex) => (
+      memberIndex === index ? { ...member, ...patch } : member
+    )));
+  }
+
+  function addMember() {
+    setMembers((current) => [
+      ...current,
+      { number: "", name: "", nickname: "", role: "队员", note: "", tone: "active" },
+    ]);
+  }
+
+  function removeMember(index: number) {
+    setMembers((current) => current.filter((_, memberIndex) => memberIndex !== index));
+  }
+
+  function moveMember(index: number, delta: -1 | 1) {
+    setMembers((current) => {
+      const nextIndex = index + delta;
+      if (nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      const [member] = next.splice(index, 1);
+      if (!member) return current;
+      next.splice(nextIndex, 0, member);
+      return next;
+    });
+  }
 
   async function handleSave() {
     onSavingChange(true);
@@ -483,6 +520,7 @@ function PublicHomeConfigCard({
           location,
           note,
         },
+        members,
         feeds: {
           milestones: {
             enabled: feedMilestonesEnabled,
@@ -545,6 +583,97 @@ function PublicHomeConfigCard({
             placeholder="例如：雨天会提前在群里通知是否改室内训练"
           />
         </label>
+      </div>
+
+      <div className={styles.configGroup}>
+        <h3 className={styles.configGroupTitle}>号码墙</h3>
+        <p className={styles.description}>维护公开主页成员墙的姓名、背号与昵称。保存后公开主页立即使用这份配置。</p>
+        <div className={styles.memberEditorList}>
+          {members.map((member, index) => (
+            <fieldset key={`${index}-${member.number}-${member.name}`} className={styles.memberEditor}>
+              <legend>成员 {index + 1}</legend>
+              <div className={styles.memberEditorGrid}>
+                <label className={styles.milestoneField}>
+                  <span>背号</span>
+                  <input
+                    value={member.number}
+                    onChange={(e) => updateMember(index, { number: e.target.value })}
+                    maxLength={4}
+                    placeholder="81"
+                  />
+                </label>
+                <label className={styles.milestoneField}>
+                  <span>姓名</span>
+                  <input
+                    value={member.name}
+                    onChange={(e) => updateMember(index, { name: e.target.value })}
+                    maxLength={48}
+                    placeholder="范张晨"
+                  />
+                </label>
+                <label className={styles.milestoneField}>
+                  <span>昵称</span>
+                  <input
+                    value={member.nickname ?? ""}
+                    onChange={(e) => updateMember(index, { nickname: e.target.value })}
+                    maxLength={32}
+                    placeholder="FAN"
+                  />
+                </label>
+                <label className={styles.milestoneField}>
+                  <span>角色</span>
+                  <input
+                    value={member.role}
+                    onChange={(e) => updateMember(index, { role: e.target.value })}
+                    maxLength={24}
+                    placeholder="队员"
+                  />
+                </label>
+                <label className={styles.milestoneField}>
+                  <span>样式</span>
+                  <select
+                    value={member.tone}
+                    onChange={(e) => updateMember(index, { tone: e.target.value as PublicHomeMemberTone })}
+                  >
+                    <option value="active">普通</option>
+                    <option value="captain">队长</option>
+                    <option value="vice">副队长</option>
+                    <option value="manager">经理</option>
+                    <option value="open">开放位</option>
+                  </select>
+                </label>
+                <label className={styles.milestoneField}>
+                  <span>备注</span>
+                  <input
+                    value={member.note}
+                    onChange={(e) => updateMember(index, { note: e.target.value })}
+                    maxLength={120}
+                    placeholder="Nickname · FAN"
+                  />
+                </label>
+              </div>
+              <div className={styles.memberActions}>
+                <button type="button" className={styles.btnSecondary} onClick={() => moveMember(index, -1)} disabled={index === 0 || isSaving}>
+                  上移
+                </button>
+                <button type="button" className={styles.btnSecondary} onClick={() => moveMember(index, 1)} disabled={index === members.length - 1 || isSaving}>
+                  下移
+                </button>
+                <button type="button" className={styles.btnSmallDanger} onClick={() => removeMember(index)} disabled={members.length <= 1 || isSaving}>
+                  删除
+                </button>
+              </div>
+            </fieldset>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={styles.btnSecondary}
+          onClick={addMember}
+          disabled={members.length >= 60 || isSaving}
+        >
+          添加成员
+        </button>
       </div>
 
       <div className={styles.configGroup}>

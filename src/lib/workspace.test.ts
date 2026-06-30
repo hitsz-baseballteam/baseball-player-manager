@@ -8,6 +8,7 @@ import {
   createEmptyAssignments,
   removePlayersFromWorkspace,
   sanitizePlayers,
+  sanitizePublicHomeConfig,
   sanitizeScenario,
   sanitizeWorkspace,
 } from "./workspace";
@@ -87,6 +88,38 @@ describe("workspace sanitizers", () => {
     assert.equal(workspace.version, 3);
     assert.equal(workspace.scenarios.length, 1);
     assert.equal(workspace.players.length, 0);
+  });
+
+  it("sanitizes public homepage members", () => {
+    const config = sanitizePublicHomeConfig({
+      training: { schedule: "周五", location: "球场", whatToBring: [], whatWeProvide: [], note: "" },
+      contacts: [],
+      faq: [],
+      history: { foundedYear: 2026, story: "球队故事", awards: [] },
+      members: [
+        {
+          number: "12345",
+          name: "测试队员".repeat(20),
+          nickname: "NICKNAME".repeat(10),
+          role: "超级长角色".repeat(10),
+          note: "备注".repeat(100),
+          tone: "invalid",
+        },
+        { number: "", name: "无背号", role: "队员", note: "", tone: "active" },
+      ],
+      feeds: {
+        milestones: { enabled: true, maxCount: 3 },
+        games: { enabled: true, maxCount: 3, gameTypes: ["official"] },
+      },
+    });
+
+    assert.equal(config.members.length, 1);
+    assert.equal(config.members[0].number, "1234");
+    assert.equal(config.members[0].name.length, 48);
+    assert.equal(config.members[0].nickname?.length, 32);
+    assert.equal(config.members[0].role.length, 24);
+    assert.equal(config.members[0].note.length, 120);
+    assert.equal(config.members[0].tone, "active");
   });
 
   it("sanitizes scenario assignments against valid player ids", () => {

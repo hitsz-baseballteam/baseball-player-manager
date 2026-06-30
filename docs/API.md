@@ -677,9 +677,21 @@ Request body:
 ```json
 {
   "version": 114,
-  "helpDismissed": true
+  "helpDismissed": true,
+  "publicHomeConfig": {
+    "training": { "schedule": "每周五 16:00–18:00", "location": "哈工深足球场", "whatToBring": ["运动服"], "whatWeProvide": ["球棒"], "note": "欢迎体验" },
+    "contacts": [],
+    "faq": [],
+    "history": { "foundedYear": 2026, "story": "球队故事", "awards": [] },
+    "members": [
+      { "number": "81", "name": "范张晨", "nickname": "FAN", "role": "队员", "note": "Nickname · FAN", "tone": "active" }
+    ],
+    "feeds": { "milestones": { "enabled": true, "maxCount": 3 }, "games": { "enabled": true, "maxCount": 3, "gameTypes": ["official"] } }
+  }
 }
 ```
+
+`publicHomeConfig.members` drives the public homepage number wall. The API accepts up to 60 members; each member includes `number`, `name`, optional `nickname`, `role`, `note`, and `tone` (`captain` / `vice` / `manager` / `active` / `open`).
 
 Success response:
 

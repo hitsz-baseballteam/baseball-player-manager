@@ -15,6 +15,14 @@ Last updated: 2026-06-24
 
 ## Recent changes
 
+### 2026-06-30 — Phase 1 homepage number wall backendization
+
+- Extended `PublicHomeConfig` with `members` so the public homepage number wall can be edited from `/panel/settings`.
+- Added sanitization and API schema coverage for up to 60 homepage members, including nickname and visual tone fields.
+- Updated `PublicHome` to prefer configured members with static content as fallback.
+- Added tests for config-driven homepage rendering, member sanitization, and settings-page save payloads.
+- Verification: targeted tests pass; `npm run build` succeeds; `npm run lint` remains at 0 errors with pre-existing warnings.
+
 ### 2026-06-24 — Phase 1 public homepage static content enhancement
 
 - Extended `src/lib/public-site-content.ts` with typed `TrainingInfo`, `ContactChannel`, `FaqItem`, and `TeamHistory` structures.
@@ -41,4 +49,4 @@ Last updated: 2026-06-24
 ## Known debt
 
 - 15 lint warnings in pre-existing files (not introduced by this change).
-- Public homepage content is still static; Phase 2 will wire it to workspace preferences and expose milestones/games.
+- Some public homepage sections remain static (`hero`, `intro`, `stats`, `timeline`, `firstMatch`, `trainingSteps`, `culture`, `gallery`); members, training, contacts, FAQ, history, milestones, and games now flow through workspace preferences or public feeds.

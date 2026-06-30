@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 
 import { PUBLIC_SITE_CONTENT as content } from "@/lib/public-site-content";
+import { createDefaultPublicHomeConfig } from "@/lib/workspace/base";
 
 let PublicHome: typeof import("@/components/public-home").PublicHome;
 
@@ -73,6 +74,29 @@ describe("PublicHome", () => {
       "/panel",
     );
     assert.equal(screen.queryByText("管理员口令"), null);
+  });
+
+  it("renders configured homepage members before static fallback members", () => {
+    const config = {
+      ...createDefaultPublicHomeConfig(),
+      members: [
+        {
+          number: "00",
+          name: "后台队员",
+          nickname: "CMS",
+          role: "队员",
+          note: "后台配置成员",
+          tone: "active" as const,
+        },
+      ],
+    };
+
+    render(<PublicHome config={config} />);
+
+    assert.ok(screen.getByRole("heading", { name: "后台队员" }));
+    assert.ok(screen.getByText("00"));
+    assert.ok(screen.getByText("CMS"));
+    assert.equal(screen.queryByRole("heading", { name: "范张晨" }), null);
   });
 
   it("renders navigation anchors for every major section", () => {

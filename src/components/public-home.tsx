@@ -55,6 +55,7 @@ function resolveContent(
   const contacts = config?.contacts ?? staticContent.contacts;
   const faq = config?.faq ?? staticContent.faq;
   const history = config?.history ?? staticContent.history;
+  const members = config?.members ?? staticContent.members;
 
   return {
     ...staticContent,
@@ -62,6 +63,7 @@ function resolveContent(
     contacts,
     faq,
     history,
+    members,
     milestones: milestones ?? [],
     games: games ?? [],
   };

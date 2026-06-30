@@ -1,3 +1,5 @@
+import type { PublicHomeMember } from "@/lib/workspace/types";
+
 export type TrainingInfo = {
   schedule: string;
   location: string;
@@ -71,14 +73,7 @@ export type PublicSiteContent = {
     title: string;
     detail: string;
   }>;
-  members: Array<{
-    number: string;
-    name: string;
-    nickname?: string;
-    role: string;
-    note: string;
-    tone: "captain" | "vice" | "manager" | "active" | "open";
-  }>;
+  members: PublicHomeMember[];
   gallery: Array<{
     id: string;
     category: "match" | "training" | "group" | "detail";
