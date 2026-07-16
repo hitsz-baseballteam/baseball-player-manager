@@ -310,8 +310,8 @@ export const PUBLIC_SITE_CONTENT: PublicSiteContent = {
     {
       type: "email",
       label: "球队邮箱",
-      value: "hitsz.baseball@example.com",
-      href: "mailto:hitsz.baseball@example.com",
+      value: "hi@hitsz-baseball.online",
+      href: "mailto:hi@hitsz-baseball.online",
     },
     {
       type: "social",
