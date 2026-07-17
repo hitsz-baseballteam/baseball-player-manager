@@ -92,14 +92,40 @@ export function PublicHome(props: PublicHomeProps) {
   const progressRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  const CARDS_VISIBLE = 4;
+  const [cardsVisible, setCardsVisible] = useState(5);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    function updateVisible() {
+      if (typeof window === "undefined") return;
+      if (window.innerWidth <= 620) {
+        setCardsVisible(3);
+      } else if (window.innerWidth <= 900) {
+        setCardsVisible(4);
+      } else {
+        setCardsVisible(5);
+      }
+    }
+    updateVisible();
+    window.addEventListener("resize", updateVisible);
+    return () => window.removeEventListener("resize", updateVisible);
+  }, []);
 
   const content = useMemo(
     () => resolveContent(config, milestones, games),
     [config, milestones, games],
   );
 
-  const carouselMaxIndex = Math.max(0, (content.members?.length ?? 0) - CARDS_VISIBLE);
+  const carouselMaxIndex = Math.max(0, (content.members?.length ?? 0) - cardsVisible);
+
+  // Auto-play timer
+  useEffect(() => {
+    if (isPaused || carouselMaxIndex <= 0) return;
+    const interval = setInterval(() => {
+      setCarouselIndex((i) => (i >= carouselMaxIndex ? 0 : i + 1));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [carouselMaxIndex, isPaused]);
 
   const carouselPrev = useCallback(() => {
     setCarouselIndex((i) => Math.max(0, i - 1));
@@ -110,10 +136,12 @@ export function PublicHome(props: PublicHomeProps) {
   }, [carouselMaxIndex]);
 
   function handleCarouselTouchStart(e: React.TouchEvent) {
+    setIsPaused(true);
     touchStartX.current = e.touches[0]?.clientX ?? null;
   }
 
   function handleCarouselTouchEnd(e: React.TouchEvent) {
+    setIsPaused(false);
     if (touchStartX.current === null) return;
     const delta = touchStartX.current - (e.changedTouches[0]?.clientX ?? 0);
     if (Math.abs(delta) > 40) {
@@ -519,7 +547,11 @@ export function PublicHome(props: PublicHomeProps) {
           <h2>人是球队最重要的内容。</h2>
         </div>
         <div className={revealClass("members", visibleSections)}>
-          <div className={styles.carouselRoot}>
+          <div
+            className={styles.carouselRoot}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+          >
             <button
               type="button"
               className={styles.carouselPrev}
@@ -538,7 +570,7 @@ export function PublicHome(props: PublicHomeProps) {
               <div
                 className={styles.carouselTrack}
                 style={{
-                  transform: `translateX(calc(-${carouselIndex} * (100% / ${CARDS_VISIBLE})))`,
+                  transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible})))`,
                 }}
               >
                 {content.members.map((member) => (

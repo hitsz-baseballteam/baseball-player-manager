@@ -969,7 +969,7 @@
 }
 
 .carouselCard {
-  flex: 0 0 calc((100% - 42px) / 4); /* 4 cards, 3 gaps × 14px */
+  flex: 0 0 calc((100% - 56px) / 5); /* 5 cards, 4 gaps × 14px */
 }
 
 .carouselPrev,
@@ -1036,8 +1036,8 @@
 
 .jersey {
   position: relative;
-  min-height: 230px;
-  padding: 18px;
+  min-height: 190px;
+  padding: 12px;
   overflow: hidden;
   border: 1px solid rgba(8, 50, 79, 0.14);
   border-radius: 22px;
@@ -1061,40 +1061,40 @@
 
 .jerseyRole {
   display: inline-block;
-  padding: 6px 9px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 
 .jersey strong {
   display: block;
-  margin-top: 24px;
+  margin-top: 12px;
   font-family: var(--font-ui), sans-serif;
-  font-size: clamp(54px, 6vw, 92px);
+  font-size: clamp(38px, 4vw, 52px);
   font-weight: 950;
   line-height: 0.9;
 }
 
 .jersey h3 {
-  margin: 18px 0 0;
-  font-size: 20px;
+  margin: 10px 0 0;
+  font-size: 16px;
 }
 
 .jerseyNickname {
   display: inline-block;
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 2px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .jersey p {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .captain,
@@ -1746,7 +1746,7 @@
   }
 
   .carouselCard {
-    flex: 0 0 calc((100% - 28px) / 3); /* 3 cards on tablet */
+    flex: 0 0 calc((100% - 42px) / 4); /* 4 cards on tablet */
   }
 
   .footer {
@@ -1786,7 +1786,7 @@
   }
 
   .carouselCard {
-    flex: 0 0 calc((100% - 14px) / 2); /* 2 cards on mobile */
+    flex: 0 0 calc((100% - 28px) / 3); /* 3 cards on mobile */
   }
 
   .carouselPrev,
@@ -1796,9 +1796,11 @@
     font-size: 22px;
   }
 
-  .statCard,
-  .jersey {
+  .statCard {
     min-height: 220px;
+  }
+  .jersey {
+    min-height: 180px;
   }
 
   .trainingStepper {
