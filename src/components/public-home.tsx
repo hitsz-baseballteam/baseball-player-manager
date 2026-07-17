@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowRight,
   Baseball,
@@ -82,12 +88,40 @@ export function PublicHome(props: PublicHomeProps) {
   const [activeStep, setActiveStep] = useState(staticContent.trainingSteps[0]?.number ?? "01");
   const [galleryFilter, setGalleryFilter] = useState<GalleryCategory>("all");
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const progressRef = useRef<HTMLDivElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  const CARDS_VISIBLE = 4;
 
   const content = useMemo(
     () => resolveContent(config, milestones, games),
     [config, milestones, games],
   );
+
+  const carouselMaxIndex = Math.max(0, (content.members?.length ?? 0) - CARDS_VISIBLE);
+
+  const carouselPrev = useCallback(() => {
+    setCarouselIndex((i) => Math.max(0, i - 1));
+  }, []);
+
+  const carouselNext = useCallback(() => {
+    setCarouselIndex((i) => Math.min(carouselMaxIndex, i + 1));
+  }, [carouselMaxIndex]);
+
+  function handleCarouselTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  }
+
+  function handleCarouselTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return;
+    const delta = touchStartX.current - (e.changedTouches[0]?.clientX ?? 0);
+    if (Math.abs(delta) > 40) {
+      if (delta > 0) carouselNext();
+      else carouselPrev();
+    }
+    touchStartX.current = null;
+  }
 
   const filteredGallery = useMemo(() => {
     if (galleryFilter === "all") return content.gallery;
@@ -484,16 +518,70 @@ export function PublicHome(props: PublicHomeProps) {
           <p className={styles.eyebrow}>NUMBER WALL</p>
           <h2>人是球队最重要的内容。</h2>
         </div>
-        <div className={`${styles.membersWall} ${revealClass("members", visibleSections)}`}>
-          {content.members.map((member) => (
-            <article key={`${member.number}-${member.name}`} className={`${styles.jersey} ${styles[member.tone]}`}>
-              <span className={styles.jerseyRole}>{member.role}</span>
-              <strong>{member.number}</strong>
-              <h3>{member.name}</h3>
-              {member.nickname && <span className={styles.jerseyNickname}>{member.nickname}</span>}
-              <p>{member.note}</p>
-            </article>
-          ))}
+        <div className={revealClass("members", visibleSections)}>
+          <div className={styles.carouselRoot}>
+            <button
+              type="button"
+              className={styles.carouselPrev}
+              aria-label="上一位"
+              onClick={carouselPrev}
+              disabled={carouselIndex === 0}
+            >
+              ‹
+            </button>
+
+            <div
+              className={styles.carouselViewport}
+              onTouchStart={handleCarouselTouchStart}
+              onTouchEnd={handleCarouselTouchEnd}
+            >
+              <div
+                className={styles.carouselTrack}
+                style={{
+                  transform: `translateX(calc(-${carouselIndex} * (100% / ${CARDS_VISIBLE})))`,
+                }}
+              >
+                {content.members.map((member) => (
+                  <article
+                    key={`${member.number}-${member.name}`}
+                    className={`${styles.jersey} ${styles[member.tone]} ${styles.carouselCard}`}
+                  >
+                    <span className={styles.jerseyRole}>{member.role}</span>
+                    <strong>{member.number}</strong>
+                    <h3>{member.name}</h3>
+                    {member.nickname && (
+                      <span className={styles.jerseyNickname}>{member.nickname}</span>
+                    )}
+                    <p>{member.note}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.carouselNext}
+              aria-label="下一位"
+              onClick={carouselNext}
+              disabled={carouselIndex >= carouselMaxIndex}
+            >
+              ›
+            </button>
+          </div>
+
+          {carouselMaxIndex > 0 && (
+            <div className={styles.carouselDots} aria-label="轮播页面指示">
+              {Array.from({ length: carouselMaxIndex + 1 }).map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={i === carouselIndex ? styles.dotActive : styles.dot}
+                  aria-label={`跳转到第 ${i + 1} 页`}
+                  onClick={() => setCarouselIndex(i)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

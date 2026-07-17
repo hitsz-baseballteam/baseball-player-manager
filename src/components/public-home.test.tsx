@@ -76,6 +76,23 @@ describe("PublicHome", () => {
     assert.equal(screen.queryByText("管理员口令"), null);
   });
 
+  it("renders member carousel with navigation buttons", () => {
+    render(<PublicHome />);
+
+    // All member cards are still present in the DOM (carousel uses CSS overflow, not conditional rendering)
+    assert.ok(screen.getByRole("heading", { name: "范张晨" }));
+
+    // Carousel arrow buttons exist
+    assert.ok(screen.getByRole("button", { name: "上一位" }));
+    assert.ok(screen.getByRole("button", { name: "下一位" }));
+
+    // First page: prev button is disabled
+    assert.equal(
+      screen.getByRole("button", { name: "上一位" }).hasAttribute("disabled"),
+      true,
+    );
+  });
+
   it("renders configured homepage members before static fallback members", () => {
     const config = {
       ...createDefaultPublicHomeConfig(),
