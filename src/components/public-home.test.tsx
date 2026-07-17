@@ -38,18 +38,16 @@ describe("PublicHome", () => {
 
     assert.ok(screen.getByRole("heading", { name: "哈工深小熊猫棒球队" }));
     assert.ok(screen.getByText("HITSZ Red Pandas Baseball Team"));
-    assert.ok(screen.getByText("从零起步，向省赛进发。"));
+    assert.ok(screen.getByText("手套、球棒，还有红土场上的风。来和我们一起打棒球吧！"));
     assert.ok(screen.getAllByText("2026.04").length >= 1);
     assert.ok(screen.getAllByText("30").length >= 1);
     assert.ok(screen.getAllByText("2026.05.30").length >= 1);
-    assert.ok(screen.getByRole("heading", { name: "得物王牌棒球赛，第一次站上竞技赛场。" }));
-    assert.ok(screen.getByRole("heading", { name: "人是球队最重要的内容。" }));
-    assert.ok(screen.getByRole("heading", { name: "范张晨" }));
-    assert.ok(screen.getByText("81"));
-    assert.ok(screen.getByText("FAN"));
-    assert.ok(screen.getByRole("heading", { name: "Thabang Mathaba" }));
-    assert.ok(screen.getByText("99"));
-    assert.ok(screen.getByText("高兴"));
+    assert.ok(screen.getByRole("heading", { name: "第一场比赛：没赢，但我们打得很痛快！" }));
+    assert.ok(screen.getByRole("heading", { name: "每一件队服背后的我们" }));
+    assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 1);
+    assert.ok(screen.getAllByText("81").length >= 1);
+    assert.ok(screen.getAllByRole("heading", { name: "Thabang Mathaba" }).length >= 1);
+    assert.ok(screen.getAllByText("99").length >= 1);
     assert.equal(screen.queryByText("球队经理——陶YF"), null);
     assert.equal(screen.queryByText("微信 t90507002fyt"), null);
     assert.equal(
@@ -76,6 +74,13 @@ describe("PublicHome", () => {
     assert.equal(screen.queryByText("管理员口令"), null);
   });
 
+  it("renders member marquee layout", () => {
+    render(<PublicHome />);
+
+    // All member cards are present in the DOM (rendered twice for the infinite marquee scroll)
+    assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 2);
+  });
+
   it("renders configured homepage members before static fallback members", () => {
     const config = {
       ...createDefaultPublicHomeConfig(),
@@ -93,9 +98,8 @@ describe("PublicHome", () => {
 
     render(<PublicHome config={config} />);
 
-    assert.ok(screen.getByRole("heading", { name: "后台队员" }));
-    assert.ok(screen.getByText("00"));
-    assert.ok(screen.getByText("CMS"));
+    assert.ok(screen.getAllByRole("heading", { name: "后台队员" }).length >= 1);
+    assert.ok(screen.getAllByText("00").length >= 1);
     assert.equal(screen.queryByRole("heading", { name: "范张晨" }), null);
   });
 

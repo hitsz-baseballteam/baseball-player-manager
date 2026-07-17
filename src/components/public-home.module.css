@@ -948,18 +948,65 @@
   background: rgba(255, 252, 244, 0.5);
 }
 
-.membersWall {
-  display: grid;
-  max-width: 1180px;
-  margin: 0 auto;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 14px;
+.marqueeContainer {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 16px 0;
+  isolation: isolate;
 }
+
+/* Premium fade gradients on left and right, matching TapData layout */
+.marqueeContainer::before,
+.marqueeContainer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(40px, 10vw, 140px);
+  z-index: 3;
+  content: "";
+  pointer-events: none;
+}
+
+.marqueeContainer::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--public-cream) 18%, rgba(247, 241, 231, 0) 100%);
+}
+
+.marqueeContainer::after {
+  right: 0;
+  background: linear-gradient(-90deg, var(--public-cream) 18%, rgba(247, 241, 231, 0) 100%);
+}
+
+.marqueeTrack {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  animation: marqueeScroll 45s linear infinite;
+}
+
+.marqueeTrack:hover {
+  animation-play-state: paused;
+}
+
+.marqueeCard {
+  flex: 0 0 140px; /* Highly compact fixed width */
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 
 .jersey {
   position: relative;
-  min-height: 230px;
-  padding: 18px;
+  min-height: 130px;
+  padding: 10px;
   overflow: hidden;
   border: 1px solid rgba(8, 50, 79, 0.14);
   border-radius: 22px;
@@ -983,40 +1030,31 @@
 
 .jerseyRole {
   display: inline-block;
-  padding: 6px 9px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 
 .jersey strong {
   display: block;
-  margin-top: 24px;
+  margin-top: 4px;
   font-family: var(--font-ui), sans-serif;
-  font-size: clamp(54px, 6vw, 92px);
+  font-size: clamp(28px, 3.5vw, 38px);
   font-weight: 950;
   line-height: 0.9;
 }
 
 .jersey h3 {
-  margin: 18px 0 0;
-  font-size: 20px;
-}
-
-.jerseyNickname {
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin: 4px 0 0;
+  font-size: 14px;
 }
 
 .jersey p {
-  margin: 8px 0 0;
+  margin: 2px 0 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
+  font-size: 11px;
 }
 
 .captain,
@@ -1697,16 +1735,17 @@
   }
 
   .statsGrid,
-  .membersWall,
   .cultureRow,
   .matchCards,
   .galleryGrid {
     grid-template-columns: 1fr;
   }
 
-  .statCard,
-  .jersey {
+  .statCard {
     min-height: 220px;
+  }
+  .jersey {
+    min-height: 120px;
   }
 
   .trainingStepper {
