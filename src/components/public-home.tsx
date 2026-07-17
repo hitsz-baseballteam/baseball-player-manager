@@ -88,98 +88,17 @@ export function PublicHome(props: PublicHomeProps) {
   const [activeStep, setActiveStep] = useState(staticContent.trainingSteps[0]?.number ?? "01");
   const [galleryFilter, setGalleryFilter] = useState<GalleryCategory>("all");
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [disableTransition, setDisableTransition] = useState(false);
   const progressRef = useRef<HTMLDivElement | null>(null);
-  const touchStartX = useRef<number | null>(null);
-
-  const [cardsVisible, setCardsVisible] = useState(5);
-  const [isPaused, setIsPaused] = useState(false);
-
-  useEffect(() => {
-    function updateVisible() {
-      if (typeof window === "undefined") return;
-      if (window.innerWidth <= 620) {
-        setCardsVisible(3);
-      } else if (window.innerWidth <= 900) {
-        setCardsVisible(4);
-      } else {
-        setCardsVisible(5);
-      }
-    }
-    updateVisible();
-    window.addEventListener("resize", updateVisible);
-    return () => window.removeEventListener("resize", updateVisible);
-  }, []);
 
   const content = useMemo(
     () => resolveContent(config, milestones, games),
     [config, milestones, games],
   );
 
-  const L = content.members?.length ?? 0;
-  const isLoopable = L > cardsVisible;
-
-  const clonedMembers = useMemo(() => {
-    if (L === 0) return [];
-    if (!isLoopable) return content.members;
-    const prepended = content.members.slice(-cardsVisible);
-    const appended = content.members.slice(0, cardsVisible);
-    return [...prepended, ...content.members, ...appended];
-  }, [content.members, cardsVisible, L, isLoopable]);
-
-  const carouselPrev = useCallback(() => {
-    if (!isLoopable || disableTransition) return;
-    setCarouselIndex((i) => i - 1);
-  }, [isLoopable, disableTransition]);
-
-  const carouselNext = useCallback(() => {
-    if (!isLoopable || disableTransition) return;
-    setCarouselIndex((i) => i + 1);
-  }, [isLoopable, disableTransition]);
-
-  // Auto-play timer
-  useEffect(() => {
-    if (!isLoopable || isPaused) return;
-    const interval = setInterval(() => {
-      carouselNext();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isLoopable, isPaused, carouselNext]);
-
-  const handleTransitionEnd = useCallback(() => {
-    if (carouselIndex >= L) {
-      setDisableTransition(true);
-      setCarouselIndex(0);
-      setTimeout(() => {
-        setDisableTransition(false);
-      }, 50);
-    } else if (carouselIndex < 0) {
-      setDisableTransition(true);
-      setCarouselIndex(L - 1);
-      setTimeout(() => {
-        setDisableTransition(false);
-      }, 50);
-    }
-  }, [carouselIndex, L]);
-
-  function handleCarouselTouchStart(e: React.TouchEvent) {
-    if (!isLoopable) return;
-    setIsPaused(true);
-    touchStartX.current = e.touches[0]?.clientX ?? null;
-  }
-
-  function handleCarouselTouchEnd(e: React.TouchEvent) {
-    if (!isLoopable) return;
-    setIsPaused(false);
-    if (touchStartX.current === null) return;
-    const delta = touchStartX.current - (e.changedTouches[0]?.clientX ?? 0);
-    if (Math.abs(delta) > 40) {
-      if (delta > 0) carouselNext();
-      else carouselPrev();
-    }
-    touchStartX.current = null;
-  }
+  const marqueeMembers = useMemo(() => {
+    if (!content.members) return [];
+    return [...content.members, ...content.members];
+  }, [content.members]);
 
   const filteredGallery = useMemo(() => {
     if (galleryFilter === "all") return content.gallery;
@@ -577,89 +496,24 @@ export function PublicHome(props: PublicHomeProps) {
           <h2>人是球队最重要的内容。</h2>
         </div>
         <div className={revealClass("members", visibleSections)}>
-          <div
-            className={styles.carouselRoot}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-          >
-            {isLoopable && (
-              <button
-                type="button"
-                className={styles.carouselPrev}
-                aria-label="上一位"
-                onClick={carouselPrev}
-                disabled={disableTransition}
-              >
-                ‹
-              </button>
-            )}
-
-            <div
-              className={styles.carouselViewport}
-              onTouchStart={handleCarouselTouchStart}
-              onTouchEnd={handleCarouselTouchEnd}
-            >
-              <div
-                className={styles.carouselTrack}
-                style={
-                  isLoopable
-                    ? {
-                        transform: `translateX(calc(-${cardsVisible + carouselIndex} * (100% / ${cardsVisible})))`,
-                        transition: disableTransition ? "none" : undefined,
-                      }
-                    : undefined
-                }
-                onTransitionEnd={isLoopable ? handleTransitionEnd : undefined}
-              >
-                {clonedMembers.map((member, idx) => (
-                  <article
-                    key={`${member.number}-${member.name}-${idx}`}
-                    className={`${styles.jersey} ${styles[member.tone]} ${styles.carouselCard}`}
-                  >
-                    <span className={styles.jerseyRole}>{member.role}</span>
-                    <strong>{member.number}</strong>
-                    <h3>{member.name}</h3>
-                    {member.nickname && (
-                      <span className={styles.jerseyNickname}>{member.nickname}</span>
-                    )}
-                    <p>{member.note}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            {isLoopable && (
-              <button
-                type="button"
-                className={styles.carouselNext}
-                aria-label="下一位"
-                onClick={carouselNext}
-                disabled={disableTransition}
-              >
-                ›
-              </button>
-            )}
-          </div>
-
-          {isLoopable && L > 0 && (
-            <div className={styles.carouselDots} aria-label="轮播页面指示">
-              {Array.from({ length: L }).map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={
-                    ((carouselIndex % L + L) % L) === i
-                      ? styles.dotActive
-                      : styles.dot
-                  }
-                  aria-label={`跳转到第 ${i + 1} 页`}
-                  onClick={() => {
-                    if (!disableTransition) setCarouselIndex(i);
-                  }}
-                />
+          <div className={styles.marqueeContainer}>
+            <div className={styles.marqueeTrack}>
+              {marqueeMembers.map((member, idx) => (
+                <article
+                  key={`${member.number}-${member.name}-${idx}`}
+                  className={`${styles.jersey} ${styles[member.tone]} ${styles.marqueeCard}`}
+                >
+                  <span className={styles.jerseyRole}>{member.role}</span>
+                  <strong>{member.number}</strong>
+                  <h3>{member.name}</h3>
+                  {member.nickname && (
+                    <span className={styles.jerseyNickname}>{member.nickname}</span>
+                  )}
+                  <p>{member.note}</p>
+                </article>
               ))}
             </div>
-          )}
+          </div>
         </div>
       </section>
 

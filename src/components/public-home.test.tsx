@@ -76,21 +76,11 @@ describe("PublicHome", () => {
     assert.equal(screen.queryByText("管理员口令"), null);
   });
 
-  it("renders member carousel with navigation buttons", () => {
+  it("renders member marquee layout", () => {
     render(<PublicHome />);
 
-    // All member cards are still present in the DOM (carousel uses CSS overflow, not conditional rendering)
-    assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 1);
-
-    // Carousel arrow buttons exist
-    assert.ok(screen.getByRole("button", { name: "上一位" }));
-    assert.ok(screen.getByRole("button", { name: "下一位" }));
-
-    // Infinite loop: prev button is enabled initially
-    assert.equal(
-      screen.getByRole("button", { name: "上一位" }).hasAttribute("disabled"),
-      false,
-    );
+    // All member cards are present in the DOM (rendered twice for the infinite marquee scroll)
+    assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 2);
   });
 
   it("renders configured homepage members before static fallback members", () => {
@@ -110,9 +100,9 @@ describe("PublicHome", () => {
 
     render(<PublicHome config={config} />);
 
-    assert.ok(screen.getByRole("heading", { name: "后台队员" }));
-    assert.ok(screen.getByText("00"));
-    assert.ok(screen.getByText("CMS"));
+    assert.ok(screen.getAllByRole("heading", { name: "后台队员" }).length >= 1);
+    assert.ok(screen.getAllByText("00").length >= 1);
+    assert.ok(screen.getAllByText("CMS").length >= 1);
     assert.equal(screen.queryByRole("heading", { name: "范张晨" }), null);
   });
 
