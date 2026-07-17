@@ -493,7 +493,7 @@ export function PublicHome(props: PublicHomeProps) {
       <section id="members" className={styles.membersSection} data-reveal-id="members">
         <div className={styles.sectionHeading}>
           <p className={styles.eyebrow}>NUMBER WALL</p>
-          <h2>人是球队最重要的内容。</h2>
+          <h2>每一件队服背后的我们</h2>
         </div>
         <div className={revealClass("members", visibleSections)}>
           <div className={styles.marqueeContainer}>
@@ -538,7 +538,7 @@ export function PublicHome(props: PublicHomeProps) {
       <section id="gallery" className={styles.gallerySection} data-reveal-id="gallery">
         <div className={styles.sectionHeading}>
           <p className={styles.eyebrow}>PHOTO ARCHIVE</p>
-          <h2>照片负责情绪。</h2>
+          <h2>我们在球场的样子</h2>
           <p>围圈、背影、赛场和队服细节会比长文字更快说明这支队伍从哪里开始。</p>
         </div>
         <div className={styles.galleryFilters} aria-label="相册分类">
@@ -591,7 +591,7 @@ export function PublicHome(props: PublicHomeProps) {
       <section id="join" className={styles.join} data-reveal-id="join">
         <Baseball size={68} weight="duotone" aria-hidden="true" />
         <p className={styles.eyebrow}>JOIN THE TEAM</p>
-        <h2>想和我们一起上场？</h2>
+        <h2>一起上场打球吧！</h2>
         <p>
           球队长期欢迎对棒球感兴趣的同学加入。无论你是否有基础，都可以先来体验一次训练。
         </p>
