@@ -44,12 +44,12 @@ describe("PublicHome", () => {
     assert.ok(screen.getAllByText("2026.05.30").length >= 1);
     assert.ok(screen.getByRole("heading", { name: "得物王牌棒球赛，第一次站上竞技赛场。" }));
     assert.ok(screen.getByRole("heading", { name: "人是球队最重要的内容。" }));
-    assert.ok(screen.getByRole("heading", { name: "范张晨" }));
-    assert.ok(screen.getByText("81"));
-    assert.ok(screen.getByText("FAN"));
-    assert.ok(screen.getByRole("heading", { name: "Thabang Mathaba" }));
-    assert.ok(screen.getByText("99"));
-    assert.ok(screen.getByText("高兴"));
+    assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 1);
+    assert.ok(screen.getAllByText("81").length >= 1);
+    assert.ok(screen.getAllByText("FAN").length >= 1);
+    assert.ok(screen.getAllByRole("heading", { name: "Thabang Mathaba" }).length >= 1);
+    assert.ok(screen.getAllByText("99").length >= 1);
+    assert.ok(screen.getAllByText("高兴").length >= 1);
     assert.equal(screen.queryByText("球队经理——陶YF"), null);
     assert.equal(screen.queryByText("微信 t90507002fyt"), null);
     assert.equal(
@@ -80,16 +80,16 @@ describe("PublicHome", () => {
     render(<PublicHome />);
 
     // All member cards are still present in the DOM (carousel uses CSS overflow, not conditional rendering)
-    assert.ok(screen.getByRole("heading", { name: "范张晨" }));
+    assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 1);
 
     // Carousel arrow buttons exist
     assert.ok(screen.getByRole("button", { name: "上一位" }));
     assert.ok(screen.getByRole("button", { name: "下一位" }));
 
-    // First page: prev button is disabled
+    // Infinite loop: prev button is enabled initially
     assert.equal(
       screen.getByRole("button", { name: "上一位" }).hasAttribute("disabled"),
-      true,
+      false,
     );
   });
 

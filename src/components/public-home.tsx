@@ -89,6 +89,7 @@ export function PublicHome(props: PublicHomeProps) {
   const [galleryFilter, setGalleryFilter] = useState<GalleryCategory>("all");
   const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [disableTransition, setDisableTransition] = useState(false);
   const progressRef = useRef<HTMLDivElement | null>(null);
   const touchStartX = useRef<number | null>(null);
 
@@ -116,31 +117,60 @@ export function PublicHome(props: PublicHomeProps) {
     [config, milestones, games],
   );
 
-  const carouselMaxIndex = Math.max(0, (content.members?.length ?? 0) - cardsVisible);
+  const L = content.members?.length ?? 0;
+  const isLoopable = L > cardsVisible;
+
+  const clonedMembers = useMemo(() => {
+    if (L === 0) return [];
+    if (!isLoopable) return content.members;
+    const prepended = content.members.slice(-cardsVisible);
+    const appended = content.members.slice(0, cardsVisible);
+    return [...prepended, ...content.members, ...appended];
+  }, [content.members, cardsVisible, L, isLoopable]);
+
+  const carouselPrev = useCallback(() => {
+    if (!isLoopable || disableTransition) return;
+    setCarouselIndex((i) => i - 1);
+  }, [isLoopable, disableTransition]);
+
+  const carouselNext = useCallback(() => {
+    if (!isLoopable || disableTransition) return;
+    setCarouselIndex((i) => i + 1);
+  }, [isLoopable, disableTransition]);
 
   // Auto-play timer
   useEffect(() => {
-    if (isPaused || carouselMaxIndex <= 0) return;
+    if (!isLoopable || isPaused) return;
     const interval = setInterval(() => {
-      setCarouselIndex((i) => (i >= carouselMaxIndex ? 0 : i + 1));
+      carouselNext();
     }, 3000);
     return () => clearInterval(interval);
-  }, [carouselMaxIndex, isPaused]);
+  }, [isLoopable, isPaused, carouselNext]);
 
-  const carouselPrev = useCallback(() => {
-    setCarouselIndex((i) => Math.max(0, i - 1));
-  }, []);
-
-  const carouselNext = useCallback(() => {
-    setCarouselIndex((i) => Math.min(carouselMaxIndex, i + 1));
-  }, [carouselMaxIndex]);
+  const handleTransitionEnd = useCallback(() => {
+    if (carouselIndex >= L) {
+      setDisableTransition(true);
+      setCarouselIndex(0);
+      setTimeout(() => {
+        setDisableTransition(false);
+      }, 50);
+    } else if (carouselIndex < 0) {
+      setDisableTransition(true);
+      setCarouselIndex(L - 1);
+      setTimeout(() => {
+        setDisableTransition(false);
+      }, 50);
+    }
+  }, [carouselIndex, L]);
 
   function handleCarouselTouchStart(e: React.TouchEvent) {
+    if (!isLoopable) return;
     setIsPaused(true);
     touchStartX.current = e.touches[0]?.clientX ?? null;
   }
 
   function handleCarouselTouchEnd(e: React.TouchEvent) {
+    if (!isLoopable) return;
     setIsPaused(false);
     if (touchStartX.current === null) return;
     const delta = touchStartX.current - (e.changedTouches[0]?.clientX ?? 0);
@@ -552,15 +582,17 @@ export function PublicHome(props: PublicHomeProps) {
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
           >
-            <button
-              type="button"
-              className={styles.carouselPrev}
-              aria-label="上一位"
-              onClick={carouselPrev}
-              disabled={carouselIndex === 0}
-            >
-              ‹
-            </button>
+            {isLoopable && (
+              <button
+                type="button"
+                className={styles.carouselPrev}
+                aria-label="上一位"
+                onClick={carouselPrev}
+                disabled={disableTransition}
+              >
+                ‹
+              </button>
+            )}
 
             <div
               className={styles.carouselViewport}
@@ -569,13 +601,19 @@ export function PublicHome(props: PublicHomeProps) {
             >
               <div
                 className={styles.carouselTrack}
-                style={{
-                  transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible})))`,
-                }}
+                style={
+                  isLoopable
+                    ? {
+                        transform: `translateX(calc(-${cardsVisible + carouselIndex} * (100% / ${cardsVisible})))`,
+                        transition: disableTransition ? "none" : undefined,
+                      }
+                    : undefined
+                }
+                onTransitionEnd={isLoopable ? handleTransitionEnd : undefined}
               >
-                {content.members.map((member) => (
+                {clonedMembers.map((member, idx) => (
                   <article
-                    key={`${member.number}-${member.name}`}
+                    key={`${member.number}-${member.name}-${idx}`}
                     className={`${styles.jersey} ${styles[member.tone]} ${styles.carouselCard}`}
                   >
                     <span className={styles.jerseyRole}>{member.role}</span>
@@ -590,26 +628,34 @@ export function PublicHome(props: PublicHomeProps) {
               </div>
             </div>
 
-            <button
-              type="button"
-              className={styles.carouselNext}
-              aria-label="下一位"
-              onClick={carouselNext}
-              disabled={carouselIndex >= carouselMaxIndex}
-            >
-              ›
-            </button>
+            {isLoopable && (
+              <button
+                type="button"
+                className={styles.carouselNext}
+                aria-label="下一位"
+                onClick={carouselNext}
+                disabled={disableTransition}
+              >
+                ›
+              </button>
+            )}
           </div>
 
-          {carouselMaxIndex > 0 && (
+          {isLoopable && L > 0 && (
             <div className={styles.carouselDots} aria-label="轮播页面指示">
-              {Array.from({ length: carouselMaxIndex + 1 }).map((_, i) => (
+              {Array.from({ length: L }).map((_, i) => (
                 <button
                   key={i}
                   type="button"
-                  className={i === carouselIndex ? styles.dotActive : styles.dot}
+                  className={
+                    ((carouselIndex % L + L) % L) === i
+                      ? styles.dotActive
+                      : styles.dot
+                  }
                   aria-label={`跳转到第 ${i + 1} 页`}
-                  onClick={() => setCarouselIndex(i)}
+                  onClick={() => {
+                    if (!disableTransition) setCarouselIndex(i);
+                  }}
                 />
               ))}
             </div>
