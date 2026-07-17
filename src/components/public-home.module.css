@@ -990,7 +990,7 @@
 }
 
 .marqueeCard {
-  flex: 0 0 180px; /* Elegant fixed width for uniform logo-wall style */
+  flex: 0 0 140px; /* Highly compact fixed width */
 }
 
 @keyframes marqueeScroll {
@@ -1005,8 +1005,8 @@
 
 .jersey {
   position: relative;
-  min-height: 190px;
-  padding: 12px;
+  min-height: 130px;
+  padding: 10px;
   overflow: hidden;
   border: 1px solid rgba(8, 50, 79, 0.14);
   border-radius: 22px;
@@ -1039,31 +1039,22 @@
 
 .jersey strong {
   display: block;
-  margin-top: 12px;
+  margin-top: 4px;
   font-family: var(--font-ui), sans-serif;
-  font-size: clamp(38px, 4vw, 52px);
+  font-size: clamp(28px, 3.5vw, 38px);
   font-weight: 950;
   line-height: 0.9;
 }
 
 .jersey h3 {
-  margin: 10px 0 0;
-  font-size: 16px;
-}
-
-.jerseyNickname {
-  display: inline-block;
-  margin-top: 2px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin: 4px 0 0;
+  font-size: 14px;
 }
 
 .jersey p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .captain,
@@ -1754,7 +1745,7 @@
     min-height: 220px;
   }
   .jersey {
-    min-height: 180px;
+    min-height: 120px;
   }
 
   .trainingStepper {

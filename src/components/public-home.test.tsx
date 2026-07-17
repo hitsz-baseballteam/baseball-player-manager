@@ -46,10 +46,8 @@ describe("PublicHome", () => {
     assert.ok(screen.getByRole("heading", { name: "人是球队最重要的内容。" }));
     assert.ok(screen.getAllByRole("heading", { name: "范张晨" }).length >= 1);
     assert.ok(screen.getAllByText("81").length >= 1);
-    assert.ok(screen.getAllByText("FAN").length >= 1);
     assert.ok(screen.getAllByRole("heading", { name: "Thabang Mathaba" }).length >= 1);
     assert.ok(screen.getAllByText("99").length >= 1);
-    assert.ok(screen.getAllByText("高兴").length >= 1);
     assert.equal(screen.queryByText("球队经理——陶YF"), null);
     assert.equal(screen.queryByText("微信 t90507002fyt"), null);
     assert.equal(
@@ -102,7 +100,6 @@ describe("PublicHome", () => {
 
     assert.ok(screen.getAllByRole("heading", { name: "后台队员" }).length >= 1);
     assert.ok(screen.getAllByText("00").length >= 1);
-    assert.ok(screen.getAllByText("CMS").length >= 1);
     assert.equal(screen.queryByRole("heading", { name: "范张晨" }), null);
   });
 
